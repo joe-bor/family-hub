@@ -1,0 +1,133 @@
+---
+title: Family Hub — Testing & CI Flow
+---
+flowchart TB
+    subgraph BE_CI["BE CI (GitHub Actions)"]
+        direction TB
+        BE_PUSH["Push / PR to main"]
+        BE_TEST["./mvnw verify"]
+        TC["TestContainers<br/>Postgres 16"]
+        FLYWAY["Flyway migrations"]
+        BE_TESTS_RUN["Integration tests<br/>+ Repository tests"]
+        TC_DESTROY["Container destroyed"]
+
+        BE_PUSH --> BE_TEST
+        BE_TEST --> TC
+        TC --> FLYWAY
+        FLYWAY --> BE_TESTS_RUN
+        BE_TESTS_RUN --> TC_DESTROY
+
+        subgraph PUBLISH["publish-docker (main only)"]
+            DOCKER_BUILD["docker build<br/>(multi-stage Dockerfile)"]
+            DOCKER_PUSH["docker push"]
+            GHCR["ghcr.io/joe-bor/<br/>family-hub-api:latest"]
+            DOCKER_BUILD --> DOCKER_PUSH --> GHCR
+        end
+
+        TC_DESTROY -->|"tests pass<br/>+ main branch"| DOCKER_BUILD
+    end
+
+    subgraph FE_CI["FE CI (GitHub Actions)"]
+        direction TB
+        FE_PUSH["Push / PR to main"]
+        FE_SETUP["npm ci<br/>playwright install"]
+        FE_LINT["npm run lint"]
+
+        subgraph UNIT["Unit Tests"]
+            VITEST["npm run test:coverage"]
+            MSW["MSW<br/>(network-level mocks)"]
+            VITEST --- MSW
+        end
+
+        subgraph E2E_SETUP["E2E Backend Setup"]
+            COMPOSE_UP["docker compose -f<br/>docker-compose.e2e.yml<br/>up --wait"]
+            PULL_IMAGE["Pull from GHCR"]
+            SPRING_BOOT_CI["Spring Boot<br/>(dev profile)"]
+            H2_CI["H2 in-memory DB"]
+            HEALTH["Healthcheck<br/>GET /api/health"]
+
+            COMPOSE_UP --> PULL_IMAGE
+            PULL_IMAGE --> SPRING_BOOT_CI
+            SPRING_BOOT_CI --> H2_CI
+            SPRING_BOOT_CI --> HEALTH
+        end
+
+        subgraph E2E_RUN["E2E Test Execution"]
+            PW["Playwright"]
+            VITE_CI["Vite dev server<br/>VITE_USE_MOCK_API=false"]
+            BROWSER_CI["Browser"]
+            PROXY_CI["/api proxy"]
+            SEED["beforeEach:<br/>POST /api/auth/register<br/>(unique family per test)"]
+
+            PW --> VITE_CI
+            PW --> BROWSER_CI
+            BROWSER_CI --> VITE_CI
+            VITE_CI --> PROXY_CI
+            PROXY_CI --> SPRING_BOOT_CI
+            PW --> SEED
+            SEED --> SPRING_BOOT_CI
+        end
+
+        COMPOSE_DOWN["docker compose down"]
+        FE_BUILD["npm run build"]
+        LIGHTHOUSE["Lighthouse CI"]
+
+        FE_PUSH --> FE_SETUP --> FE_LINT --> VITEST
+        VITEST --> COMPOSE_UP
+        HEALTH --> PW
+        PW -->|"tests complete"| COMPOSE_DOWN
+        COMPOSE_DOWN --> FE_BUILD --> LIGHTHOUSE
+    end
+
+    GHCR -.->|"pulled by FE CI"| PULL_IMAGE
+
+    subgraph LOCAL["Local Development"]
+        direction TB
+        TERM1["Terminal 1:<br/>docker compose up api"]
+        SPRING_LOCAL["Spring Boot<br/>(dev profile)"]
+        H2_LOCAL["H2 in-memory DB"]
+
+        TERM2["Terminal 2:<br/>npm run dev"]
+        VITE_LOCAL["Vite :5173"]
+        PROXY_LOCAL["/api proxy → :8080"]
+
+        BROWSER_LOCAL["Browser<br/>localhost:5173"]
+
+        TERM1 --> SPRING_LOCAL --> H2_LOCAL
+        TERM2 --> VITE_LOCAL --> PROXY_LOCAL --> SPRING_LOCAL
+        BROWSER_LOCAL --> VITE_LOCAL
+    end
+
+    subgraph PROD["Production"]
+        direction TB
+        NGINX["nginx"]
+        SPRING_PROD["Spring Boot JAR<br/>(systemd service)"]
+        NEON["Neon Postgres<br/>(external, persistent)"]
+        STATIC["Static FE files<br/>/var/www/familyhub"]
+        FLYWAY_PROD["Flyway migrations"]
+
+        NGINX -->|"/api/*"| SPRING_PROD
+        NGINX -->|"/*"| STATIC
+        SPRING_PROD --> FLYWAY_PROD --> NEON
+    end
+
+    subgraph DB_MAP["Database by Context"]
+        direction LR
+        DB1["BE tests → TestContainers Postgres 16"]
+        DB2["FE E2E (CI & local) → H2 in-memory"]
+        DB3["Local dev → H2 in-memory"]
+        DB4["Production → Neon Postgres"]
+    end
+
+    style BE_CI fill:#1a1a2e,stroke:#e94560,color:#fff
+    style FE_CI fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style LOCAL fill:#1a1a2e,stroke:#16213e,color:#fff
+    style PROD fill:#1a1a2e,stroke:#533483,color:#fff
+    style DB_MAP fill:#0f0f23,stroke:#666,color:#ccc
+    style GHCR fill:#2d1b69,stroke:#8b5cf6,color:#fff
+    style TC fill:#1e3a2f,stroke:#22c55e,color:#fff
+    style H2_CI fill:#1e3a2f,stroke:#22c55e,color:#fff
+    style H2_LOCAL fill:#1e3a2f,stroke:#22c55e,color:#fff
+    style NEON fill:#1e3a2f,stroke:#22c55e,color:#fff
+    style MSW fill:#2d2b1b,stroke:#eab308,color:#fff
+    style PUBLISH fill:#1a1a2e,stroke:#8b5cf6,color:#fff

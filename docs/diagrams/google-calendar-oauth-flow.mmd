@@ -1,0 +1,76 @@
+---
+title: Google Calendar OAuth 2.0 Flow & Sync Architecture
+---
+sequenceDiagram
+    participant U as User (Browser)
+    participant FE as FamilyHub FE
+    participant BE as FamilyHub BE
+    participant GA as Google Auth Server
+    participant GC as Google Calendar API
+
+    Note over U,GC: === OAUTH CONNECTION (one-time per member) ===
+
+    U->>FE: Click "Connect Google Calendar"<br/>(Settings page, per member)
+    FE->>BE: GET /api/google/auth?memberId={uuid}
+    Note right of BE: Build OAuth URL with:<br/>client_id, redirect_uri,<br/>scope, state=memberId,<br/>access_type=offline,<br/>prompt=consent
+    BE-->>FE: Return OAuth redirect URL
+    FE->>GA: Redirect browser to Google
+    Note right of GA: Google shows consent screen:<br/>"FamilyHub wants to view<br/>your calendar events. Allow?"
+    U->>GA: Click "Allow"
+    GA->>BE: Redirect to /api/google/callback<br/>?code=AUTH_CODE&state=memberId
+    Note right of BE: Authorization code is<br/>single-use, expires ~10 min
+
+    BE->>GA: POST /oauth2/token<br/>{code, client_id, client_secret, redirect_uri}
+    Note right of BE: Server-to-server call<br/>(client_secret never in browser)
+    GA-->>BE: {access_token, refresh_token, expires_in: 3600}
+    Note right of BE: Encrypt tokens (AES-256)<br/>Store in google_oauth_token table<br/>linked to member_id
+
+    Note over U,GC: === INITIAL FULL SYNC ===
+
+    BE->>GC: events.list(calendarId="primary",<br/>singleEvents=true, timeMin, timeMax)
+    Note right of BE: Uses access_token<br/>as Bearer token
+    GC-->>BE: {items: [Event, ...], nextSyncToken}
+    Note right of BE: Map Google Events to CalendarEvent entities<br/>summary -> title, start.dateTime -> date + startTime<br/>creator.email -> FamilyMember.email -> memberId<br/>source = "GOOGLE", store googleEventId
+    BE->>BE: Save events to calendar_event table<br/>Store syncToken in google_synced_calendar
+
+    BE-->>FE: Redirect to /settings?google=connected
+    FE-->>U: Show "Connected" status
+
+    Note over U,GC: === PERIODIC INCREMENTAL SYNC (every 15 min) ===
+
+    BE->>BE: @Scheduled job fires
+
+    alt Access token expired
+        BE->>GA: POST /oauth2/token<br/>{refresh_token, grant_type=refresh_token}
+        GA-->>BE: {new access_token, expires_in: 3600}
+        BE->>BE: Update stored access_token
+    end
+
+    BE->>GC: events.list(calendarId, syncToken=stored)
+    Note right of GC: Returns ONLY events<br/>changed since last sync
+    GC-->>BE: {items: [changed events], nextSyncToken}
+
+    alt Event status = "confirmed" (new or updated)
+        BE->>BE: Upsert CalendarEvent<br/>(match on googleEventId)
+    end
+    alt Event status = "cancelled"
+        BE->>BE: Delete CalendarEvent<br/>where googleEventId = event.id
+    end
+
+    BE->>BE: Store new syncToken
+
+    alt syncToken expired (410 Gone)
+        Note right of BE: Full sync required<br/>(token stale after ~7 days idle)
+        BE->>GC: events.list (full sync, no syncToken)
+        GC-->>BE: All events + new syncToken
+        BE->>BE: Replace all Google events for this calendar
+    end
+
+    Note over U,GC: === DISCONNECT ===
+
+    U->>FE: Click "Disconnect" in Settings
+    FE->>BE: DELETE /api/google/disconnect/{memberId}
+    BE->>GA: POST /oauth2/revoke?token={access_token}
+    BE->>BE: Delete google_oauth_token row<br/>Delete all calendar_events<br/>where source=GOOGLE and member_id=X
+    BE-->>FE: 200 OK
+    FE-->>U: Show "Disconnected" status
