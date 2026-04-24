@@ -9,7 +9,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 ### Foundation
 
 - Family registration + JWT auth — FE + BE (retrofit)
-- Docker + GHCR + prod deploy — [deployment-guide](../deployment-guide.md), [docker migration](../deployment-docker-migration.md) · BE #8, #9
+- Docker + GHCR + prod deploy — [deployment-guide](../deployment-guide.md) · BE #8, #9
 - E2E against real backend — FE #105
 - BE versioned releases (release-please) — [spec](../superpowers/specs/2026-03-19-be-versioned-releases-design.md) · BE (multiple)
 

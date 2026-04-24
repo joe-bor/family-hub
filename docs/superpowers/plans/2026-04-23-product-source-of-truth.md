@@ -295,7 +295,7 @@ Each sub-repo has its own `CLAUDE.md` with repo-specific conventions, patterns, 
 
 ## What we do here
 
-- **Alignment checks** between FE and BE — API contracts, types, data formats, validation rules
+- **Cross-repo reviews** between FE and BE — API contracts, types, data formats, validation rules
 - **Architecture discussions** and design decisions that span both repos
 - **Maintaining product docs** — PRD, roadmap summary, backlog stories, API reference, design docs
 
@@ -315,12 +315,12 @@ Each sub-repo has its own `CLAUDE.md` with repo-specific conventions, patterns, 
 | `docs/superpowers/` | Specs and plans for major initiatives |
 | `docs/prompts/_archive/` | Historical handoff prompts (read-only reference) |
 
-The `/alignment` skill reads the Resolved section of the API reference doc before running, so keeping it current prevents re-flagging fixed issues.
+Keep the API reference current when shared contracts change so future work starts from the right documented contract.
 
 ## Repo-specific agents
 
-- **FE agent** (`frontend/CLAUDE.md`): Full dev agent — codes, tests, commits, opens PRs
-- **BE agent** (`backend/family-hub-api/CLAUDE.md`): Mentor-first — teaches by default, codes when explicitly asked. Has a `/mentor` skill for code reviews.
+- **FE agent** (`frontend/AGENTS.md`, `frontend/CLAUDE.md`): Full dev agent — codes, tests, commits, opens PRs
+- **BE agent** (`backend/family-hub-api/AGENTS.md`, `backend/family-hub-api/CLAUDE.md`): Mentor-first — teaches by default, codes when explicitly asked. Has a `/mentor` skill for code reviews.
 ```
 
 - [ ] **Step 3.2: Verify symlink still resolves and both files show the new content**
@@ -501,7 +501,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 ### Foundation
 
 - Family registration + JWT auth — FE + BE (retrofit)
-- Docker + GHCR + prod deploy — [deployment-guide](../deployment-guide.md), [docker migration](../deployment-docker-migration.md) · BE #8, #9
+- Docker + GHCR + prod deploy — [deployment-guide](../deployment-guide.md) · BE #8, #9
 - E2E against real backend — FE #105
 - BE versioned releases (release-please) — [spec](../superpowers/specs/2026-03-19-be-versioned-releases-design.md) · BE (multiple)
 
