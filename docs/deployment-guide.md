@@ -110,4 +110,12 @@ Example: `BE_IMAGE_TAG=0.3.2`
 
 ## Frontend deploy note
 
-Frontend deployment remains owned by the frontend repo. This guide is mainly here so the root workspace documents the current production backend path and the contract between releases, GHCR, and the droplet.
+Frontend deployment remains owned by the frontend repo and is still a manual local-terminal deploy via `frontend/deploy.sh`.
+
+Important FE release rule:
+
+- Deploy only from `frontend/main`
+- Deploy only when the current commit is the released FE commit tagged `family-hub-v<package.json version>`
+- FE CI may run on newer `main`, but FE production shipping should follow FE releases, not arbitrary commits
+
+This guide mainly exists so the root workspace documents the current production backend path and the release contract between FE, BE, GHCR, and the droplet.

@@ -38,6 +38,12 @@ Sub-repos follow the same harness-agnostic pattern as this root repo: `AGENTS.md
 - Labels: filtering only
 - `roadmap.md`: summary/index only
 
+## Shipping Semantics
+
+- Backend `main` may merge incrementally, but FE CI E2E and BE production deploy consume the latest published BE release, not unreleased BE `main`.
+- A BE release is the stable backend contract for FE work that depends on backend behavior.
+- FE production deploy remains manual from a local terminal, but it should ship only a released FE commit on `frontend/main`, not an arbitrary `main` commit.
+
 ## Operating workflow
 
 - Root repo for product truth and cross-repo reasoning
