@@ -5,22 +5,63 @@ epic: mobile-ux
 status: planned
 priority: P2
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-04-25
 issues: []
 prs: []
+spec: ../../../superpowers/specs/2026-04-25-home-dashboard-redesign-design.md
 ---
 
 ## Context
 
-The mobile home screen is a basic 2-column grid of colored module buttons. It works but feels like a prototype. Needs a proper mobile home experience — possibly a dashboard with today's agenda, upcoming chores, quick-add actions, etc. (From `docs/mobile-ux-polish-backlog.md` item 1.)
+The mobile home screen today is a 2-column grid of colored module buttons. It works but reads as a prototype. This story replaces it with a calm, layered, mobile-first home surface for adult users.
+
+Design concept: **"The Now"** — a moment-aware home where the hero announces what matters right now (in progress / next up / all clear), with today's remaining events and a small horizon peek beneath. See the spec for the full design.
+
+## Scope
+
+- **Adult-first:** primary audience is Joe + Partner.
+- **Mobile-only:** ≤768px breakpoints. Touchscreen and tablet keep the current home until a dedicated follow-up story.
+- **Pure home surface:** no module launcher tiles. Cross-module navigation is owned by the persistent bottom nav.
+- **Calendar-only data:** today's events, with up to 3 events in the next 48h beyond today as a horizon peek. No tasks/chores/meals/weather (those data sources don't exist yet).
+
+## Dependencies
+
+- **Hard prerequisite:** `persistent-bottom-nav.md`. Dashboard assumes the nav is present.
+- **Soft:** `visual-identity-refinement.md` (parallel work inherits for free).
+- **Soft:** Google Calendar incremental sync epic.
 
 ## Acceptance Criteria
 
-- [ ] Design proposal for a dashboard-style home (agenda + quick actions) reviewed and approved
-- [ ] Replaces the 2-column module grid on mobile breakpoints
-- [ ] Today's agenda visible at-a-glance
-- [ ] At least one quick-add action is reachable in one tap from home
+### Functional
+- [ ] Replaces the 2-column module grid at the home route on mobile breakpoints (≤768px).
+- [ ] Hero renders correctly across all five states (RIGHT_NOW, UP_NEXT, ALL_DAY_ONLY, REST_OF_DAY_CLEAR, ALL_CLEAR_TODAY).
+- [ ] Hero transitions live as time crosses event boundaries (30-second poll + visibility-change recompute).
+- [ ] Member-chip focus filters Hero, Today list, and Coming-up consistently; single-focus only.
+- [ ] All-day events pin at the top of Today list.
+- [ ] Coming-up renders 0–3 events in `(endOfToday, endOfToday+2)`; region omitted when empty.
+- [ ] "+" opens event-create sheet pre-filled with today + focused member.
+- [ ] Pull-to-refresh triggers sync; sync thread + error pill render appropriately.
+- [ ] First-time users with no Google Calendar connected see the onboarding hero card.
+
+### Quality
+- [ ] No new design tokens introduced.
+- [ ] Motion uses the three-duration / single-easing system in the spec.
+- [ ] `prefers-reduced-motion` respected.
+- [ ] All touch targets ≥44px; rows ≥44px tall; chips 36px visual + 8px halo.
+- [ ] Layout holds 320–768px without horizontal overflow.
+- [ ] Dashboard and calendar tab are not confusable in screenshots.
+
+### Performance
+- [ ] Reuses existing events query; no new BE endpoint or duplicate fetch.
+- [ ] Hero state recompute does not trigger today-list re-render when the subject hasn't changed.
+
+## Follow-up stories to create
+
+These were split out during brainstorming and are not part of this story:
+
+- **Child-mode home** — the 4-year-old's home surface, replacing what they currently have on the touchscreen.
+- **Touchscreen / tablet home** — large-screen home surface; current 2-col color grid stays there in the meantime.
 
 ## Notes
 
-Design exploration needed before implementation. May pair well with bottom-nav story.
+Detailed design, IA, motion vocabulary, interaction model, and out-of-scope items live in the spec linked in frontmatter.
