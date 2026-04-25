@@ -1,3 +1,5 @@
+> Archived 2026-04-25 — implemented by joe-bor/FamilyHub#128
+
 # FE Cleanup: Google Calendar Service Test Coverage
 
 ## Context
