@@ -4,7 +4,7 @@
 
 **Goal:** Replace the mobile home screen's 2-column module grid with the "The Now" moment-aware dashboard from the design spec.
 
-**Architecture:** A composition of pure derivation logic (hero-state machine, relative-time formatting), data hooks (`useDashboardEvents`, `useHeroState`), and presentational components (`DashboardHeader`, `MemberChipRow`, `HeroCard`, `TodayList`, `ComingUp`, `OnboardingCard`). The existing `HomeDashboard` becomes a viewport-gated container — mobile renders the new dashboard, non-mobile keeps the current 2-column launcher until follow-up stories ship.
+**Architecture:** A composition of pure derivation logic (hero-state machine, relative-time formatting), data hooks (`useDashboardEvents`, `useHeroState`), and presentational components (`DashboardHeader`, `MemberChipRow`, `HeroCard`, `TodayList`, `ComingUp`). The existing `HomeDashboard` becomes a viewport-gated container in the current FE app shell — mobile renders the new dashboard when `activeModule === null`, while non-mobile keeps the current "null -> calendar" behavior.
 
 **Tech Stack:** React 19, TypeScript, Vite, TanStack Query, Tailwind v4 (oklch CSS vars), Vitest, Playwright, Biome, date-fns. No new dependencies.
 
@@ -21,6 +21,7 @@ Before starting:
 - [ ] Read `docs/superpowers/specs/2026-04-25-home-dashboard-redesign-design.md` end-to-end. Every implementation decision must trace back to it.
 - [ ] Read `frontend/CLAUDE.md` — pay attention to date/time pitfalls (`@/lib/time-utils`), test gotchas (gcTime, store reset, async form fields), and z-index hierarchy.
 - [ ] Confirm `frontend/` working tree is clean and up to date with `origin/main`.
+- [ ] Confirm `mobile-persistent-bottom-nav` is already merged on FE `main`. If it is not, stop and implement that story first; this plan assumes nav-based mobile module switching already exists.
 - [ ] Create a feature branch in the FE repo: `git checkout -b feat/home-dashboard-redesign`
 - [ ] **Do not** introduce new design tokens. All colors, spacing, and type sizes come from existing Tailwind utilities and CSS variables in `src/index.css`.
 
@@ -45,7 +46,6 @@ components/home/
 │   ├── today-list.test.tsx               # NEW
 │   ├── coming-up.tsx                     # NEW
 │   ├── coming-up.test.tsx                # NEW
-│   └── onboarding-card.tsx               # NEW
 ├── hooks/
 │   ├── index.ts                          # NEW
 │   ├── use-dashboard-events.ts           # NEW
@@ -91,12 +91,13 @@ const at = (h: number, m = 0) =>
 const event = (overrides: Partial<CalendarEvent>): CalendarEvent => ({
   id: "e1",
   title: "Test",
-  date: at(0),
+  date: new Date(2026, 3, 25),
   startTime: "10:00",
   endTime: "11:00",
-  allDay: false,
-  memberIds: ["m1"],
-  // ...other required fields fill from CalendarEvent shape
+  memberId: "m1",
+  isAllDay: false,
+  location: "Gym",
+  source: "NATIVE",
   ...overrides,
 });
 
@@ -120,7 +121,7 @@ describe("deriveHeroState", () => {
   });
 
   it("returns ALL_DAY_ONLY when only all-day events today", () => {
-    const ad = event({ allDay: true });
+    const ad = event({ isAllDay: true });
     expect(deriveHeroState({ todayEvents: [ad], now: at(12) }))
       .toEqual({ kind: "ALL_DAY_ONLY", event: ad });
   });
@@ -132,7 +133,7 @@ describe("deriveHeroState", () => {
   });
 
   it("ignores all-day events for RIGHT_NOW / UP_NEXT", () => {
-    const ad = event({ id: "ad", allDay: true });
+    const ad = event({ id: "ad", isAllDay: true });
     const next = event({ id: "n", startTime: "14:00", endTime: "15:00" });
     expect(deriveHeroState({ todayEvents: [ad, next], now: at(12) }))
       .toEqual({ kind: "UP_NEXT", event: next });
@@ -181,8 +182,8 @@ function eventEnd(e: CalendarEvent): Date {
 }
 
 export function deriveHeroState({ todayEvents, now }: DeriveHeroStateInput): HeroState {
-  const timed = todayEvents.filter((e) => !e.allDay);
-  const allDay = todayEvents.filter((e) => e.allDay);
+  const timed = todayEvents.filter((e) => !e.isAllDay);
+  const allDay = todayEvents.filter((e) => e.isAllDay);
 
   const inProgress = timed.find((e) => eventStart(e) <= now && now < eventEnd(e));
   if (inProgress) return { kind: "RIGHT_NOW", event: inProgress };
@@ -300,14 +301,11 @@ The hook accepts `todayEvents: CalendarEvent[]` and returns `HeroState`. The clo
 - Create: `src/components/home/components/dashboard-header.tsx`
 - Test: `src/components/home/components/dashboard-header.test.tsx`
 
-Renders a single line: `<greeting>, <name>` on the left, formatted date and sync indicator on the right. Greeting derives from current hour (`< 12` morning, `< 17` afternoon, else evening). On narrow viewports (≤360px), the date may wrap below — use `flex-wrap` rather than truncation.
+Renders a single line: `<greeting>, <family name>` on the left and formatted date on the right. Greeting derives from current hour (`< 12` morning, `< 17` afternoon, else evening). On narrow viewports (≤360px), the date may wrap below — use `flex-wrap` rather than truncation.
 
-Sync states (passed in as props, not internally subscribed — keeps the component pure):
-- `idle` → render nothing extra
-- `syncing` → 1px progress thread along the bottom edge of the header (`absolute inset-x-0 bottom-0 h-px bg-muted-foreground/20` with a translating gradient)
-- `error` → small inline pill at the right end with `role="status"` aria-live polite, label "Sync paused", click handler from prop
+This component is intentionally pure and dashboard-local. It does **not** render Google sync status, retry controls, or connection CTAs in this story.
 
-- [ ] **Step 1: Write component tests** — render under each sync state; assert text content, aria attributes, click handler invocation.
+- [ ] **Step 1: Write component tests** — render morning/afternoon/evening variants, assert text content, and verify the narrow-layout wrapping classes are present.
 - [ ] **Step 2: Verify failure**
 - [ ] **Step 3: Implement** using existing Tailwind utilities and `cn()` from `@/lib/utils`. No new tokens.
 - [ ] **Step 4: Verify pass**
@@ -355,7 +353,7 @@ Renders the hero per spec §5.2:
 - Time/relative line above title (use `formatRelativeStart` / `formatRemainingEnd` from Task 2)
 - Title 24–28px Nunito semibold (`text-2xl font-semibold` or `text-3xl font-semibold` — choose existing scale)
 - Location/notes below title at ~60% opacity
-- `RIGHT_NOW` only: small breathing dot next to time. Animation: a CSS keyframe with 2s cycle, 0.6 → 1.0 → 0.6 opacity. Define keyframes in `src/index.css` if no existing token covers this — name it `--animate-breathing-pulse` and gate inside `@media (prefers-reduced-motion: no-preference)`.
+- `RIGHT_NOW` only: small breathing dot next to time. Animation: a CSS keyframe with 2s cycle, 0.6 → 1.0 → 0.6 opacity. Define a local `@keyframes home-breathing-pulse` in `src/index.css` if no existing animation covers this, and gate it inside `@media (prefers-reduced-motion: no-preference)`.
 
 States:
 - `RIGHT_NOW` → "Now · ends in 22 min" + title + accent
@@ -422,22 +420,7 @@ Props: `events: CalendarEvent[]`, `members: FamilyMember[]`, `onSelect: (event: 
 
 ---
 
-## Task 10 — `OnboardingCard` component
-
-**Files:**
-- Create: `src/components/home/components/onboarding-card.tsx`
-- (No separate test file required — covered via the `home-dashboard.test.tsx` integration test that asserts it appears when `googleConnected === false`.)
-
-Props: `onConnect: () => void`.
-
-A quiet card with the same visual chrome as `HeroCard` but with onboarding copy ("Connect Google Calendar to see your schedule here") and a single primary action button labeled "Connect" that calls `onConnect`. No accent bar.
-
-- [ ] **Step 1: Implement directly** (small, low-risk component; tested via integration test in Task 12).
-- [ ] **Step 2: Commit** — `feat(home): add OnboardingCard`
-
----
-
-## Task 11 — Dashboard barrel and hooks barrel
+## Task 10 — Dashboard barrel and hooks barrel
 
 **Files:**
 - Create: `src/components/home/components/index.ts`
@@ -452,61 +435,57 @@ Export everything new from the per-folder barrels. Keep `home-dashboard` exporte
 
 ---
 
-## Task 12 — Compose into `HomeDashboard` with viewport gating
+## Task 11 — Compose into `HomeDashboard` in the current FE shell
 
 **Files:**
 - Modify: `src/components/home/home-dashboard.tsx`
 - Modify: `src/components/home/home-dashboard.test.tsx`
+- Reuse from `src/components/calendar/components/`: `add-event-button.tsx`, `event-form-modal.tsx`, `event-detail-modal.tsx` (or their mobile-specific equivalents if current mobile behavior requires them)
+- Reuse hooks from `@/api`: `useFamilyName`, `useFamilyMembers`, `useCreateEvent`, `useUpdateEvent`, `useDeleteEvent`
 
-This is the integration step. The existing component currently always renders the 2-column launcher. After this task:
+This is the integration step. The current FE shell already treats `activeModule === null` as the mobile home surface and redirects non-mobile `null` to Calendar in `App.tsx`. Do **not** add route semantics and do **not** add a second desktop dashboard path here.
 
-- On non-mobile (`!useIsMobile()`): unchanged — the legacy 2-column grid still renders. Extract that JSX into a `LegacyHomeLauncher` sub-component for clarity, but do not change its behavior.
-- On mobile (`useIsMobile()`): render the new dashboard.
+After this task:
+- On mobile, `HomeDashboard` renders the new dashboard surface.
+- Desktop/non-mobile behavior remains unchanged because `App.tsx` already redirects `activeModule === null` to Calendar.
+- No dashboard-specific Google connect / sync UI is introduced. Empty states remain the normal calm hero states.
 
-Composition for mobile:
+Composition sketch:
 
 ```tsx
 const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
-const { data: family } = useFamily();
+const familyName = useFamilyName();
+const members = useFamilyMembers();
 const { today, comingUp, isLoading, isError } = useDashboardEvents({ memberFocusId: focusedMemberId });
 const heroState = useHeroState(today);
-const { isGoogleConnected } = useGoogleCalendarStatus();   // existing hook — wire up
-const focusedMember = focusedMemberId
-  ? family?.members.find((m) => m.id === focusedMemberId)
-  : undefined;
+const focusedMember = focusedMemberId ? members.find((m) => m.id === focusedMemberId) : undefined;
+const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+const [isDetailOpen, setIsDetailOpen] = useState(false);
+const [isAddOpen, setIsAddOpen] = useState(false);
 
 return (
   <div className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+72px)]">
-    <DashboardHeader
-      memberName={...}
-      now={now}
-      syncStatus={...}
-      onRetrySync={...}
-    />
-    <MemberChipRow members={family?.members ?? []} focusedId={focusedMemberId} onFocusChange={setFocusedMemberId} />
-    {!isGoogleConnected ? (
-      <OnboardingCard onConnect={...} />
-    ) : (
-      <HeroCard state={heroState} member={heroMember} now={now} onTap={...} />
-    )}
-    <TodayList events={today} members={family?.members ?? []} excludeId={heroEventId} onSelect={...} />
-    <ComingUp events={comingUp} members={family?.members ?? []} onSelect={...} />
-    <FloatingAddButton onTap={...} /> {/* existing pattern; re-use the calendar module's FAB component if one exists; otherwise leave a placeholder and add a follow-up note */}
+    <DashboardHeader familyName={familyName} now={now} />
+    <MemberChipRow members={members} focusedId={focusedMemberId} onFocusChange={setFocusedMemberId} />
+    <HeroCard state={heroState} member={focusedMember} now={now} onTap={...} />
+    <TodayList events={today} members={members} excludeId={heroEventId} onSelect={...} />
+    <ComingUp events={comingUp} members={members} onSelect={...} />
+    <AddEventButton onClick={() => setIsAddOpen(true)} />
   </div>
 );
 ```
 
-The bottom inset (`pb-[calc(env(safe-area-inset-bottom)+72px)]`) reserves space for the persistent bottom nav (hard prerequisite story). Until that ships, the spacing is harmless.
+The bottom inset (`pb-[calc(env(safe-area-inset-bottom)+72px)]`) reserves space for the persistent bottom nav. Because nav is a prerequisite, this spacing should be tuned against the real nav implementation, not treated as hypothetical.
 
 `now` should be created once at top of component and passed down — do not create new `Date()` in children. Recompute every 30s via the same mechanism `useHeroState` uses (export `useNow` helper from `use-hero-state.ts`, or co-locate).
 
-The "+" floating action button: **check whether the calendar module already exports a reusable FAB**. If yes, reuse it. If not, leave a minimal `aria-label="Add event"` button positioned with `fixed bottom-[calc(env(safe-area-inset-bottom)+88px)] right-4` and add a `// TODO(home-dashboard): unify with calendar FAB` comment — this can be addressed in the visual identity refinement story.
+The "+" floating action button: reuse the existing `AddEventButton` from calendar rather than creating a dashboard-only FAB.
 
 - [ ] **Step 1: Write integration tests**
-  - On mobile (mock `useIsMobile() === true`): renders DashboardHeader, MemberChipRow, HeroCard, TodayList; does **not** render the legacy 2-column grid.
-  - On non-mobile: renders the legacy 2-column grid; does not render the new dashboard.
-  - When Google Calendar is not connected: renders OnboardingCard in place of HeroCard.
+  - With mobile shell conditions satisfied, renders DashboardHeader, MemberChipRow, HeroCard, TodayList, and ComingUp from seeded data.
+  - With no visible events, renders the calm empty hero state instead of any Google onboarding CTA.
   - Member-chip focus filters TodayList rows.
+  - Tapping "+" opens the reused add-event modal flow.
 - [ ] **Step 2: Verify failures**
 - [ ] **Step 3: Implement the gating + composition**
 - [ ] **Step 4: Verify all tests pass**
@@ -515,7 +494,7 @@ The "+" floating action button: **check whether the calendar module already expo
 
 ---
 
-## Task 13 — Reduced-motion + a11y verification
+## Task 12 — Reduced-motion + a11y verification
 
 **Files:**
 - Modify: `src/index.css` (only if a new keyframe was added in Task 7)
@@ -525,7 +504,6 @@ Confirm the breathing pulse (Task 7) and the empty-state breathing fade (if impl
 
 A11y sweep:
 - All buttons have accessible names (chips, hero card, list rows, FAB)
-- Sync error pill has `role="status"` and `aria-live="polite"`
 - Hero `<section aria-label>` reflects state
 
 Run:
@@ -540,7 +518,7 @@ npm run test -- --run
 
 ---
 
-## Task 14 — E2E spec
+## Task 13 — E2E spec
 
 **Files:**
 - Create: `e2e/mobile-home-dashboard.spec.ts`
@@ -561,7 +539,7 @@ Cover:
 
 ---
 
-## Task 15 — PR
+## Task 14 — PR
 
 - [ ] Push branch: `git push -u origin feat/home-dashboard-redesign`
 - [ ] Open PR against FE `main`
@@ -576,34 +554,35 @@ Cover:
 
 Before requesting review, confirm each spec acceptance criterion:
 
-- [ ] Replaces the 2-column module grid at the home route on mobile breakpoints (≤768px) — Task 12
+- [ ] Replaces the 2-column module grid as the mobile home surface on breakpoints ≤768px — Task 11
+- [ ] Integrates with the current FE app shell as the mobile `activeModule === null` surface; desktop/non-mobile behavior unchanged — Task 11
 - [ ] Hero renders the correct state across all five cases — Tasks 1, 7
 - [ ] Hero transitions live as time crosses event boundaries — Task 4
-- [ ] Member-chip focus filters Hero, Today list, and Coming-up consistently — Tasks 3, 12
+- [ ] Member-chip focus filters Hero, Today list, and Coming-up consistently — Tasks 3, 11
 - [ ] All-day events pin at the top of Today list; ALL_DAY_ONLY hero state correct — Tasks 1, 8
 - [ ] Coming-up renders 0–3 events; region omitted when empty — Tasks 3, 9
-- [ ] "+" opens event-create sheet pre-filled — Task 12
-- [ ] Pull-to-refresh + sync indicator + error pill — Task 5 (component); wiring sync triggers in Task 12
-- [ ] First-time onboarding hero card — Tasks 10, 12
+- [ ] "+" opens event-create sheet pre-filled — Task 11
+- [ ] Native and Google-synced events share the same dashboard states; no dashboard-owned Google onboarding/sync UI added — Tasks 3, 11
 - [ ] No new design tokens — verified across all tasks
-- [ ] Motion uses three-duration / single-easing — Tasks 6, 7, 13
-- [ ] `prefers-reduced-motion` respected — Task 13
+- [ ] Motion uses three-duration / single-easing — Tasks 6, 7, 12
+- [ ] `prefers-reduced-motion` respected — Task 12
 - [ ] All touch targets ≥44px — Tasks 6, 7, 8, 9
-- [ ] Layout 320–768px without horizontal overflow — Task 14
+- [ ] Layout 320–768px without horizontal overflow — Task 13
 - [ ] Dashboard and calendar tab not confusable in screenshots — visual review during PR
 - [ ] Existing query reused — Task 3
-- [ ] Hero recompute does not trigger today-list re-render — Tasks 4, 12 (memoization)
+- [ ] Hero recompute does not trigger today-list re-render — Tasks 4, 11 (memoization)
 
 ---
 
 ## Notes for the implementer
 
 - **Don't introduce new tokens.** If you find yourself wanting a custom color, opacity, or radius value, stop and check the existing scale.
-- **Don't subscribe to global state from leaf components.** Hero, list, coming-up, onboarding, header, chip-row are all pure props-in. Subscriptions live in `home-dashboard.tsx` and the dashboard-specific hooks.
+- **Don't subscribe to global state from leaf components.** Hero, list, coming-up, header, and chip-row are all pure props-in. Subscriptions live in `home-dashboard.tsx` and the dashboard-specific hooks.
 - **Prefer `useMemo` over `useEffect` + `useState`** for derived values from events.
 - **Watch the date pitfalls** documented in `frontend/CLAUDE.md` — never `new Date("YYYY-MM-DD")`, never `toISOString()` for display.
 - **Don't add "missed event" or "overdue" UI.** The dashboard is moment-aware, not status-aware (spec §11).
 - **Don't add notifications, badges, or weather.** Out of scope (spec §11).
+- **Don't invent a family-level Google sync model here.** Connection and manual sync stay in member settings for this story.
 - **The `now` clock is one source.** Don't create new `Date()` in multiple components — drift will produce subtle inconsistencies between hero and list ordering.
 
 ---

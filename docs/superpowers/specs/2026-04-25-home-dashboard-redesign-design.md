@@ -36,7 +36,7 @@ This concept was selected over two alternatives:
 
 ### 4.1 Regions, top to bottom
 
-1. **Header line** — greeting (time-of-day–aware) + date. Single line. Sync-status indicator at the right end.
+1. **Header line** — greeting (time-of-day-aware) + date. Single line.
 2. **Member-chip row** — circular avatars, single-line, horizontally scrollable if needed. Single-focus filter.
 3. **Hero card** — the announcement. Five possible states (§4.2).
 4. **Rest of today** — compressed list of today's remaining events excluding the hero's subject. All-day events pin at the top of this list.
@@ -68,20 +68,24 @@ Recompute triggers: data change (TanStack Query), 30-second interval, `visibilit
 - **Coming-up range:** events with `start ∈ (endOfToday, endOfToday+2)`, sorted by start, capped at 3.
 - **Multi-day events:** appear in today's list when today is in `[start, end]`; rendered with a span affix (`→ ends Sat` / `from Mon →`). Same in Coming-up if start falls in range.
 - **Member-chip focus:** filters Hero, Today list, and Coming-up consistently.
-- **Sync status:** subscribes to existing Google Calendar sync state.
+- **No new data source orchestration:** the dashboard consumes the existing events query only. It does not own Google connection management, sync triggering, or global sync-state aggregation.
 
-### 4.4 Empty, loading, sync, and onboarding states
+### 4.4 Empty and loading states
 
 - **No events today, no events in next 48h:** Hero = "All clear today" with a soft glyph. Rest-of-today empty. Coming-up omitted. Empty space is part of the calm — do not collapse the layout.
 - **Initial load:** skeleton hero + chip row + 2 rows. No full-screen spinner.
-- **Background sync:** 1px progress thread along the bottom of the header line, subtle. No layout shift.
-- **Sync error:** small inline pill at the right end of the header ("Sync paused"); tap to retry. Does not push down content.
-- **Pull-to-refresh:** standard iOS-style indicator triggers manual sync.
-- **First-time user (no Google Calendar connected):** hero is replaced by a quiet onboarding card ("Connect Google Calendar to see your schedule here") with a single primary action. Member chips and "+" still render.
+
+### 4.5 Google integration semantics
+
+- **Event-first, not Google-first.** Native events and Google-synced events render through the same dashboard states. A valid schedule must never be replaced by a "connect Google" prompt.
+- **No dashboard-specific onboarding in MVP.** If the visible scope has no events, the dashboard shows the normal calm empty state (`ALL_CLEAR_TODAY` or `REST_OF_DAY_CLEAR`) regardless of Google connection status.
+- **Google connection is member-scoped today.** The current FE app models Google connection/sync per member, not globally. This story does not invent a family-level aggregate state.
+- **Connection and manual sync stay in settings.** Connect, disconnect, calendar selection, and "Sync Now" remain in the existing member settings surfaces for this story.
+- **No dashboard-level sync pill or pull-to-refresh in MVP.** Those require a separately defined member/family sync model and are intentionally deferred.
 
 ## 5. Visual vocabulary
 
-The whole surface sits inside existing tokens — cream/purple, Nunito, member colors. No new design tokens introduced. "Premium calm" comes from restraint and rhythm, not new ingredients.
+The whole surface sits inside existing tokens — cream/purple, Nunito, member colors. No new color, spacing, type, or shadow tokens are introduced. "Premium calm" comes from restraint and rhythm, not new ingredients.
 
 ### 5.1 Surface & layering
 
@@ -164,7 +168,6 @@ Under `prefers-reduced-motion`:
 | Element | Tap | Notes |
 |---|---|---|
 | Header | — | Non-interactive |
-| Sync-error pill | Retry sync | Pill only renders on failure |
 | Member chip (unselected) | Set focus | Single-focus only |
 | Member chip (currently focused) | Clear focus | Returns to "everyone" |
 | Hero card (event states) | Open event-detail sheet | Same sheet as calendar tab |
@@ -173,20 +176,18 @@ Under `prefers-reduced-motion`:
 | All-day pinned strip row | Open event-detail sheet | — |
 | Coming-up row | Open event-detail sheet | Does *not* navigate to calendar tab — consistent with today rows |
 | Floating "+" | Open event-create sheet | Pre-fill: today, current focused member if any, next 30-min slot |
-| Pull-to-refresh | Manual sync | Standard pull indicator |
 
-## 8. Routing & navigation
+## 8. App-shell integration
 
-- Dashboard is the route at `/` on mobile breakpoints (≤768px).
-- Assumes the persistent bottom nav (separate story, *hard prerequisite*) is rendered around it. Dashboard respects the bottom-nav safe-area inset but does not render the nav.
-- Tab switches via bottom nav do not animate dashboard content.
-- Deep-linking into an event (e.g., from a future notification) opens the event-detail sheet on top of the current route. Dashboard needs no special deep-link entry.
+- In the current FE app, the dashboard is the **mobile home surface** rendered when `activeModule === null`. This story does not introduce route-based navigation.
+- On desktop / non-mobile breakpoints, the current app-shell behavior remains unchanged: `activeModule === null` still redirects to Calendar.
+- Persistent bottom nav is a separate story and a real prerequisite. This dashboard assumes nav-based module switching already exists in the mobile shell; it does not render the nav itself.
+- Event detail continues to open through the existing in-app modal / sheet patterns. No deep-link or router changes are in scope here.
 
 ## 9. Accessibility
 
 - Member chips: `aria-label="Focus on <Name>'s events"`, `aria-pressed` for selected state.
 - Hero card: `<section>` with `aria-label` reflecting state ("Right now: Soccer practice, ends in 22 minutes").
-- Sync-error pill: `role="status"`, polite live region.
 - Reduced motion respected as specified in §6.2.
 - All touch targets ≥44px hit area; chips 36px visual + 8px halo. All rows ≥44px tall.
 - Member identity is never carried by color alone — chip avatars carry initials; today rows expose the member name via the dot's accessible label.
@@ -209,29 +210,31 @@ These belong to other stories or are explicitly deferred:
 - **Drag-to-create on dashboard** — that pattern lives in the calendar tab.
 - **Tasks / chores / meals / weather** — none of these data sources exist; dashboard does not stub them.
 - **Notifications / status badges / overdue UI** — dashboard is moment-aware, not status-aware.
-- **Full onboarding redesign** — covered minimally here (one connect-Google card); broader onboarding lives in `sidebar-settings-onboarding-mobile`.
+- **Dashboard-owned Google connect / sync UI** — stays in settings/member profile for MVP.
+- **Full onboarding redesign** — broader onboarding lives in `sidebar-settings-onboarding-mobile`.
 
 ## 12. Dependencies
 
 | Type | Item | Effect |
 |---|---|---|
-| **Hard prerequisite** | `mobile-ux/persistent-bottom-nav.md` | Must ship before or alongside this story. Dashboard layout assumes nav is present. |
+| **Hard prerequisite** | `mobile-ux/persistent-bottom-nav.md` | Must ship before this story is merged to production. The dashboard removes launcher tiles and assumes nav-based module switching already exists. |
 | **Soft dependency** | `mobile-ux/visual-identity-refinement.md` | If running in parallel, dashboard inherits any spacing/type tightening. No coordination needed. |
-| **Soft dependency** | Google Calendar incremental sync (in-flight epic) | Sync-thread / error-pill behavior is cleaner with incremental, but works against full-poll sync too. |
+| **Soft dependency** | Google Calendar incremental sync (in-flight epic) | Improves data freshness over time, but the dashboard can ship against the existing events query without adding sync UI. |
 
 ## 13. Acceptance criteria
 
 ### Functional
 
-- [ ] Replaces the 2-column module grid at the home route on mobile breakpoints (≤768px).
+- [ ] Replaces the 2-column module grid as the mobile home surface on breakpoints ≤768px.
+- [ ] Integrates with the current FE app shell as the mobile `activeModule === null` surface; desktop/non-mobile behavior stays unchanged.
 - [ ] Hero renders the correct state across all five cases (RIGHT_NOW, UP_NEXT, ALL_DAY_ONLY, REST_OF_DAY_CLEAR, ALL_CLEAR_TODAY).
 - [ ] Hero transitions live as time crosses event boundaries, verified by 30-second poll + `visibilitychange` recompute.
 - [ ] Member-chip focus filters Hero, Today list, and Coming-up consistently. Single-focus only.
 - [ ] All-day events pin at the top of Today list. ALL_DAY_ONLY hero state is reached only when there are no timed events today.
 - [ ] Coming-up renders 0–3 events in `(endOfToday, endOfToday+2)`; region omitted when empty.
 - [ ] "+" opens the event-create sheet pre-filled with today's date and the currently focused member, if any.
-- [ ] Pull-to-refresh triggers sync; sync thread renders during sync; error pill renders on failure.
-- [ ] First-time users with no Google Calendar connected see the onboarding hero card.
+- [ ] Native and Google-synced events are rendered through the same dashboard states; a missing Google connection never replaces a valid schedule or calm empty state.
+- [ ] The dashboard does not add dashboard-owned Google connect/sync UI in MVP; connection management remains in settings/member profile.
 
 ### Quality
 
