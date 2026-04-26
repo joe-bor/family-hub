@@ -2,10 +2,10 @@
 id: mobile-home-dashboard-redesign
 title: Home dashboard redesign
 epic: mobile-ux
-status: planned
+status: blocked
 priority: P2
 created: 2026-04-23
-updated: 2026-04-25
+updated: 2026-04-26
 issues: []
 prs: []
 spec: ../../../superpowers/specs/2026-04-25-home-dashboard-redesign-design.md
@@ -26,22 +26,23 @@ Design concept: **"The Now"** — a moment-aware home where the hero announces w
 
 ## Dependencies
 
-- **Hard prerequisite:** `persistent-bottom-nav.md`. Dashboard assumes the nav is present.
+- **Hard prerequisite:** `persistent-bottom-nav.md`. This story should not merge to production until mobile nav-based module switching is already in place.
 - **Soft:** `visual-identity-refinement.md` (parallel work inherits for free).
 - **Soft:** Google Calendar incremental sync epic.
 
 ## Acceptance Criteria
 
 ### Functional
-- [ ] Replaces the 2-column module grid at the home route on mobile breakpoints (≤768px).
+- [ ] Replaces the 2-column module grid as the mobile home surface on breakpoints ≤768px.
+- [ ] Integrates with the current FE app shell as the mobile `activeModule === null` surface; desktop/non-mobile behavior remains unchanged.
 - [ ] Hero renders correctly across all five states (RIGHT_NOW, UP_NEXT, ALL_DAY_ONLY, REST_OF_DAY_CLEAR, ALL_CLEAR_TODAY).
 - [ ] Hero transitions live as time crosses event boundaries (30-second poll + visibility-change recompute).
 - [ ] Member-chip focus filters Hero, Today list, and Coming-up consistently; single-focus only.
 - [ ] All-day events pin at the top of Today list.
 - [ ] Coming-up renders 0–3 events in `(endOfToday, endOfToday+2)`; region omitted when empty.
 - [ ] "+" opens event-create sheet pre-filled with today + focused member.
-- [ ] Pull-to-refresh triggers sync; sync thread + error pill render appropriately.
-- [ ] First-time users with no Google Calendar connected see the onboarding hero card.
+- [ ] Native and Google-synced events are rendered through the same dashboard states; lack of Google connection never replaces a valid schedule or calm empty state.
+- [ ] The dashboard does not add dashboard-owned Google connect/sync UI in MVP; connection management remains in settings/member profile.
 
 ### Quality
 - [ ] No new design tokens introduced.
@@ -65,3 +66,4 @@ These were split out during brainstorming and are not part of this story:
 ## Notes
 
 Detailed design, IA, motion vocabulary, interaction model, and out-of-scope items live in the spec linked in frontmatter.
+This story is blocked pending `persistent-bottom-nav`; once nav ships, dashboard implementation can proceed as a separate FE story.
