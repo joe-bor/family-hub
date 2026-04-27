@@ -26,10 +26,22 @@ Sub-repos follow the same harness-agnostic pattern as this root repo: `AGENTS.md
 
 ## When picking up a task
 
-1. `gh issue view <N> --repo <repo>` → find the `Story:` URL at the top of the body
-2. Read that story file for context, acceptance criteria, and linked design doc
-3. Execute the task; open PR with `Closes #<N>`
-4. If the story's overall state changes, update only its `status:` and `updated:` in frontmatter. Treat `roadmap.md` as an index, not a second status system.
+1. `gh issue view <N> --repo <repo>` → treat the Issue body as the execution entrypoint
+2. Read the `Story:`, `Spec:`, and `Plan:` links from the top of the Issue body
+3. Restate the non-negotiable implementation contract before writing code; if any linked doc is inaccessible, stop and report the blocker before implementing
+4. Execute the task in the owning delivery repo; open PR with `Closes #<N>`
+5. If the story's overall state changes, update only its `status:` and `updated:` in frontmatter. Treat `roadmap.md` as an index, not a second status system.
+
+## Execution issue contract
+
+Implementation Issues in FE/BE should include:
+
+- `Story:` link
+- `Spec:` link
+- `Plan:` link
+- a short execution contract with the non-negotiable requirements that must not drift
+
+The root docs remain canonical. The Issue body is a portable execution brief so cloud or remote agents can still implement correctly if cross-repo context is thinner than a local terminal session.
 
 ## Status ownership
 
@@ -56,12 +68,23 @@ Use this operating loop:
    - `docs/product/prd.md` for product intent
    - `docs/product/roadmap.md` for shipped / active / next
    - `docs/product/backlog/<epic>/<story>.md` for the specific unit of work
-2. Open or update FE/BE Issues from the story-task template, keeping the `Story:` URL at the top of the body.
-3. Add filtering labels such as `family-hub`, `priority:*`, and `type:*`; let the issue auto-add into GitHub Project `Family Hub`.
-4. Do implementation only inside the delivery repo that owns the work.
-5. Move issue state in GitHub Project as work progresses.
-6. Update the story file only when the story itself changes state in a meaningful way, or when linked Issues / PRs need to be recorded.
-7. Treat `docs/prompts/_archive/` and Claude `MEMORY.md` as historical or migration context only, never as the live source of product truth.
+2. Write or refine the spec and implementation plan in `docs/superpowers/` before opening implementation Issues when the work is non-trivial.
+3. Open or update FE/BE Issues from the story-task template, keeping `Story:`, `Spec:`, and `Plan:` links at the top of the body.
+4. Include a concise execution contract in the Issue body for the owning repo.
+5. Add filtering labels such as `family-hub`, `priority:*`, and `type:*`; let the issue auto-add into GitHub Project `Family Hub`.
+6. Do implementation only inside the delivery repo that owns the work. Cloud, local terminal, or other harnesses should start from the Issue, read the linked docs, restate the contract, then continue without waiting unless blocked.
+7. Review implementation PRs against the Issue plus linked Story / Spec / Plan before merge. Root review checks contract conformance first; repo-local review/debug can follow if needed.
+8. Move issue state in GitHub Project as work progresses.
+9. Update the story file only when the story itself changes state in a meaningful way, or when linked Issues / PRs need to be recorded.
+10. Treat `docs/prompts/_archive/` and Claude `MEMORY.md` as historical or migration context only, never as the live source of product truth.
+
+## Cloud execution notes
+
+- Codex Cloud or other remote agents should be treated as Issue-first implementers, not as product planners.
+- Remote agents must read the full Issue body and linked docs before coding.
+- Ask remote agents to summarize the contract in their work log, then continue immediately. Do not require a human approval checkpoint unless the task is blocked.
+- Before a PR is opened, require a final checklist mapping each non-negotiable requirement to code and tests.
+- If root planning docs are private, either make them accessible to the execution environment or copy the critical non-negotiables into the Issue body.
 
 ## What we do here
 
