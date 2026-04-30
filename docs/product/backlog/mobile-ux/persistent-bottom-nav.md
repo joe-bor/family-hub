@@ -2,10 +2,10 @@
 id: mobile-persistent-bottom-nav
 title: Persistent bottom navigation
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-04-23
-updated: 2026-04-26
+updated: 2026-04-30
 issues: []
 prs: []
 ---

@@ -2,10 +2,10 @@
 id: mobile-home-dashboard-redesign
 title: Home dashboard redesign
 epic: mobile-ux
-status: blocked
+status: planned
 priority: P2
 created: 2026-04-23
-updated: 2026-04-26
+updated: 2026-04-30
 issues: []
 prs: []
 spec: ../../../superpowers/specs/2026-04-25-home-dashboard-redesign-design.md
