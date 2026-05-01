@@ -335,7 +335,6 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 ❌ **Location/Map Integration** - Future enhancement  
 ❌ **Voice Control** - Future enhancement  
 ❌ **Offline Mode** - Requires active internet connection  
-❌ **Task/Todo Management** — deferred post-MVP  
 ❌ **WebSocket real-time sync** — polling via TanStack Query is sufficient  
 ❌ **Two-way Google Calendar sync** — Phase 1 is read-only; write-back is a future epic  
 

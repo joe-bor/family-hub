@@ -2,10 +2,10 @@
 id: mobile-home-dashboard-redesign
 title: Home dashboard redesign
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-04-23
-updated: 2026-04-30
+updated: 2026-05-01
 issues: []
 prs: []
 spec: ../../../superpowers/specs/2026-04-25-home-dashboard-redesign-design.md
@@ -66,4 +66,4 @@ These were split out during brainstorming and are not part of this story:
 ## Notes
 
 Detailed design, IA, motion vocabulary, interaction model, and out-of-scope items live in the spec linked in frontmatter.
-This story is blocked pending `persistent-bottom-nav`; once nav ships, dashboard implementation can proceed as a separate FE story.
+This story shipped on FE after `persistent-bottom-nav` landed. Follow-up work remains separate for child-mode home and touchscreen / tablet home.

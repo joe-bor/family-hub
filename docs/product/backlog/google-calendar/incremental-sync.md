@@ -2,10 +2,10 @@
 id: google-cal-incremental-sync
 title: Incremental sync with sync tokens + scheduler
 epic: google-calendar-read-only
-status: in-progress
+status: planned
 priority: P1
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-01
 design_doc: docs/google-calendar-integration-design.md
 issues: []
 prs: []
@@ -35,4 +35,4 @@ See [Google Calendar integration design](../../../google-calendar-integration-de
 
 ## Notes
 
-Design doc describes the sync token lifecycle; confirm DB schema matches before implementation. Claude `MEMORY.md` references this as "PR 5 incremental sync and scheduler next."
+Design doc describes the sync token lifecycle; confirm DB schema matches before implementation. This story is intentionally postponed while current product focus stays on mobile UX and module foundations.

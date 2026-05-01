@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-04-23
+Last updated: 2026-05-01
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -20,7 +20,30 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - Multi-day events (endDate) — same · BE #18, #19, FE #111
 - Recurring events (RRULE + expansion) — [recurring events design](../recurring-events-design.md) · BE #20, #21, FE #117
 
+### Mobile shell + home
+
+- [Persistent bottom navigation](backlog/mobile-ux/persistent-bottom-nav.md) · FE #148, PR #152
+- [Home dashboard redesign](backlog/mobile-ux/home-dashboard-redesign.md) · FE #149, PR #154
+
 ## Active epics
+
+### Mobile UX polish
+
+Current story:
+- [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md)
+
+Remaining stories in this epic:
+- [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md)
+- [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
+- [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
+- [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
+- [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
+
+## Planned epics
+
+### Module foundations
+
+- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
 
 ### Google Calendar read-only sync
 
@@ -30,27 +53,14 @@ Completed in this epic:
 - Full sync — same · BE #24, #25
 
 Remaining story:
-- [Incremental sync + scheduler](backlog/google-calendar/incremental-sync.md)
-
-## Planned epics
+- [Incremental sync + scheduler](backlog/google-calendar/incremental-sync.md) — postponed for now while FE focus stays on mobile UX + module foundations
 
 ### Google Calendar write-back
 
 - [Write-back (create/edit/delete to Google)](backlog/google-calendar/write-back.md) — [Google Cal integration design](../google-calendar-integration-design.md)
 
-### Mobile UX polish
-
-- [Home dashboard redesign](backlog/mobile-ux/home-dashboard-redesign.md)
-- [Persistent bottom navigation](backlog/mobile-ux/persistent-bottom-nav.md)
-- [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md)
-- [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md)
-- [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
-- [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
-- [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
-- [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
-
 ## Deferred
 
-### Tasks / todos
+### Lower-priority PRD items
 
-Deferred post-MVP per PRD v2.0 realignment. Will be planned when the Google Calendar epic completes.
+Deferred post-MVP per PRD v2.0 realignment. Items can move back into planned work as dedicated backlog stories are created.

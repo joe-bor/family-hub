@@ -2,10 +2,10 @@
 id: mobile-visual-identity-refinement
 title: Visual identity refinement pass
 epic: mobile-ux
-status: planned
+status: in-progress
 priority: P2
 created: 2026-04-23
-updated: 2026-04-23
+updated: 2026-05-01
 issues: []
 prs: []
 ---
