@@ -23,6 +23,24 @@ After `mobile-ux/visual-identity-refinement.md`, the next product focus is turni
 - Decide the delivery order for the non-calendar modules after visual polish
 - Create the first follow-on implementation stories with clear FE / BE ownership
 
+## MVP module definitions
+
+- `Chores` — assigned family responsibilities with completion and due-date semantics. This is the MVP task-management surface and the home of the PRD's historical `Tasks` requirements.
+- `Lists` — shared ad-hoc checklists for things like shopping, packing, or prep work. Lists are lighter-weight than chores and are not person-assigned by default.
+- `Meals` — week-ahead meal planning for family coordination. Start with planning, not recipes, pantry management, or grocery automation.
+- `Photos` — family photo library / screensaver-management surface. Do not assume a final storage provider or Google Photos integration yet.
+
+## Recommended delivery order
+
+1. `Chores` core loop
+2. `Lists` simple shared checklists
+3. `Meals` week-ahead planning
+4. `Photos` library / screensaver administration
+
+## Follow-on implementation stories
+
+- [Chores core loop (real data, create, complete)](./chores-core-loop.md)
+
 ## Acceptance Criteria
 
 - [ ] Product docs explicitly define what `Lists`, `Chores`, `Meals`, and `Photos` each mean in MVP
@@ -35,3 +53,4 @@ After `mobile-ux/visual-identity-refinement.md`, the next product focus is turni
 
 - Keep this epic sliced by module. Do not turn `Lists`, `Chores`, `Meals`, and `Photos` into one giant implementation issue.
 - `Chores` is the shortest path to a real module because the PRD already contains task-management requirements that can likely anchor its MVP.
+- Remaining mobile-UX polish stories do not block this epic once `visual-identity-refinement.md` is complete.

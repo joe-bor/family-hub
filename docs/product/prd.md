@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD)
 ## Family Hub — Family Touchscreen Calendar
 
-**Document Version:** 2.0
-**Last Updated:** 2026-04-23
+**Document Version:** 2.1
+**Last Updated:** 2026-05-01
 **Project Owner:** Joe
 **Document Status:** Living document — see `docs/product/roadmap.md` for current phase.
 
@@ -92,7 +92,7 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 - Daily active interactions with touchscreen (target: 10+ per day)
 - Mobile app opens when away from home (target: 3+ per day)
 - Events created/modified per week (target: 15+)
-- Tasks completed via interface (target: 20+ per week)
+- Chores/tasks completed via interface (target: 20+ per week)
 
 **Outcome Metrics:**
 - Time spent coordinating schedules (target: reduce by 50%)
@@ -284,7 +284,7 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 **Core Calendar Functionality:**
 ✅ Week/Month/Day view switching  
-✅ Google Calendar integration (read/write via API)  
+✅ Google Calendar integration (read-only sync shipped; write-back is a future epic)  
 ✅ Add/Edit/Delete events from touchscreen  
 ✅ Color-coded events per family member  
 ✅ Profile-based filtering (show/hide specific people)  
@@ -337,6 +337,19 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 ❌ **Offline Mode** - Requires active internet connection  
 ❌ **WebSocket real-time sync** — polling via TanStack Query is sufficient  
 ❌ **Two-way Google Calendar sync** — Phase 1 is read-only; write-back is a future epic  
+
+### Module Vocabulary Alignment (2026-05-01)
+
+The current product shell exposes six primary mobile destinations: `Home`, `Calendar`, `Lists`, `Chores`, `Meals`, and `Photos`.
+
+To align this PRD with the shipped shell:
+
+- Historical references to a top-level `Tasks` surface should be read as `Chores` for MVP planning and implementation.
+- `Chores` is the assigned-responsibility module: family work with assignees, completion state, and optional due-date semantics.
+- `Lists` is a separate, lighter checklist surface for shared ad-hoc lists such as shopping, packing, or prep.
+- `Meals` and `Photos` remain separate future-facing modules; they should not be collapsed into `Chores` or `Lists` for naming convenience.
+
+Roadmap and backlog determine delivery order. This section only settles the product vocabulary.
 
 ---
 
@@ -563,18 +576,18 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 ---
 
-### 7.3 Task Management
+### 7.3 Chores (Task Management)
 
-#### Feature 7.3.1: Task List View
+#### Feature 7.3.1: Chores List View
 **Priority:** P0 (Must Have)  
-**User Story:** As a parent, I want to see all incomplete tasks so important items don't get forgotten
+**User Story:** As a parent, I want to see all incomplete chores/tasks so important items don't get forgotten
 
 **Requirements:**
 
 **Layout:**
-- Separate "Tasks" tab/section (not embedded in calendar initially for MVP)
-- Access via navigation: "Calendar" / "Tasks" toggle or tabs
-- Task List displays:
+- Separate `Chores` tab/section (not embedded in calendar initially for MVP)
+- Access via navigation from the mobile shell's primary tabs
+- Chores list displays:
   - All incomplete tasks (default view)
   - Option to toggle "Show Completed" (grayed out, strikethrough)
   - Grouped by assigned person (collapsible sections)
@@ -602,14 +615,14 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 ---
 
-#### Feature 7.3.2: Create Task
+#### Feature 7.3.2: Create Chore
 **Priority:** P0 (Must Have)  
-**User Story:** As a parent, I want to create tasks with due dates so responsibilities are clear
+**User Story:** As a parent, I want to create chores/tasks with due dates so responsibilities are clear
 
 **Requirements:**
 
 **Trigger:**
-- "+" button in Tasks view → Opens "New Task" modal
+- "+" button in Chores view → Opens "New Chore" modal
 
 **Task Form Fields:**
 1. **Task Title** (required)
@@ -641,9 +654,9 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 ---
 
-#### Feature 7.3.3: Complete/Uncomplete Task
+#### Feature 7.3.3: Complete/Uncomplete Chore
 **Priority:** P0 (Must Have)  
-**User Story:** As a child, I want to check off completed tasks so I feel accomplished
+**User Story:** As a child, I want to check off completed chores/tasks so I feel accomplished
 
 **Requirements:**
 
@@ -680,15 +693,15 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 ### 7.4 Google Calendar Integration
 
-#### Feature 7.4.1: Two-Way Sync with Google Calendar
+#### Feature 7.4.1: Read-Only Sync with Google Calendar
 **Priority:** P0 (Must Have)  
-**User Story:** As a parent, I want events to sync with Google Calendar so my phone calendar stays updated
+**User Story:** As a parent, I want events from Google Calendar to appear in Family Hub so my family view stays current without duplicate entry
 
 **Requirements:**
 
 **Initial Setup:**
 - Google Calendar API OAuth authentication
-- User grants permission for calendar read/write access
+- User grants permission for calendar read access
 - Select which Google Calendar to sync (if multiple exist)
   - **Default:** Primary calendar
   - **Option:** Select specific calendar or create new "Family Calendar"
@@ -696,40 +709,39 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 **Sync Behavior:**
 - **From Google Calendar → App:**
+  - Full sync imports selected Google Calendar events into Family Hub
   - Poll Google Calendar API every 5 minutes for changes
   - Detect: New events, updated events, deleted events
   - Update local cache with changes
-  - Push updates to all connected clients via WebSocket
-- **From App → Google Calendar:**
-  - When event created/edited/deleted in app, immediately call Google Calendar API
-  - Update Google Calendar in real-time (no batch processing for MVP)
-  - Handle API errors gracefully (retry logic, user notification if sync fails)
+  - Incremental sync with sync tokens is the remaining read-only follow-up story
+- **From App → Google Calendar:** Out of scope in Phase 1
+  - Family Hub-created event changes do not write back to Google yet
+  - Write-back is handled by the separate future roadmap epic once the read-only loop is stable
 
-**Conflict Resolution:**
-- If event modified in both places since last sync:
-  - **Strategy:** Last-write-wins (Google Calendar is source of truth)
-  - Show user notification: "Event updated in Google Calendar. Reloading."
-  - Option to view "conflict history" in advanced settings (post-MVP)
+**Source-of-Truth Rule:**
+- Google Calendar is the source of truth for synced Google events in Phase 1
+- Synced Google events are read-only in Family Hub until write-back ships
+- If read-only sync encounters an invalid incremental state later, recover by re-running a fresh sync
 
 **Error Handling:**
 - API rate limits → Exponential backoff retry
-- Network errors → Queue changes, sync when online
+- Network errors → Retry on next sync cycle
 - Auth token expired → Re-authenticate flow (background if possible)
 - Sync failures → Show warning banner: "Calendar sync issues. Tap to resolve."
 
 **Acceptance Criteria:**
-- [ ] Events created in app appear in Google Calendar within 30 seconds
 - [ ] Events created in Google Calendar appear in app within 5 minutes (next poll cycle)
-- [ ] Event edits sync bidirectionally within 5 minutes
+- [ ] Event edits made in Google Calendar appear in Family Hub within 5 minutes
 - [ ] Deleted events sync within 5 minutes
 - [ ] Multi-person events store assignees in Google Calendar (custom field or description)
 - [ ] Sync status indicator visible (last sync time, sync in progress)
-- [ ] No data loss during sync conflicts (Google Calendar wins, app updates)
+- [ ] Synced Google events are clearly protected from local edit/delete actions until write-back exists
+- [ ] No data loss during sync refresh or token-recovery flows
 
 ---
 
 #### Feature 7.4.2: Profile Assignment Storage
-**Priority:** P0 (Must Have)  
+**Priority:** P1 (Required before write-back ships)  
 **User Story:** As a parent, I want multi-person events to retain their profile assignments when syncing with Google Calendar
 
 **Requirements:**
@@ -753,24 +765,24 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
    - Pros: Clean Google Calendar data, more robust
    - Cons: More complex, profile data doesn't sync to other devices without custom backend logic
 
-**MVP Approach:** Store in Description Field
-- When creating/editing event:
-  - Append `<!-- PROFILES: [1,2] -->` to description
-  - Hidden in most calendar views (HTML comment not rendered)
+**Planned Approach:** Store in Description Field
 - When reading events:
   - Parse description for profile metadata
   - Extract profile IDs
   - Render with appropriate colors
+- When the write-back epic lands:
+  - Append `<!-- PROFILES: [1,2] -->` to Family Hub-authored event descriptions
+  - Keep the metadata hidden in most calendar views (HTML comment not rendered)
 - If metadata missing/corrupted:
   - Default: Assign to all profiles (safe fallback)
   - Log warning for manual review
 
 **Acceptance Criteria:**
-- [ ] Profile assignments persist through Google Calendar sync
-- [ ] Multi-person events show correct colors after round-trip sync
+- [ ] Imported Google events with valid profile metadata retain their profile assignments in Family Hub
+- [ ] Multi-person events show correct colors after sync/import
 - [ ] Profile metadata doesn't interfere with Google Calendar mobile app
 - [ ] Invalid/missing metadata handled gracefully (default to all profiles)
-- [ ] Test: Create event in app → View in Google Calendar web → Edit in Google Calendar → Verify profiles retained
+- [ ] Write-back planning keeps this metadata contract intact when the separate write-back epic is implemented
 
 ---
 
@@ -785,14 +797,14 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 **Responsive Breakpoints:**
 - **Large (Desktop/Touchscreen):** 1024px+
   - Full week view with time grid
-  - Side-by-side calendar + task list
+  - Side-by-side calendar + supporting module context when relevant
   - Large touch targets optimized for touchscreen
 - **Medium (Tablet):** 768px - 1023px
   - Adjusted layout, still shows full week
-  - Stacked calendar and task list (tabs or scroll)
+  - Stacked calendar + supporting module context (tabs or scroll)
 - **Small (Mobile):** 320px - 767px
   - Default to day view (week view too cramped)
-  - Bottom navigation (calendar/tasks)
+  - Bottom navigation for primary module switching (`Home`, `Calendar`, `Lists`, `Chores`, `Meals`, `Photos`)
   - Optimized for thumb-friendly tapping
 
 **Touch Optimization:**
@@ -1138,6 +1150,8 @@ POST   /api/settings/google-calendar  - Configure Google Calendar integration
 
 **Primary Views:**
 
+**Current mobile shell note:** the shipped shell uses `Home`, `Calendar`, `Lists`, `Chores`, `Meals`, and `Photos` tabs. The view descriptions below focus on the primary calendar and chore/task surfaces, not the full shell map.
+
 1. **Calendar View (Default):**
    - Top Bar:
      - App title/logo (left)
@@ -1147,23 +1161,29 @@ POST   /api/settings/google-calendar  - Configure Google Calendar integration
    - Main Area:
      - Calendar grid (day/week/month based on selection)
      - Events rendered as colored blocks
-   - Bottom Bar (mobile):
+   - Bottom Bar (mobile shell):
+     - Home icon
      - Calendar icon (active)
-     - Tasks icon
-     - Settings icon
+     - Lists icon
+     - Chores icon
+     - Meals icon
+     - Photos icon
 
-2. **Tasks View:**
+2. **Chores View:**
    - Top Bar:
-     - "Tasks" title
-     - "+ Add Task" button (right)
+     - "Chores" title
+     - "+ Add Chore" button (right)
      - "Show Completed" toggle
    - Main Area:
-     - Task list grouped by profile
-     - Each task: checkbox, title, due date, assigned person
-   - Bottom Bar (mobile):
+     - Chore list grouped by profile
+     - Each chore: checkbox, title, due date, assigned person
+   - Bottom Bar (mobile shell):
+     - Home icon
      - Calendar icon
-     - Tasks icon (active)
-     - Settings icon
+     - Lists icon
+     - Chores icon (active)
+     - Meals icon
+     - Photos icon
 
 3. **Settings View (Future):**
    - Google Calendar sync status
@@ -1400,7 +1420,7 @@ Current epics (see roadmap for details):
 - **Google Calendar read-only sync**
 - **Google Calendar write-back**
 - **Mobile UX polish**
-- **Tasks/todos** (post-MVP)
+- **Module foundations** (`Chores`, `Lists`, `Meals`, `Photos`)
 
 ---
 
@@ -1587,6 +1607,7 @@ Current epics (see roadmap for details):
 |---------|------------|--------|----------------------------------|
 | 1.0     | 2024-12-11 | Joe    | Initial PRD draft                |
 | 2.0     | 2026-04-23 | Joe    | Realigned with shipped reality; moved phase plan to roadmap.md; added JWT/recurring/multi-day as shipped; deferred Tasks and WebSocket. |
+| 2.1     | 2026-05-01 | Joe    | Aligned PRD vocabulary with shell (`Chores` vs `Lists`), corrected Google Calendar read-only wording, and recorded module-language decisions. |
 
 ---
 

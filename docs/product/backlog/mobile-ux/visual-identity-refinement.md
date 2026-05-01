@@ -6,8 +6,11 @@ status: in-progress
 priority: P2
 created: 2026-04-23
 updated: 2026-05-01
-issues: []
+issues:
+  - FE #155
 prs: []
+spec: ../../../superpowers/specs/2026-05-01-visual-identity-refinement-design.md
+plan: ../../../superpowers/plans/2026-05-01-visual-identity-refinement.md
 ---
 
 ## Context

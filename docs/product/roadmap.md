@@ -32,6 +32,9 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 Current story:
 - [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md)
 
+Exit criterion for this phase:
+- Finish the visual refinement pass, then shift primary product work to module foundations. Remaining mobile-UX polish stories stay backlogged until at least the first real module lands.
+
 Remaining stories in this epic:
 - [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md)
 - [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
@@ -44,6 +47,12 @@ Remaining stories in this epic:
 ### Module foundations
 
 - [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
+
+Recommended order after visual polish:
+1. [Chores core loop](backlog/module-foundations/chores-core-loop.md) — first real module slice; fulfills the old PRD `Tasks` surface
+2. `Lists` — shared ad-hoc checklists, separate from chores
+3. `Meals` — simple week-ahead planning
+4. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
 
 ### Google Calendar read-only sync
 
