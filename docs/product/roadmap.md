@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -24,35 +24,34 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 
 - [Persistent bottom navigation](backlog/mobile-ux/persistent-bottom-nav.md) · FE #148, PR #152
 - [Home dashboard redesign](backlog/mobile-ux/home-dashboard-redesign.md) · FE #149, PR #154
+- [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md) · FE #155, PR #156
 
 ## Active epics
 
-### Mobile UX polish
+### Module foundations
 
 Current story:
-- [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md)
+- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
 
 Exit criterion for this phase:
-- Finish the visual refinement pass, then shift primary product work to module foundations. Remaining mobile-UX polish stories stay backlogged until at least the first real module lands.
+- Turn placeholder module tabs into implementation-ready product surfaces, then ship the first real module slice.
 
-Remaining stories in this epic:
+Recommended order:
+1. [Chores core loop](backlog/module-foundations/chores-core-loop.md) — first real module slice; fulfills the old PRD `Tasks` surface
+2. `Lists` — shared ad-hoc checklists, separate from chores
+3. `Meals` — simple week-ahead planning
+4. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
+
+## Planned epics
+
+### Mobile UX polish backlog
+
+Backlogged until at least the first real module lands:
 - [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md)
 - [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
-
-## Planned epics
-
-### Module foundations
-
-- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
-
-Recommended order after visual polish:
-1. [Chores core loop](backlog/module-foundations/chores-core-loop.md) — first real module slice; fulfills the old PRD `Tasks` surface
-2. `Lists` — shared ad-hoc checklists, separate from chores
-3. `Meals` — simple week-ahead planning
-4. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
 
 ### Google Calendar read-only sync
 
