@@ -2,11 +2,13 @@
 id: chores-core-loop
 title: Chores core loop (real data, create, complete)
 epic: module-foundations
-status: planned
+status: in-progress
 priority: P1
 created: 2026-05-01
-updated: 2026-05-01
-issues: []
+updated: 2026-05-05
+issues:
+  - BE #41
+  - FE #158
 prs: []
 ---
 
