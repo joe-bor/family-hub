@@ -6,7 +6,8 @@ status: planned
 priority: P1
 created: 2026-05-06
 updated: 2026-05-06
-issues: []
+issues:
+  - BE #44
 prs: []
 ---
 
