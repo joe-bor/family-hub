@@ -2,10 +2,10 @@
 id: module-surface-foundations
 title: Lists / Chores / Meals / Photos module foundations
 epic: module-foundations
-status: planned
+status: in-progress
 priority: P1
 created: 2026-05-01
-updated: 2026-05-01
+updated: 2026-05-06
 issues: []
 prs: []
 ---
@@ -32,14 +32,15 @@ After `mobile-ux/visual-identity-refinement.md`, the next product focus is turni
 
 ## Recommended delivery order
 
-1. `Chores` core loop
+1. `Chores` core loop (shipped 2026-05-06)
 2. `Lists` simple shared checklists
 3. `Meals` week-ahead planning
 4. `Photos` library / screensaver administration
 
 ## Follow-on implementation stories
 
-- [Chores core loop (real data, create, complete)](./chores-core-loop.md)
+- [Chores core loop (real data, create, complete)](./chores-core-loop.md) — shipped 2026-05-06
+- [Lists simple shared checklists](./lists-simple-shared-checklists.md) — next recommended story
 
 ## Acceptance Criteria
 
