@@ -2,12 +2,13 @@
 id: lists-simple-shared-checklists
 title: Lists simple shared checklists
 epic: module-foundations
-status: planned
+status: in-progress
 priority: P1
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-05-07
 issues:
   - BE #44
+  - FE #163
 prs: []
 ---
 
