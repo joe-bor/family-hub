@@ -10,7 +10,9 @@ backend/
 
 # Local harness state
 .claude/
+.codex/
 .playwright-mcp/
+.superpowers/
 
 # Node
 node_modules/

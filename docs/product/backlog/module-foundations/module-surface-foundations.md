@@ -5,16 +5,16 @@ epic: module-foundations
 status: in-progress
 priority: P1
 created: 2026-05-01
-updated: 2026-05-06
+updated: 2026-05-17
 issues: []
 prs: []
 ---
 
 ## Context
 
-The shell now exposes first-class tabs for `Lists`, `Chores`, `Meals`, and `Photos`, but those surfaces are still mostly placeholder or sample-data experiences. `Home` and `Calendar` have crossed the line into real product surfaces; the rest of the module rail has not.
+The shell now exposes first-class tabs for `Lists`, `Chores`, `Meals`, and `Photos`. `Home`, `Calendar`, `Chores`, and `Lists` have now crossed the line into real product surfaces; `Meals` and `Photos` remain placeholder destinations that still need product definition and real data ownership.
 
-After `mobile-ux/visual-identity-refinement.md`, the next product focus is turning those shell destinations into real modules with documented scope, real data ownership, and implementation-ready slices.
+After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary-setting into phased module delivery. The next product focus is turning the remaining placeholder destinations into real modules, starting with `Meals`.
 
 ## Scope
 
@@ -33,25 +33,26 @@ After `mobile-ux/visual-identity-refinement.md`, the next product focus is turni
 ## Recommended delivery order
 
 1. `Chores` core loop (shipped 2026-05-06)
-2. `Lists` simple shared checklists
+2. `Lists` simple shared checklists (shipped 2026-05-17)
 3. `Meals` week-ahead planning
 4. `Photos` library / screensaver administration
 
 ## Follow-on implementation stories
 
 - [Chores core loop (real data, create, complete)](./chores-core-loop.md) — shipped 2026-05-06
-- [Lists simple shared checklists](./lists-simple-shared-checklists.md) — next recommended story
+- [Lists simple shared checklists](./lists-simple-shared-checklists.md) — shipped 2026-05-17
+- `Meals` week-ahead planning — next recommended story to define
 
 ## Acceptance Criteria
 
-- [ ] Product docs explicitly define what `Lists`, `Chores`, `Meals`, and `Photos` each mean in MVP
-- [ ] The vocabulary decision is recorded: whether `Chores` is the MVP task-management surface, how `Lists` differs, and what PRD wording needs alignment
-- [ ] The delivery order after `visual-identity-refinement.md` is documented
-- [ ] At least the first follow-on module implementation story is created with a clear contract
-- [ ] Roadmap and backlog reflect this epic as the next focus after visual polish
+- [x] Product docs explicitly define what `Lists`, `Chores`, `Meals`, and `Photos` each mean in MVP
+- [x] The vocabulary decision is recorded: whether `Chores` is the MVP task-management surface, how `Lists` differs, and what PRD wording needs alignment
+- [x] The delivery order after `visual-identity-refinement.md` is documented
+- [x] At least the first follow-on module implementation story is created with a clear contract
+- [x] Roadmap and backlog reflect this epic as the next focus after visual polish
 
 ## Notes
 
 - Keep this epic sliced by module. Do not turn `Lists`, `Chores`, `Meals`, and `Photos` into one giant implementation issue.
-- `Chores` is the shortest path to a real module because the PRD already contains task-management requirements that can likely anchor its MVP.
-- Remaining mobile-UX polish stories do not block this epic once `visual-identity-refinement.md` is complete.
+- `Chores` and `Lists` now anchor the module vocabulary in shipped product behavior; `Meals` should build on that clarity rather than re-open it.
+- Remaining mobile-UX polish stories do not block the next module slice once `visual-identity-refinement.md` is complete.

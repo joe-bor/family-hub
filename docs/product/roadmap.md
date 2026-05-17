@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-05-06
+Last updated: 2026-05-17
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -29,6 +29,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 ### Module foundations
 
 - [Chores core loop](backlog/module-foundations/chores-core-loop.md) · FE #158, PR #159, BE #41
+- [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) · FE #163, PR #164, BE #44, PR #45
 
 ## Active epics
 
@@ -38,18 +39,17 @@ Current story:
 - [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
 
 Most recent shipped story:
-- [Chores core loop](backlog/module-foundations/chores-core-loop.md) — first real module slice; fulfills the old PRD `Tasks` surface
+- [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) — turns `Lists` into the second real module surface after `Chores`
 
 Next recommended story:
-- [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) — turn `Lists` into the next real lightweight module after `Chores`
+- `Meals` — simple week-ahead planning as the next lightweight family coordination surface after `Lists`
 
 Exit criterion for this phase:
-- Turn the remaining placeholder module tabs into real product surfaces after `Chores` became the first shipped module slice.
+- Turn the remaining placeholder module tabs into real product surfaces after `Chores` and `Lists` shipped.
 
 Recommended order:
-1. [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) — next real module slice after `Chores`
-2. `Meals` — simple week-ahead planning
-3. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
+1. `Meals` — simple week-ahead planning
+2. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
 
 ## Planned epics
 

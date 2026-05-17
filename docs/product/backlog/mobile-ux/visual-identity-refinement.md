@@ -5,24 +5,25 @@ epic: mobile-ux
 status: done
 priority: P2
 created: 2026-04-23
-updated: 2026-05-02
+updated: 2026-05-17
 issues:
   - FE #155
-prs: []
+prs:
+  - FE PR #156
 spec: ../../../superpowers/specs/2026-05-01-visual-identity-refinement-design.md
 plan: ../../../superpowers/plans/2026-05-01-visual-identity-refinement.md
 ---
 
 ## Context
 
-The cream/purple/Nunito foundation is solid. A deeper pass should tighten consistent spacing scale, better type hierarchy (heading sizes, weight usage, line heights), and a more cohesive member color palette (the 7 colors work but could feel more unified). During brainstorming, "keep the bones, refine the execution" was chosen over a bigger overhaul — but a more thorough refinement is still wanted. (From `docs/mobile-ux-polish-backlog.md` item 3.)
+This shipped story tightened the cream/purple/Nunito foundation with more consistent spacing, better type hierarchy, and a more cohesive member color palette. It remained a refinement pass rather than a broader visual overhaul. (From `docs/mobile-ux-polish-backlog.md` item 3.)
 
 ## Acceptance Criteria
 
-- [ ] Spacing scale documented and applied across screens
-- [ ] Type hierarchy documented (heading sizes, weights, line heights) and applied
-- [ ] Member color palette reviewed for cohesion; adjustments documented
-- [ ] Before/after comparison captured
+- [x] Spacing scale documented and applied across screens
+- [x] Type hierarchy documented (heading sizes, weights, line heights) and applied
+- [x] Member color palette reviewed for cohesion; adjustments documented
+- [x] Before/after comparison captured
 
 ## Notes
 
