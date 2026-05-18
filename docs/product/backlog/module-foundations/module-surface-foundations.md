@@ -25,21 +25,23 @@ After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary
 
 ## MVP module definitions
 
-- `Chores` — assigned family responsibilities with completion and due-date semantics. This is the MVP task-management surface and the home of the PRD's historical `Tasks` requirements.
+- `Chores` — recurring family routines with present-focused completion by day, week, and month. This is the current MVP chores contract and the home of the PRD's active chores requirements.
 - `Lists` — shared ad-hoc checklists for things like shopping, packing, or prep work. Lists are lighter-weight than chores and are not person-assigned by default.
 - `Meals` — week-ahead meal planning for family coordination. Start with planning, not recipes, pantry management, or grocery automation.
 - `Photos` — family photo library / screensaver-management surface. Do not assume a final storage provider or Google Photos integration yet.
 
 ## Recommended delivery order
 
-1. `Chores` core loop (shipped 2026-05-06)
-2. `Lists` simple shared checklists (shipped 2026-05-17)
-3. `Meals` week-ahead planning
-4. `Photos` library / screensaver administration
+1. `Chores` core loop (shipped 2026-05-06, superseded 2026-05-17 by recurring routines)
+2. `Chores` recurring routines (active)
+3. `Lists` simple shared checklists (shipped 2026-05-17)
+4. `Meals` week-ahead planning
+5. `Photos` library / screensaver administration
 
 ## Follow-on implementation stories
 
-- [Chores core loop (real data, create, complete)](./chores-core-loop.md) — shipped 2026-05-06
+- [Chores recurring routines](./chores-recurring-routines.md) — current chores contract
+- [Chores core loop (real data, create, complete)](./chores-core-loop.md) — historical shipped one-off chores release, superseded 2026-05-17
 - [Lists simple shared checklists](./lists-simple-shared-checklists.md) — shipped 2026-05-17
 - `Meals` week-ahead planning — next recommended story to define
 
@@ -54,5 +56,6 @@ After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary
 ## Notes
 
 - Keep this epic sliced by module. Do not turn `Lists`, `Chores`, `Meals`, and `Photos` into one giant implementation issue.
+- `Chores recurring routines` is now the live chores story. `Chores core loop` remains historical context only.
 - `Chores` and `Lists` now anchor the module vocabulary in shipped product behavior; `Meals` should build on that clarity rather than re-open it.
 - Remaining mobile-UX polish stories do not block the next module slice once `visual-identity-refinement.md` is complete.
