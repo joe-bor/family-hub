@@ -59,3 +59,8 @@ This story is also the product-language anchor for the old PRD `Tasks` requireme
 
 - This is the first real module slice because it has the strongest product value-to-scope ratio and already maps to existing PRD task-management requirements.
 - Keep the contract crisp. If implementation starts pulling in recurrence, points, or cross-module summaries, the story has drifted.
+
+## Supersession
+
+This shipped story remains historical context for the first chores release only.
+The live chores contract now continues in [Chores recurring routines](./chores-recurring-routines.md).

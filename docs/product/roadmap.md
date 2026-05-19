@@ -28,7 +28,8 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 
 ### Module foundations
 
-- [Chores core loop](backlog/module-foundations/chores-core-loop.md) · FE #158, PR #159, BE #41
+- [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) · active replacement for the initial one-off chores release
+- [Chores core loop](backlog/module-foundations/chores-core-loop.md) · FE #158, PR #159, BE #41, historical shipped one-off release
 - [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) · FE #163, PR #164, BE #44, PR #45
 
 ## Active epics
