@@ -5,11 +5,12 @@ epic: module-foundations
 status: in-progress
 priority: P1
 created: 2026-05-17
-updated: 2026-05-19
+updated: 2026-05-20
 issues:
   - BE #47
   - FE #173
-prs: []
+prs:
+  - BE PR #48
 spec: ../../../superpowers/specs/2026-05-17-recurring-chores-present-focused-design.md
 plan: ../../../superpowers/plans/2026-05-17-recurring-chores-present-focused.md
 ---
