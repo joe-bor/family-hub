@@ -2,15 +2,16 @@
 id: chores-recurring-routines
 title: Chores recurring routines
 epic: module-foundations
-status: in-progress
+status: done
 priority: P1
 created: 2026-05-17
-updated: 2026-05-20
+updated: 2026-05-21
 issues:
   - BE #47
   - FE #173
 prs:
   - BE PR #48
+  - FE PR #175
 spec: ../../../superpowers/specs/2026-05-17-recurring-chores-present-focused-design.md
 plan: ../../../superpowers/plans/2026-05-17-recurring-chores-present-focused.md
 ---

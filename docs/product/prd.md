@@ -224,10 +224,10 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 - As a **parent**, I want to see which family members are associated with each event, so coordination is clear
 
 **Task Management**
-- As a **parent**, I want to create tasks/todos with due dates, so important items don't get forgotten
-- As a **parent**, I want to assign tasks to specific family members, so responsibilities are clear
-- As a **child**, I want to check off completed tasks, so I feel accomplished
-- As a **parent**, I want to see incomplete tasks highlighted, so nothing falls through the cracks
+- As a **parent**, I want to create recurring chores with daily, weekly, or monthly cadence, so household routines do not need to be recreated.
+- As a **parent**, I want to assign routines to specific family members, so responsibilities are clear.
+- As a **child**, I want to check off routines for the current day, week, or month, so I feel accomplished.
+- As a **parent**, I want to see remaining and completed routines in the current timeframe, so nothing falls through the cracks.
 
 **Mobile Access**
 - As a **parent**, I want to access the calendar from my phone, so I can add events when away from home
@@ -330,7 +330,6 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 ❌ **User Authentication** - Single-family use (no multi-tenant support)  
 ❌ **Third-party Calendar Integrations** (Apple, Outlook) - Google Calendar only for MVP  
 ❌ **Advanced Analytics** - Basic logging only  
-❌ **Recurring Task Templates** - Manual recreation for MVP  
 ❌ **Task Categories** - Future enhancement  
 ❌ **Location/Map Integration** - Future enhancement  
 ❌ **Voice Control** - Future enhancement  
@@ -338,14 +337,14 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 ❌ **WebSocket real-time sync** — polling via TanStack Query is sufficient  
 ❌ **Two-way Google Calendar sync** — Phase 1 is read-only; write-back is a future epic  
 
-### Module Vocabulary Alignment (2026-05-01)
+### Module Vocabulary Alignment (updated 2026-05-21)
 
 The current product shell exposes six primary mobile destinations: `Home`, `Calendar`, `Lists`, `Chores`, `Meals`, and `Photos`.
 
 To align this PRD with the shipped shell:
 
 - Historical references to a top-level `Tasks` surface should be read as `Chores` for MVP planning and implementation.
-- `Chores` is the assigned-responsibility module: family work with assignees, completion state, and optional due-date semantics.
+- `Chores` is the recurring family-routines module: assigned routines with daily, weekly, or monthly cadence and current-period completion state.
 - `Lists` is a separate, lighter checklist surface for shared ad-hoc lists such as shopping, packing, or prep.
 - `Meals` and `Photos` remain separate future-facing modules; they should not be collapsed into `Chores` or `Lists` for naming convenience.
 
@@ -576,101 +575,93 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 
 ---
 
-### 7.3 Chores (Task Management)
+### 7.3 Chores (Recurring Routines)
 
-#### Feature 7.3.1: Chores List View
+#### Feature 7.3.1: Chores Board View
 **Priority:** P0 (Must Have)  
-**User Story:** As a parent, I want to see all incomplete chores/tasks so important items don't get forgotten
+**User Story:** As a parent, I want to see the family's current recurring routines by day, week, and month so important household work stays visible.
 
 **Requirements:**
 
 **Layout:**
 - Separate `Chores` tab/section (not embedded in calendar initially for MVP)
 - Access via navigation from the mobile shell's primary tabs
-- Chores list displays:
-  - All incomplete tasks (default view)
-  - Option to toggle "Show Completed" (grayed out, strikethrough)
-  - Grouped by assigned person (collapsible sections)
-  - Sorted by: Due date (overdue first), then creation date
+- Chores board displays:
+  - Mobile: one selected scope at a time with `Day | Week | Month`
+  - Larger screens: `Today`, `This Week`, and `This Month` in parallel
+  - Routines grouped by assigned person within each scope
+  - Incomplete routines first, completed routines visible below in muted styling
 
-**Task Display (Each Item):**
+**Routine Display (Each Item):**
 - [ ] Checkbox (tap to complete/uncomplete)
-- Task title (bold if overdue)
-- Assigned person indicator (color dot + name)
-- Due date (if set) - highlighted red if overdue, orange if due today
-- Optional: Notes preview (truncated to 50 chars)
+- Routine title
+- Cadence label (`Daily`, `Weekly`, or `Monthly`)
+- Assigned person grouping with member color
+- Current-period completion state
 
 **Interactions:**
-- Tap checkbox → Mark complete/incomplete (immediate update)
-- Tap task row → Opens task detail modal (view full details)
-- Swipe left (mobile) → Quick delete action
+- Tap checkbox → Mark complete/incomplete for the current period
+- Tap archive action → Remove the recurring template from the active board
 
 **Acceptance Criteria:**
-- [ ] Tasks load in <1 second
+- [ ] Board loads in <1 second
 - [ ] Checkbox toggle responds instantly (<100ms)
-- [ ] Overdue tasks clearly highlighted (visual distinction)
-- [ ] 4-year-old can identify "their tasks" by color
-- [ ] Completed tasks visually distinct (strikethrough, grayed)
-- [ ] Empty state message if no tasks: "No tasks yet. Tap + to create one."
+- [ ] Day, week, and month scopes are clear on mobile and larger screens
+- [ ] 4-year-old can identify "their routines" by color
+- [ ] Completed routines visually distinct (strikethrough, grayed)
+- [ ] Empty states cover no recurring chores, no routines in a timeframe, and all caught up
 
 ---
 
-#### Feature 7.3.2: Create Chore
+#### Feature 7.3.2: Create Recurring Chore
 **Priority:** P0 (Must Have)  
-**User Story:** As a parent, I want to create chores/tasks with due dates so responsibilities are clear
+**User Story:** As a parent, I want to create recurring chores with a cadence and assignee so responsibilities repeat without manual recreation.
 
 **Requirements:**
 
 **Trigger:**
 - "+" button in Chores view → Opens "New Chore" modal
 
-**Task Form Fields:**
-1. **Task Title** (required)
+**Routine Form Fields:**
+1. **Chore Title** (required)
    - Text input, max 100 characters
    - Placeholder: "What needs to be done?"
 2. **Assign To** (required)
-   - Radio buttons or checkboxes (allow multiple assignees?)
-   - **Decision Needed:** Single assignee vs multiple? 
-     - **Recommendation:** Single assignee for MVP (simpler UX, clear ownership)
-     - If multi-person task needed, create duplicate tasks (one per person)
-3. **Due Date** (optional)
-   - Date picker (no time, just date)
-   - "No due date" option (for ongoing tasks)
-   - Quick options: Today, Tomorrow, This Weekend
-4. **Notes** (optional)
-   - Text area, max 300 characters
-   - Placeholder: "Additional details"
+   - Single assignee for MVP (simpler UX, clear ownership)
+3. **Repeats** (required)
+   - Daily
+   - Weekly
+   - Monthly
 
 **Actions:**
-- "Save" button → Creates task in database
+- "Save" button → Creates recurring template in database
 - "Cancel" button → Discards, closes modal
 
 **Acceptance Criteria:**
 - [ ] Modal opens in <300ms
-- [ ] Validation prevents saving without title and assignee
-- [ ] Task appears in task list immediately after saving
-- [ ] Date picker is touch-friendly
-- [ ] Duplicate task detection (warn if very similar task exists)
+- [ ] Validation prevents saving without title, assignee, and cadence
+- [ ] Routine appears in the matching scope immediately after saving
+- [ ] Activation starts from the family's current local date
 
 ---
 
-#### Feature 7.3.3: Complete/Uncomplete Chore
+#### Feature 7.3.3: Complete/Uncomplete Current Period
 **Priority:** P0 (Must Have)  
-**User Story:** As a child, I want to check off completed chores/tasks so I feel accomplished
+**User Story:** As a child, I want to check off a routine for the current day, week, or month so I feel accomplished without changing future periods.
 
 **Requirements:**
 
 **Interaction:**
-- Tap checkbox next to task → Toggles completion state
-- Completed task:
+- Tap checkbox next to routine → Toggles completion state for the current period
+- Completed routine:
   - Checkbox shows checkmark (✓)
   - Text gets strikethrough styling
-  - Task grayed out (opacity 50%)
-  - Moves to bottom of list (or separate "Completed" section)
-- Uncomplete task:
-  - Tap completed task checkbox → Removes checkmark
-  - Task returns to normal styling
-  - Returns to appropriate position in list
+  - Routine uses muted styling
+  - Routine remains visible below incomplete routines
+- Uncomplete routine:
+  - Tap completed routine checkbox → Removes checkmark
+  - Routine returns to normal styling
+  - Routine returns to the incomplete section
 
 **Visual Feedback:**
 - Brief animation when completing (subtle scale/fade)
@@ -679,15 +670,15 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 
 **Persistence:**
 - Completion state saved to database immediately
-- Synced across all devices in real-time
-- Completed tasks retained for 30 days before auto-deletion (configurable)
+- Completion applies only to the current day, week, or month period
+- Synced across devices through normal app polling/refetch behavior
 
 **Acceptance Criteria:**
 - [ ] Checkbox toggle responds in <100ms
 - [ ] Completion status syncs across devices within 5 seconds
 - [ ] 4-year-old can easily tap checkboxes (minimum 44x44px touch target)
-- [ ] Visual feedback clear (child understands task is done)
-- [ ] Completed tasks collapsible (don't clutter view)
+- [ ] Visual feedback clearly communicates the routine is done for the current period
+- [ ] Completed routines remain visible but secondary
 
 ---
 
@@ -1173,10 +1164,10 @@ POST   /api/settings/google-calendar  - Configure Google Calendar integration
    - Top Bar:
      - "Chores" title
      - "+ Add Chore" button (right)
-     - "Show Completed" toggle
+     - `Day | Week | Month` scope switcher on mobile
    - Main Area:
-     - Chore list grouped by profile
-     - Each chore: checkbox, title, due date, assigned person
+     - Current-scope routine board grouped by profile
+     - Each routine: checkbox, title, cadence, assigned person
    - Bottom Bar (mobile shell):
      - Home icon
      - Calendar icon
@@ -1608,6 +1599,7 @@ Current epics (see roadmap for details):
 | 1.0     | 2024-12-11 | Joe    | Initial PRD draft                |
 | 2.0     | 2026-04-23 | Joe    | Realigned with shipped reality; moved phase plan to roadmap.md; added JWT/recurring/multi-day as shipped; deferred Tasks and WebSocket. |
 | 2.1     | 2026-05-01 | Joe    | Aligned PRD vocabulary with shell (`Chores` vs `Lists`), corrected Google Calendar read-only wording, and recorded module-language decisions. |
+| 2.2     | 2026-05-21 | Joe    | Updated Chores from one-off due-date tasks to shipped recurring day / week / month routines. |
 
 ---
 

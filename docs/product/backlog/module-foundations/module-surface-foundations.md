@@ -5,7 +5,7 @@ epic: module-foundations
 status: in-progress
 priority: P1
 created: 2026-05-01
-updated: 2026-05-17
+updated: 2026-05-21
 issues: []
 prs: []
 ---
@@ -33,14 +33,14 @@ After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary
 ## Recommended delivery order
 
 1. `Chores` core loop (shipped 2026-05-06, superseded 2026-05-17 by recurring routines)
-2. `Chores` recurring routines (active)
+2. `Chores` recurring routines (shipped 2026-05-21)
 3. `Lists` simple shared checklists (shipped 2026-05-17)
 4. `Meals` week-ahead planning
 5. `Photos` library / screensaver administration
 
 ## Follow-on implementation stories
 
-- [Chores recurring routines](./chores-recurring-routines.md) — current chores contract
+- [Chores recurring routines](./chores-recurring-routines.md) — current shipped chores contract
 - [Chores core loop (real data, create, complete)](./chores-core-loop.md) — historical shipped one-off chores release, superseded 2026-05-17
 - [Lists simple shared checklists](./lists-simple-shared-checklists.md) — shipped 2026-05-17
 - `Meals` week-ahead planning — next recommended story to define

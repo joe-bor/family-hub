@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-05-17
+Last updated: 2026-05-21
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -28,7 +28,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 
 ### Module foundations
 
-- [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) · active replacement for the initial one-off chores release
+- [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) · FE #173, PR #175, BE #47, PR #48; current shipped chores contract
 - [Chores core loop](backlog/module-foundations/chores-core-loop.md) · FE #158, PR #159, BE #41, historical shipped one-off release
 - [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) · FE #163, PR #164, BE #44, PR #45
 
@@ -40,10 +40,10 @@ Current story:
 - [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
 
 Most recent shipped story:
-- [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) — turns `Lists` into the second real module surface after `Chores`
+- [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) — replaces the initial one-off chores release with recurring day / week / month routines
 
 Next recommended story:
-- `Meals` — simple week-ahead planning as the next lightweight family coordination surface after `Lists`
+- `Meals` — simple week-ahead planning as the next lightweight family coordination surface after `Chores` and `Lists`
 
 Exit criterion for this phase:
 - Turn the remaining placeholder module tabs into real product surfaces after `Chores` and `Lists` shipped.
