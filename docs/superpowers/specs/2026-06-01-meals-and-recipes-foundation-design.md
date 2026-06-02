@@ -118,6 +118,15 @@ The UX should encourage ingredients and instructions so the library remains usef
 
 The import flow does not require a separate pre-save review step in v1.
 
+URL import must be bounded server-side because it fetches user-provided URLs:
+
+- allow only `http` and `https`
+- reject loopback, private, link-local, and otherwise non-public network targets before fetching
+- use short connection/read timeouts
+- follow only a small bounded redirect chain and re-validate each redirect target
+- cap the response body size before parsing
+- fail closed with a user-facing import failure, not a partial recipe, when these checks fail
+
 ### Recipe detail
 
 Recipe detail should be cook-first, especially on mobile:
@@ -128,6 +137,8 @@ Recipe detail should be cook-first, especially on mobile:
 4. instructions
 
 Planning actions such as `Add to Meals`, `Favorite`, and `Edit` should be easy to reach without overtaking the cooking content.
+
+`Favorite` is an editable toggle on saved recipes, not only a create-time field. `Edit` updates the saved recipe record through the real recipe editing flow; it is not a meal-planning edit surface.
 
 ### Organization and discovery
 
@@ -152,6 +163,7 @@ From recipe detail, `Add to Meals` should:
 - default to the current or currently visible week
 - let the user choose day and meal slot
 - allow switching weeks if needed
+- prompt with the normal collision choices if the target slot already has a primary meal
 
 This action creates a meal snapshot from the recipe as it exists at the moment of placement.
 
@@ -307,13 +319,13 @@ Duplicating a meal block copies the full planned unit:
 
 ### Collision handling
 
-If a moved or duplicated meal lands in a slot that already has a primary meal, prompt the user with:
+If any action would put content into a slot that already has a primary meal, prompt the user with:
 
 - `Replace primary`
 - `Add as extra`
 - `Cancel`
 
-Do not silently replace existing planned content.
+This applies to move, duplicate, and recipe placement from `Add to Meals`. Do not silently replace existing planned content.
 
 ## Cross-Module Flows
 
@@ -343,6 +355,8 @@ If create/import starts from `Meals`:
 ## Cross-Module Contract
 
 The implementation should treat `Recipes` and `Meals` as separate but intentionally connected modules. The contract between them needs to be explicit before implementation starts so work can move in two focused tracks without hidden assumptions.
+
+Wire values crossing the frontend/backend boundary are lowercase strings. Backend enums may keep uppercase Java constants, but JSON serialization/deserialization should expose lowercase values such as `breakfast`, `lunch`, `dinner`, `recipe`, `quick`, `replace_primary`, and `add_as_extra`.
 
 ### Recipes owns
 
@@ -384,9 +398,17 @@ The implementation should treat `Recipes` and `Meals` as separate but intentiona
 
 ### Recipe-backed planned meals
 
-When a saved recipe is placed into `Meals`, the planned item should snapshot the fields needed for stable historical display and future review.
+When a saved recipe is placed into `Meals`, the planned item should snapshot the fields needed for stable board display and future week review.
 
-At minimum, the planned meal should retain the visible state required to avoid later recipe edits mutating already planned meals.
+For v1, historical review means stable meal-board fidelity, not a frozen duplicate of the full recipe detail. A recipe-backed planned meal snapshots:
+
+- source type
+- recipe id when the source recipe still exists
+- title
+- image URL
+- meal-specific note
+
+Tapping a recipe-backed planned meal opens the live recipe detail when the recipe still exists. If the base recipe is later edited, the board keeps the original snapshot title/image/note, while recipe detail shows the current recipe. If the base recipe is deleted, the board still shows the snapshot and the live recipe-detail action is unavailable.
 
 ### Quick meals
 
@@ -397,6 +419,8 @@ They are valid first-class planned meals and should not feel like broken or seco
 ### Past weeks
 
 Past weeks should remain browsable for review, but normal editing affordances should not be exposed there. The product should bias toward present and upcoming planning rather than retroactive maintenance.
+
+In v1 this is a frontend product guardrail, not a server-side authorization rule. Backend write endpoints may still accept past-week writes for backfill, recovery, or future administrative workflows unless a later story adds authoritative server enforcement.
 
 ## Integration Notes
 
@@ -413,6 +437,14 @@ Past weeks should remain browsable for review, but normal editing affordances sh
 ## Implementation Planning Strategy
 
 Implementation planning should be intentionally split into at least two plans rather than one combined plan.
+
+Each delivery plan should also map into repo-owned execution issues:
+
+- a backend issue in `backend/family-hub-api` for schema, services, controllers, and backend tests
+- a frontend issue in `frontend` for types, hooks, UI, mocks, and frontend tests
+- any root-docs issue only for spec/plan updates, not production implementation
+
+Frontend issues that depend on real backend behavior must state the released backend version they consume. They should not depend on unreleased backend `main`.
 
 ### Plan 1: Recipes
 
@@ -465,6 +497,8 @@ Both plans should reference the existence of the sibling module and the shared c
 - A user can manually create a recipe with only a name required
 - A user can import a recipe from a URL and have successful imports auto-save
 - A user can open a recipe detail screen that is useful for cooking
+- A user can edit a saved recipe from recipe detail
+- A user can toggle a saved recipe as favorite from recipe detail
 - A user can favorite recipes and see those favorites prioritized in selection flows
 - A user can use light search, tags, and filters to find recipes
 - A user can add a recipe to a meal plan from recipe detail
@@ -476,7 +510,7 @@ Both plans should reference the existence of the sibling module and the shared c
 - A user can tap an empty slot to create a planned meal
 - A user can choose between saved recipes and quick non-recipe meals
 - A planned meal can include one primary item and optional extras
-- A planned meal created from a recipe snapshots that recipe state at placement time
+- A planned meal created from a recipe snapshots board-display state at placement time
 - A user can move a planned meal and explicitly duplicate a planned meal
 - Slot collisions prompt the user instead of silently overwriting content
 - Past weeks are reviewable but not normally editable

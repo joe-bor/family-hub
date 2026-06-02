@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the placeholder `Meals` module with a real week-by-week household meal planner that consumes the `Recipes` foundation, supports quick meals and recipe-backed slots, renders mobile day-cards plus a larger-screen weekly grid, and persists stable recipe snapshots for reviewable past weeks.
+**Goal:** Replace the placeholder `Meals` module with a real week-by-week household meal planner that consumes the `Recipes` foundation, supports quick meals and recipe-backed slots, renders mobile day-cards plus a larger-screen weekly grid, and persists stable board-level recipe snapshots for reviewable past weeks.
 
 **Architecture:** Build a backend meal-slot aggregate in `backend/family-hub-api/` where each family owns week/day/meal-type slots and each slot stores a primary planned item plus optional extras as snapshot data. On the frontend in `frontend/`, replace the sample `MealsView` and placeholder `meals-store` with TanStack Query-backed week navigation, a text-first composer with recipe suggestions, a planning-focused slot editor, and a shared draft handoff from `Recipes`.
 
@@ -32,10 +32,19 @@ Per root shipping rules, FE live verification that depends on real `/api/meals` 
 - `Meals` has no status model. There is no cooked/skipped/done state.
 - Empty slots must invite adding a meal.
 - The composer is text-first with recipe suggestions, recent recipes, favorite recipes, and access to the full recipe library.
-- A recipe-backed planned meal snapshots the recipe state at placement time.
+- A recipe-backed planned meal snapshots board-display state at placement time: source type, recipe id, title, image URL, and note.
+- Recipe-backed meal detail opens the live recipe when it still exists; v1 does not snapshot full ingredients/instructions for historical recipe-detail fidelity.
 - Move means move; duplicate is explicit.
-- Slot collisions must prompt `Replace primary`, `Add as extra`, or `Cancel`.
+- Slot collisions from move, duplicate, or recipe placement must prompt `Replace primary`, `Add as extra`, or `Cancel`.
+- Past-week immutability is a frontend product guardrail in v1; backend write endpoints do not enforce it unless a later story adds server-side authorization.
+- Backend JSON enum wire values must be lowercase (`breakfast`, `lunch`, `dinner`, `recipe`, `quick`, `replace_primary`, `add_as_extra`) even if Java enum constants are uppercase.
 - This plan must consume the `Recipes` handoff contract; it must not redesign it in-place.
+
+## Execution Issue Mapping
+
+- Backend execution issue in `backend/family-hub-api`: Tasks 1-2. Contract: consumes the released Recipes backend contract `>= V15`, ships meal schema/API behavior, lowercase enum wire values, board-level snapshots, collision semantics, and backend tests. It should produce published backend release `>= V16` before real FE verification depends on it.
+- Frontend execution issue in `frontend`: Tasks 3-5. Contract: consumes the released backend contract `>= V16` for live verification, while mock-backed unit work may start earlier.
+- Root docs issue, if needed: Task 0/spec reconciliation only. Do not implement production code from the root workspace.
 
 ## File Structure
 
@@ -52,6 +61,7 @@ Expected create / modify set:
 - Create: `src/main/resources/db/migration/V16__create_meal_planning_tables.sql`
 - Create: `src/main/java/com/familyhub/demo/model/MealType.java`
 - Create: `src/main/java/com/familyhub/demo/model/MealEntrySourceType.java`
+- Create: `src/main/java/com/familyhub/demo/model/MealCollisionMode.java`
 - Create: `src/main/java/com/familyhub/demo/model/MealSlotRole.java`
 - Create: `src/main/java/com/familyhub/demo/model/MealSlot.java`
 - Create: `src/main/java/com/familyhub/demo/model/MealSlotEntry.java`
@@ -162,6 +172,8 @@ Expected: the shared draft contract exists and `Meals` can consume it without re
 - `Meals` owns slot selection and persisted placement.
 - `Recipes -> Meals` placement drafts carry `recipeId`, requested week, and source context.
 - `Meals -> Recipes` creation drafts carry week, day, meal type, and typed meal text so recipe creation can return to planning.
+- Shared meal type wire values remain lowercase across FE and BE.
+- Meal snapshots preserve board-display state; live recipe detail remains best-effort.
 ```
 
 - [ ] **Step 4: Commit any spec-only contract clarification before coding Meals**
@@ -172,21 +184,26 @@ git add docs/superpowers/specs/2026-06-01-meals-and-recipes-foundation-design.md
 git commit -m "docs(meals): clarify recipes handoff contract"
 ```
 
-## Task 1: Add Backend Meal Planning Schema And Board Read Model
+## Task 1: Add Backend Meal Planning Schema, Board Read Model, And Initial Upsert
 
 **Files:**
 - Create: `backend/family-hub-api/src/main/resources/db/migration/V16__create_meal_planning_tables.sql`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/MealType.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/MealEntrySourceType.java`
+- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/MealCollisionMode.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/MealSlotRole.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/MealSlot.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/MealSlotEntry.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/repository/MealSlotRepository.java`
+- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MealEntryRequest.java`
+- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/UpsertMealSlotRequest.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MealBoardResponse.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MealDayResponse.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MealSlotResponse.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MealSlotEntryResponse.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/mapper/MealMapper.java`
+- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/MealService.java`
+- Modify: `backend/family-hub-api/src/test/java/com/familyhub/demo/TestDataFactory.java`
 - Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/service/MealServiceTest.java`
 
 - [ ] **Step 1: Write the failing backend tests for the week board and snapshot reads**
@@ -213,6 +230,7 @@ void getBoard_returnsRecipeSnapshotsRatherThanLiveRecipeFields() {
             MealType.DINNER,
             new MealEntryRequest(MealEntrySourceType.RECIPE, recipe.getId(), null, null, null),
             List.of(),
+            null,
             null
     ), family);
 
@@ -222,6 +240,24 @@ void getBoard_returnsRecipeSnapshotsRatherThanLiveRecipeFields() {
     MealBoardResponse board = mealService.getBoard(LocalDate.of(2026, 6, 7), family);
 
     assertThat(board.days().get(1).slots().get(2).primary().title()).isEqualTo("Original Tacos");
+}
+
+@Test
+void upsertSlot_createsQuickMealPrimaryAndExtras() {
+    UpsertMealSlotRequest request = new UpsertMealSlotRequest(
+            LocalDate.of(2026, 6, 7),
+            2,
+            MealType.DINNER,
+            new MealEntryRequest(MealEntrySourceType.QUICK, null, "Leftovers", null, null),
+            List.of(new MealEntryRequest(MealEntrySourceType.QUICK, null, "Salad", null, null)),
+            null,
+            null
+    );
+
+    MealSlotResponse response = mealService.upsertSlot(request, family);
+
+    assertThat(response.primary().title()).isEqualTo("Leftovers");
+    assertThat(response.extras()).extracting(MealSlotEntryResponse::title).containsExactly("Salad");
 }
 ```
 
@@ -275,10 +311,97 @@ CREATE TABLE meal_slot_entry (
 
 ```java
 public enum MealType {
-    BREAKFAST,
-    LUNCH,
-    DINNER
+    BREAKFAST("breakfast"),
+    LUNCH("lunch"),
+    DINNER("dinner");
+
+    private final String wireValue;
+
+    MealType(String wireValue) {
+        this.wireValue = wireValue;
+    }
+
+    @JsonValue
+    public String wireValue() {
+        return wireValue;
+    }
+
+    @JsonCreator
+    public static MealType fromValue(String value) {
+        return Arrays.stream(values())
+                .filter(type -> type.wireValue.equalsIgnoreCase(value) || type.name().equalsIgnoreCase(value))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown meal type: " + value));
+    }
 }
+
+public enum MealEntrySourceType {
+    RECIPE("recipe"),
+    QUICK("quick");
+
+    private final String wireValue;
+
+    MealEntrySourceType(String wireValue) {
+        this.wireValue = wireValue;
+    }
+
+    @JsonValue
+    public String wireValue() {
+        return wireValue;
+    }
+
+    @JsonCreator
+    public static MealEntrySourceType fromValue(String value) {
+        return Arrays.stream(values())
+                .filter(type -> type.wireValue.equalsIgnoreCase(value) || type.name().equalsIgnoreCase(value))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown meal entry source type: " + value));
+    }
+}
+
+public enum MealCollisionMode {
+    REPLACE_PRIMARY("replace_primary"),
+    ADD_AS_EXTRA("add_as_extra");
+
+    private final String wireValue;
+
+    MealCollisionMode(String wireValue) {
+        this.wireValue = wireValue;
+    }
+
+    @JsonValue
+    public String wireValue() {
+        return wireValue;
+    }
+
+    @JsonCreator
+    public static MealCollisionMode fromValue(String value) {
+        return Arrays.stream(values())
+                .filter(mode -> mode.wireValue.equalsIgnoreCase(value) || mode.name().equalsIgnoreCase(value))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown meal collision mode: " + value));
+    }
+}
+```
+
+```java
+public record MealEntryRequest(
+        @NotNull MealEntrySourceType sourceType,
+        UUID recipeId,
+        String title,
+        String imageUrl,
+        String note
+) {}
+
+public record UpsertMealSlotRequest(
+        @NotNull LocalDate weekStartDate,
+        @Min(0) @Max(6) int dayIndex,
+        @NotNull MealType mealType,
+        @Valid @NotNull MealEntryRequest primary,
+        List<@Valid MealEntryRequest> extras,
+        String note,
+        MealCollisionMode collisionMode
+) {}
 ```
 
 ```java
@@ -304,7 +427,32 @@ public interface MealSlotRepository extends JpaRepository<MealSlot, UUID> {
 }
 ```
 
-- [ ] **Step 4: Run the backend meal-service test to verify the board now returns stable seven-day slot groups**
+```java
+private MealSlotEntry snapshotEntry(MealEntryRequest request, MealSlot slot, MealSlotRole role, int sortOrder) {
+    MealSlotEntry entry = new MealSlotEntry();
+    entry.setSlot(slot);
+    entry.setRole(role);
+    entry.setSortOrder(sortOrder);
+    entry.setSourceType(request.sourceType());
+
+    if (request.sourceType() == MealEntrySourceType.RECIPE) {
+        Recipe recipe = recipeRepository.findByIdAndFamily(request.recipeId(), slot.getFamily())
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe", request.recipeId()));
+        entry.setRecipe(recipe);
+        entry.setTitleSnapshot(recipe.getTitle());
+        entry.setImageUrlSnapshot(recipe.getImageUrl());
+        entry.setNoteSnapshot(recipe.getNote());
+    } else {
+        entry.setTitleSnapshot(request.title().trim());
+        entry.setImageUrlSnapshot(request.imageUrl());
+        entry.setNoteSnapshot(request.note());
+    }
+
+    return entry;
+}
+```
+
+- [ ] **Step 4: Run the backend meal-service test to verify the board and initial upsert behavior now pass**
 
 Run:
 
@@ -313,7 +461,7 @@ cd /Users/joe.bor/code/family-hub/backend/family-hub-api
 ./mvnw -Dtest=MealServiceTest test
 ```
 
-Expected: PASS for the week board shape and snapshot-read behavior.
+Expected: PASS for the week board shape, initial slot upsert, and board-level recipe snapshot behavior.
 
 - [ ] **Step 5: Commit**
 
@@ -322,15 +470,20 @@ cd /Users/joe.bor/code/family-hub/backend/family-hub-api
 git add src/main/resources/db/migration/V16__create_meal_planning_tables.sql \
   src/main/java/com/familyhub/demo/model/MealType.java \
   src/main/java/com/familyhub/demo/model/MealEntrySourceType.java \
+  src/main/java/com/familyhub/demo/model/MealCollisionMode.java \
   src/main/java/com/familyhub/demo/model/MealSlotRole.java \
   src/main/java/com/familyhub/demo/model/MealSlot.java \
   src/main/java/com/familyhub/demo/model/MealSlotEntry.java \
   src/main/java/com/familyhub/demo/repository/MealSlotRepository.java \
+  src/main/java/com/familyhub/demo/dto/MealEntryRequest.java \
+  src/main/java/com/familyhub/demo/dto/UpsertMealSlotRequest.java \
   src/main/java/com/familyhub/demo/dto/MealBoardResponse.java \
   src/main/java/com/familyhub/demo/dto/MealDayResponse.java \
   src/main/java/com/familyhub/demo/dto/MealSlotResponse.java \
   src/main/java/com/familyhub/demo/dto/MealSlotEntryResponse.java \
   src/main/java/com/familyhub/demo/mapper/MealMapper.java \
+  src/main/java/com/familyhub/demo/service/MealService.java \
+  src/test/java/com/familyhub/demo/TestDataFactory.java \
   src/test/java/com/familyhub/demo/service/MealServiceTest.java
 git commit -m "feat(meals): add meal board foundation"
 ```
@@ -338,42 +491,22 @@ git commit -m "feat(meals): add meal board foundation"
 ## Task 2: Add Backend Slot Write, Move, Duplicate, And Collision Handling
 
 **Files:**
-- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MealEntryRequest.java`
-- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/UpsertMealSlotRequest.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/MoveMealSlotRequest.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/DuplicateMealSlotRequest.java`
-- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/MealService.java`
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/MealService.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/controller/MealController.java`
 - Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/controller/MealControllerTest.java`
 - Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/integration/MealIntegrationTest.java`
 
-- [ ] **Step 1: Write the failing tests for upsert, move, duplicate, and collision resolution**
+- [ ] **Step 1: Write the failing tests for controller upsert, move, duplicate, and collision resolution**
 
 ```java
-@Test
-void upsertSlot_createsQuickMealPrimaryAndExtras() {
-    UpsertMealSlotRequest request = new UpsertMealSlotRequest(
-            LocalDate.of(2026, 6, 7),
-            2,
-            MealType.DINNER,
-            new MealEntryRequest(MealEntrySourceType.QUICK, null, "Leftovers", null, null),
-            List.of(new MealEntryRequest(MealEntrySourceType.QUICK, null, "Salad", null, null)),
-            null
-    );
-
-    MealSlotResponse response = mealService.upsertSlot(request, family);
-
-    assertThat(response.primary().title()).isEqualTo("Leftovers");
-    assertThat(response.extras()).extracting(MealSlotEntryResponse::title).containsExactly("Salad");
-}
-
-@Test
 void moveSlot_addAsExtra_flattensMovedUnitIntoDestinationExtras() {
     // given a source slot with primary + extra and a destination slot with an existing primary
     MoveMealSlotRequest request = new MoveMealSlotRequest(
             LocalDate.of(2026, 6, 7), 1, MealType.DINNER,
             LocalDate.of(2026, 6, 7), 2, MealType.DINNER,
-            "ADD_AS_EXTRA"
+            MealCollisionMode.ADD_AS_EXTRA
     );
 
     mealService.moveSlot(request, family);
@@ -388,6 +521,33 @@ void moveSlot_addAsExtra_flattensMovedUnitIntoDestinationExtras() {
 ```java
 @Test
 @WithMockFamily
+void upsertSlot_returns200WithLowercaseWireValues() throws Exception {
+    mockMvc.perform(put("/api/meals/slots")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {
+                              "weekStartDate": "2026-06-07",
+                              "dayIndex": 2,
+                              "mealType": "dinner",
+                              "primary": {
+                                "sourceType": "quick",
+                                "recipeId": null,
+                                "title": "Leftovers",
+                                "imageUrl": null,
+                                "note": null
+                              },
+                              "extras": [],
+                              "note": null,
+                              "collisionMode": null
+                            }
+                            """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.mealType").value("dinner"))
+            .andExpect(jsonPath("$.data.primary.sourceType").value("quick"));
+}
+
+@Test
+@WithMockFamily
 void duplicateSlot_returns200() throws Exception {
     mockMvc.perform(post("/api/meals/slots/duplicate")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -399,7 +559,7 @@ void duplicateSlot_returns200() throws Exception {
                               "destinationWeekStartDate": "2026-06-07",
                               "destinationDayIndex": 4,
                               "destinationMealType": "dinner",
-                              "collisionMode": "REPLACE_PRIMARY"
+                              "collisionMode": "replace_primary"
                             }
                             """))
             .andExpect(status().isOk());
@@ -415,28 +575,31 @@ cd /Users/joe.bor/code/family-hub/backend/family-hub-api
 ./mvnw -Dtest=MealControllerTest,MealIntegrationTest test
 ```
 
-Expected: FAIL with missing request DTOs and write endpoints.
+Expected: FAIL with missing move/duplicate request DTOs, controller endpoints, and collision handling.
 
-- [ ] **Step 3: Implement write DTOs, snapshot logic, controller endpoints, and collision semantics**
+- [ ] **Step 3: Implement move/duplicate DTOs, controller endpoints, and collision semantics**
+
+Extend the existing Task 1 `upsertSlot` service method so an occupied primary slot cannot be overwritten unless the request includes an explicit `collisionMode`. `replace_primary` replaces the primary; `add_as_extra` preserves the existing primary and appends the requested meal as an extra.
 
 ```java
-public record MealEntryRequest(
-        @NotNull MealEntrySourceType sourceType,
-        UUID recipeId,
-        String title,
-        String imageUrl,
-        String note
+public record MoveMealSlotRequest(
+        @NotNull LocalDate sourceWeekStartDate,
+        @Min(0) @Max(6) int sourceDayIndex,
+        @NotNull MealType sourceMealType,
+        @NotNull LocalDate destinationWeekStartDate,
+        @Min(0) @Max(6) int destinationDayIndex,
+        @NotNull MealType destinationMealType,
+        @NotNull MealCollisionMode collisionMode
 ) {}
-```
 
-```java
-public record UpsertMealSlotRequest(
-        @NotNull LocalDate weekStartDate,
-        @Min(0) @Max(6) int dayIndex,
-        @NotNull MealType mealType,
-        @Valid @NotNull MealEntryRequest primary,
-        List<@Valid MealEntryRequest> extras,
-        String note
+public record DuplicateMealSlotRequest(
+        @NotNull LocalDate sourceWeekStartDate,
+        @Min(0) @Max(6) int sourceDayIndex,
+        @NotNull MealType sourceMealType,
+        @NotNull LocalDate destinationWeekStartDate,
+        @Min(0) @Max(6) int destinationDayIndex,
+        @NotNull MealType destinationMealType,
+        @NotNull MealCollisionMode collisionMode
 ) {}
 ```
 
@@ -466,31 +629,6 @@ public ResponseEntity<ApiResponse<MealBoardResponse>> duplicateSlot(
 }
 ```
 
-```java
-private MealSlotEntry snapshotEntry(MealEntryRequest request, MealSlot slot, MealSlotRole role, int sortOrder) {
-    MealSlotEntry entry = new MealSlotEntry();
-    entry.setSlot(slot);
-    entry.setRole(role);
-    entry.setSortOrder(sortOrder);
-    entry.setSourceType(request.sourceType());
-
-    if (request.sourceType() == MealEntrySourceType.RECIPE) {
-        Recipe recipe = recipeRepository.findByIdAndFamily(request.recipeId(), slot.getFamily())
-                .orElseThrow(() -> new ResourceNotFoundException("Recipe", request.recipeId()));
-        entry.setRecipe(recipe);
-        entry.setTitleSnapshot(recipe.getTitle());
-        entry.setImageUrlSnapshot(recipe.getImageUrl());
-        entry.setNoteSnapshot(recipe.getNote());
-    } else {
-        entry.setTitleSnapshot(request.title().trim());
-        entry.setImageUrlSnapshot(request.imageUrl());
-        entry.setNoteSnapshot(request.note());
-    }
-
-    return entry;
-}
-```
-
 - [ ] **Step 4: Run the backend write-path tests to verify slot upsert, move, duplicate, and collision behavior**
 
 Run:
@@ -500,15 +638,13 @@ cd /Users/joe.bor/code/family-hub/backend/family-hub-api
 ./mvnw -Dtest=MealServiceTest,MealControllerTest,MealIntegrationTest test
 ```
 
-Expected: PASS for quick meals, recipe snapshotting, move/duplicate behavior, and collision resolution semantics.
+Expected: PASS for quick meals, board-level recipe snapshotting, move/duplicate behavior, and collision resolution semantics.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /Users/joe.bor/code/family-hub/backend/family-hub-api
-git add src/main/java/com/familyhub/demo/dto/MealEntryRequest.java \
-  src/main/java/com/familyhub/demo/dto/UpsertMealSlotRequest.java \
-  src/main/java/com/familyhub/demo/dto/MoveMealSlotRequest.java \
+git add src/main/java/com/familyhub/demo/dto/MoveMealSlotRequest.java \
   src/main/java/com/familyhub/demo/dto/DuplicateMealSlotRequest.java \
   src/main/java/com/familyhub/demo/service/MealService.java \
   src/main/java/com/familyhub/demo/controller/MealController.java \
@@ -577,6 +713,8 @@ Expected: FAIL with missing API-backed `Meals` types/hooks and validation.
 
 - [ ] **Step 3: Add the API contract, delete the placeholder store, and extend time utilities for Sunday-first week navigation**
 
+`getWeekStartSunday` must already exist from the completed Recipes plan. This task adds `addWeeksLocal` and `isPastWeek`; if the week-start helper is missing, stop and fix the Recipes handoff contract instead of redefining it here.
+
 ```ts
 export interface MealSlotEntry {
   id: string;
@@ -602,6 +740,38 @@ export interface MealsBoard {
     slots: MealSlot[];
   }>;
 }
+
+export type MealCollisionMode = "replace_primary" | "add_as_extra";
+
+export interface MealEntryRequest {
+  sourceType: "recipe" | "quick";
+  recipeId: string | null;
+  title: string | null;
+  imageUrl: string | null;
+  note: string | null;
+}
+
+export interface UpsertMealSlotRequest {
+  weekStartDate: string;
+  dayIndex: number;
+  mealType: "breakfast" | "lunch" | "dinner";
+  primary: MealEntryRequest;
+  extras: MealEntryRequest[];
+  note: string | null;
+  collisionMode: MealCollisionMode | null;
+}
+
+export interface MoveMealSlotRequest {
+  sourceWeekStartDate: string;
+  sourceDayIndex: number;
+  sourceMealType: "breakfast" | "lunch" | "dinner";
+  destinationWeekStartDate: string;
+  destinationDayIndex: number;
+  destinationMealType: "breakfast" | "lunch" | "dinner";
+  collisionMode: MealCollisionMode;
+}
+
+export interface DuplicateMealSlotRequest extends MoveMealSlotRequest {}
 ```
 
 ```ts
@@ -622,12 +792,6 @@ export const mealsService = {
 ```
 
 ```ts
-export function getWeekStartSunday(date: Date): Date {
-  const copy = startOfDay(date);
-  copy.setDate(copy.getDate() - copy.getDay());
-  return copy;
-}
-
 export function addWeeksLocal(date: Date, amount: number): Date {
   const copy = new Date(date);
   copy.setDate(copy.getDate() + amount * 7);
@@ -687,7 +851,7 @@ git commit -m "feat(meals): replace placeholder meals contract"
 - Create: `frontend/src/components/meals/meal-composer-sheet.test.tsx`
 - Create: `frontend/src/components/meals-view.test.tsx`
 
-- [ ] **Step 1: Write the failing UI tests for empty slots, composer suggestions, and quick meal creation**
+- [ ] **Step 1: Write the failing UI tests for empty slots, composer suggestions, quick meal creation, and recipe-placement collisions**
 
 ```tsx
 it("shows add affordances for empty meal slots", async () => {
@@ -717,6 +881,23 @@ it("returns to Recipes with a creation draft when Create recipe from this is cho
     mealType: "dinner",
     typedTitle: "Leftovers",
   });
+});
+
+it("prompts before placing a recipe draft into an occupied slot", async () => {
+  render(
+    <MealComposerSheet
+      open
+      slot={{ ...occupiedDinnerSlot, seededRecipeId: "recipe-1" }}
+      readOnly={false}
+      onOpenChange={vi.fn()}
+    />,
+  );
+
+  await user.click(await screen.findByRole("button", { name: /add recipe to slot/i }));
+
+  expect(await screen.findByText("That slot already has a meal")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /replace primary/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /add as extra/i })).toBeInTheDocument();
 });
 ```
 
@@ -837,6 +1018,49 @@ function handleCreateRecipeFromTypedText() {
 }
 ```
 
+```tsx
+function submitSeededRecipe(collisionMode: MealCollisionMode | null = null) {
+  if (!slot?.seededRecipeId) return;
+  if (slot.primary && collisionMode === null) {
+    setCollisionOpen(true);
+    return;
+  }
+
+  upsertSlot.mutate({
+    weekStartDate: slot.weekStartDate,
+    dayIndex: slot.dayIndex,
+    mealType: slot.mealType,
+    primary: {
+      sourceType: "recipe",
+      recipeId: slot.seededRecipeId,
+      title: null,
+      imageUrl: null,
+      note: null,
+    },
+    extras: [],
+    note: null,
+    collisionMode,
+  });
+}
+
+<AlertDialog open={collisionOpen} onOpenChange={setCollisionOpen}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>That slot already has a meal</AlertDialogTitle>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction onClick={() => submitSeededRecipe("add_as_extra")}>
+        Add as extra
+      </AlertDialogAction>
+      <AlertDialogAction onClick={() => submitSeededRecipe("replace_primary")}>
+        Replace primary
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
 - [ ] **Step 4: Run the unit tests to verify mobile board rendering and composer behavior pass**
 
 Run:
@@ -846,7 +1070,7 @@ cd /Users/joe.bor/code/family-hub/frontend
 npm test -- --run src/components/meals-view.test.tsx src/components/meals/meal-composer-sheet.test.tsx
 ```
 
-Expected: PASS for empty-slot affordances, recipe suggestions, quick meals, and week navigation.
+Expected: PASS for empty-slot affordances, recipe suggestions, quick meals, Add-to-Meals occupied-slot prompting, and week navigation.
 
 - [ ] **Step 5: Commit**
 
@@ -1000,7 +1224,7 @@ git commit -m "feat(meals): add grid and slot management"
 - Past weeks review-only in FE: Tasks 3 and 4
 - Quick meals plus recipe suggestions: Tasks 3 and 4
 - `Create recipe from this` and return-to-planning handoff: Tasks 0 and 4
-- Recipe snapshots at placement time: Tasks 1 and 2
+- Board-level recipe snapshots at placement time: Tasks 1 and 2
 - Explicit move, duplicate, and collision handling: Tasks 2 and 5
 - Recipe-backed meal navigation into real recipe detail: Task 5
 - Recipes handoff consumption: Tasks 0, 4, and 5

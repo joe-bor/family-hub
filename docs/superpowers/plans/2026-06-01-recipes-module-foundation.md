@@ -37,6 +37,16 @@ Per root shipping rules, live FE verification that depends on real `/api/recipes
   - `Recipes -> Meals` for adding an existing recipe to a future meal slot
   - `Meals -> Recipes -> back to Meals` for turning typed meal text into a real reusable recipe and resuming planning
 - This plan may define shared handoff state for `Meals`, but it must not absorb the `Meals` board, composer, or snapshot persistence work.
+- Shared handoff wire values must stay lowercase (`breakfast`, `lunch`, `dinner`) so frontend types and backend JSON contracts do not drift.
+- `Recipes` owns the first implementation of the Sunday week-start helper used by `Add to Meals`; the later `Meals` plan consumes and extends that helper.
+- URL import must fetch user-provided URLs with server-side guardrails: public `http`/`https` only, private-network rejection, bounded redirects, short timeouts, and a response-size cap.
+- Recipe detail must include editable favorite and edit actions for saved recipes, not only create-time favorite state.
+
+## Execution Issue Mapping
+
+- Backend execution issue in `backend/family-hub-api`: Tasks 1-2. Contract: ships schema, `/api/recipes`, import guardrails, update/favorite support, and backend tests. It should produce published backend release `>= V15` before real FE verification depends on it.
+- Frontend execution issue in `frontend`: Tasks 3-5. Contract: consumes published backend release `>= V15` for live verification, while mock-backed unit work may start earlier.
+- Root docs issue, if needed: spec/plan reconciliation only. Do not implement production code from the root workspace.
 
 ## File Structure
 
@@ -62,10 +72,12 @@ Expected create / modify set:
 - Create: `src/main/java/com/familyhub/demo/dto/RecipeSummaryResponse.java`
 - Create: `src/main/java/com/familyhub/demo/dto/RecipeDetailResponse.java`
 - Create: `src/main/java/com/familyhub/demo/mapper/RecipeMapper.java`
+- Create: `src/main/java/com/familyhub/demo/service/ImportedRecipe.java`
 - Create: `src/main/java/com/familyhub/demo/service/RecipeImportService.java`
 - Create: `src/main/java/com/familyhub/demo/service/RecipeService.java`
 - Create: `src/main/java/com/familyhub/demo/controller/RecipeController.java`
 - Modify: `src/test/java/com/familyhub/demo/TestDataFactory.java`
+- Create: `src/test/java/com/familyhub/demo/repository/RecipeRepositoryTest.java`
 - Create: `src/test/java/com/familyhub/demo/service/RecipeServiceTest.java`
 - Create: `src/test/java/com/familyhub/demo/service/RecipeImportServiceTest.java`
 - Create: `src/test/java/com/familyhub/demo/controller/RecipeControllerTest.java`
@@ -84,6 +96,8 @@ Expected create / modify set:
 - Modify: `src/components/shared/navigation-tabs.test.tsx`
 - Create: `src/lib/types/recipes.ts`
 - Modify: `src/lib/types/index.ts`
+- Modify: `src/lib/time-utils.ts`
+- Modify: `src/lib/time-utils.test.ts`
 - Create: `src/api/services/recipes.service.ts`
 - Modify: `src/api/services/index.ts`
 - Create: `src/api/hooks/use-recipes.ts`
@@ -100,6 +114,7 @@ Expected create / modify set:
 - Create: `src/components/recipes/recipe-filter-bar.tsx`
 - Create: `src/components/recipes/recipe-form.tsx`
 - Create: `src/components/recipes/recipe-create-sheet.tsx`
+- Create: `src/components/recipes/recipe-edit-sheet.tsx`
 - Create: `src/components/recipes/recipe-import-sheet.tsx`
 - Create: `src/components/recipes/recipe-detail-view.tsx`
 - Create: `src/api/hooks/use-recipes.test.tsx`
@@ -118,63 +133,52 @@ This structure keeps backend recipe persistence and import logic isolated in one
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/RecipeInstruction.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/RecipeTag.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/repository/RecipeRepository.java`
-- Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/service/RecipeServiceTest.java`
+- Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/repository/RecipeRepositoryTest.java`
 
-- [ ] **Step 1: Write the failing backend service tests for create, list, and favorite-ready recipe state**
+- [ ] **Step 1: Write the failing backend repository tests for ordered aggregate persistence and family scoping**
 
 ```java
 @Test
-void createRecipe_persistsOrderedIngredientsInstructionsAndTags() {
-    CreateRecipeRequest request = new CreateRecipeRequest(
-            "Sheet Pan Gnocchi",
-            "https://cdn.example.com/gnocchi.jpg",
-            List.of("1 lb shelf-stable gnocchi", "2 cups cherry tomatoes"),
-            List.of("Heat oven to 425F", "Roast for 20 minutes"),
-            "Weeknight favorite",
-            "https://example.com/gnocchi",
-            List.of("dinner", "weeknight"),
-            true
-    );
+void saveRecipe_persistsOrderedIngredientsInstructionsAndTags() {
+    Recipe recipe = recipeFor(family, "Sheet Pan Gnocchi");
+    recipe.getIngredients().add(ingredient(recipe, 0, "1 lb shelf-stable gnocchi"));
+    recipe.getIngredients().add(ingredient(recipe, 1, "2 cups cherry tomatoes"));
+    recipe.getInstructions().add(instruction(recipe, 0, "Heat oven to 425F"));
+    recipe.getInstructions().add(instruction(recipe, 1, "Roast for 20 minutes"));
+    recipe.getTags().add(tag(recipe, 0, "dinner"));
+    recipe.getTags().add(tag(recipe, 1, "weeknight"));
 
-    RecipeDetailResponse response = recipeService.createRecipe(request, family);
+    UUID id = recipeRepository.saveAndFlush(recipe).getId();
+    entityManager.clear();
 
-    assertThat(response.title()).isEqualTo("Sheet Pan Gnocchi");
-    assertThat(response.favorite()).isTrue();
-    assertThat(response.ingredients()).containsExactly(
-            "1 lb shelf-stable gnocchi",
-            "2 cups cherry tomatoes"
-    );
-    assertThat(response.instructions()).containsExactly(
-            "Heat oven to 425F",
-            "Roast for 20 minutes"
-    );
-    assertThat(response.tags()).containsExactly("dinner", "weeknight");
+    Recipe saved = recipeRepository.findByIdAndFamily(id, family).orElseThrow();
+
+    assertThat(saved.getIngredients()).extracting(RecipeIngredient::getText)
+            .containsExactly("1 lb shelf-stable gnocchi", "2 cups cherry tomatoes");
+    assertThat(saved.getInstructions()).extracting(RecipeInstruction::getText)
+            .containsExactly("Heat oven to 425F", "Roast for 20 minutes");
+    assertThat(saved.getTags()).extracting(RecipeTag::getName)
+            .containsExactly("dinner", "weeknight");
 }
 
 @Test
-void getRecipes_returnsRecentRecipesForFamilyOnly() {
-    Recipe newest = recipeRepository.saveAndFlush(TestDataFactory.recipe(family, "Newest Soup"));
-    Recipe oldest = recipeRepository.saveAndFlush(TestDataFactory.recipe(family, "Oldest Soup"));
-    oldest.setCreatedAt(oldest.getCreatedAt().minusDays(2));
-    recipeRepository.saveAndFlush(oldest);
+void findByIdAndFamily_doesNotReturnAnotherFamiliesRecipe() {
+    Recipe otherFamilyRecipe = recipeRepository.saveAndFlush(recipeFor(otherFamily, "Other Soup"));
 
-    List<RecipeSummaryResponse> recipes = recipeService.getRecipes(family);
-
-    assertThat(recipes).extracting(RecipeSummaryResponse::title)
-            .containsSubsequence("Newest Soup", "Oldest Soup");
+    assertThat(recipeRepository.findByIdAndFamily(otherFamilyRecipe.getId(), family)).isEmpty();
 }
 ```
 
-- [ ] **Step 2: Run the recipe-service test to verify it fails because the recipe domain does not exist yet**
+- [ ] **Step 2: Run the recipe repository test to verify it fails because the recipe domain does not exist yet**
 
 Run:
 
 ```bash
 cd /Users/joe.bor/code/family-hub/backend/family-hub-api
-./mvnw -Dtest=RecipeServiceTest test
+./mvnw -Dtest=RecipeRepositoryTest test
 ```
 
-Expected: FAIL with compilation errors for missing `Recipe*` classes and `RecipeService`.
+Expected: FAIL with compilation errors for missing `Recipe*` classes and `RecipeRepository`.
 
 - [ ] **Step 3: Add the dependency, migration, entities, and repository**
 
@@ -290,16 +294,16 @@ public interface RecipeRepository extends JpaRepository<Recipe, UUID> {
 }
 ```
 
-- [ ] **Step 4: Run the backend recipe-service test to verify the aggregate foundation now passes**
+- [ ] **Step 4: Run the backend recipe repository test to verify the aggregate foundation now passes**
 
 Run:
 
 ```bash
 cd /Users/joe.bor/code/family-hub/backend/family-hub-api
-./mvnw -Dtest=RecipeServiceTest test
+./mvnw -Dtest=RecipeRepositoryTest test
 ```
 
-Expected: PASS for creation ordering and recent-list ordering.
+Expected: PASS for ordered child persistence and family-scoped repository lookup.
 
 - [ ] **Step 5: Commit**
 
@@ -312,7 +316,7 @@ git add pom.xml \
   src/main/java/com/familyhub/demo/model/RecipeInstruction.java \
   src/main/java/com/familyhub/demo/model/RecipeTag.java \
   src/main/java/com/familyhub/demo/repository/RecipeRepository.java \
-  src/test/java/com/familyhub/demo/service/RecipeServiceTest.java
+  src/test/java/com/familyhub/demo/repository/RecipeRepositoryTest.java
 git commit -m "feat(recipes): add recipe aggregate foundation"
 ```
 
@@ -325,17 +329,85 @@ git commit -m "feat(recipes): add recipe aggregate foundation"
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/RecipeSummaryResponse.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/RecipeDetailResponse.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/mapper/RecipeMapper.java`
+- Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/ImportedRecipe.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/RecipeImportService.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/RecipeService.java`
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/controller/RecipeController.java`
 - Modify: `backend/family-hub-api/src/test/java/com/familyhub/demo/TestDataFactory.java`
+- Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/service/RecipeServiceTest.java`
 - Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/service/RecipeImportServiceTest.java`
 - Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/controller/RecipeControllerTest.java`
 - Create: `backend/family-hub-api/src/test/java/com/familyhub/demo/integration/RecipeIntegrationTest.java`
 
-- [ ] **Step 1: Write the failing controller and import-service tests for list/detail/create/update/import**
+- [ ] **Step 1: Write the failing service, controller, and import-service tests for list/detail/create/update/import**
 
 ```java
+@Test
+void createRecipe_persistsOrderedIngredientsInstructionsTagsAndFavoriteState() {
+    CreateRecipeRequest request = new CreateRecipeRequest(
+            "Sheet Pan Gnocchi",
+            "https://cdn.example.com/gnocchi.jpg",
+            List.of("1 lb shelf-stable gnocchi", "2 cups cherry tomatoes"),
+            List.of("Heat oven to 425F", "Roast for 20 minutes"),
+            "Weeknight favorite",
+            "https://example.com/gnocchi",
+            List.of("dinner", "weeknight"),
+            true
+    );
+
+    RecipeDetailResponse response = recipeService.createRecipe(request, family);
+
+    assertThat(response.title()).isEqualTo("Sheet Pan Gnocchi");
+    assertThat(response.favorite()).isTrue();
+    assertThat(response.ingredients()).containsExactly(
+            "1 lb shelf-stable gnocchi",
+            "2 cups cherry tomatoes"
+    );
+    assertThat(response.instructions()).containsExactly(
+            "Heat oven to 425F",
+            "Roast for 20 minutes"
+    );
+    assertThat(response.tags()).containsExactly("dinner", "weeknight");
+}
+
+@Test
+void updateRecipe_canToggleFavoriteAndEditRecipeFields() {
+    Recipe recipe = recipeRepository.saveAndFlush(TestDataFactory.recipe(family, "Old Soup"));
+
+    RecipeDetailResponse response = recipeService.updateRecipe(
+            recipe.getId(),
+            new UpdateRecipeRequest(
+                    "New Soup",
+                    null,
+                    List.of("1 cup broth"),
+                    List.of("Simmer"),
+                    "Updated note",
+                    null,
+                    List.of("lunch"),
+                    true
+            ),
+            family
+    );
+
+    assertThat(response.title()).isEqualTo("New Soup");
+    assertThat(response.favorite()).isTrue();
+    assertThat(response.ingredients()).containsExactly("1 cup broth");
+}
+
+@Test
+void getRecipes_returnsRecentRecipesForFamilyOnly() {
+    Recipe oldest = recipeRepository.saveAndFlush(TestDataFactory.recipe(family, "Oldest Soup"));
+    Recipe newest = recipeRepository.saveAndFlush(TestDataFactory.recipe(family, "Newest Soup"));
+    recipeRepository.saveAndFlush(TestDataFactory.recipe(otherFamily, "Other Soup"));
+
+    List<RecipeSummaryResponse> recipes = recipeService.getRecipes(family);
+
+    assertThat(recipes).extracting(RecipeSummaryResponse::title)
+            .containsSubsequence("Newest Soup", "Oldest Soup");
+    assertThat(recipes).extracting(RecipeSummaryResponse::title)
+            .doesNotContain("Other Soup");
+}
+
 @Test
 @WithMockFamily
 void getRecipes_returns200() throws Exception {
@@ -388,6 +460,15 @@ void importDocument_extractsJsonLdRecipeFields() {
     assertThat(imported.title()).isEqualTo("Weeknight Tacos");
     assertThat(imported.ingredients()).containsExactly("1 lb beef", "8 tortillas");
 }
+
+@Test
+void importRecipe_rejectsPrivateNetworkTargetsBeforeFetching() {
+    ImportRecipeRequest request = new ImportRecipeRequest("http://127.0.0.1:8080/private");
+
+    assertThatThrownBy(() -> recipeService.importRecipe(request, family))
+            .isInstanceOf(BadRequestException.class)
+            .hasMessageContaining("Could not import recipe");
+}
 ```
 
 - [ ] **Step 2: Run the focused backend tests to verify the HTTP contract and import flow are still missing**
@@ -396,12 +477,21 @@ Run:
 
 ```bash
 cd /Users/joe.bor/code/family-hub/backend/family-hub-api
-./mvnw -Dtest=RecipeControllerTest,RecipeImportServiceTest test
+./mvnw -Dtest=RecipeServiceTest,RecipeControllerTest,RecipeImportServiceTest test
 ```
 
 Expected: FAIL with missing DTO/controller/service/import types.
 
 - [ ] **Step 3: Implement the DTOs, mapper, service, import parser, and controller**
+
+The import service must validate and fetch user-provided URLs before parsing:
+
+- accept only `http` and `https`
+- reject loopback, private, link-local, and otherwise non-public resolved addresses
+- apply short connection/read timeouts
+- follow only a small bounded redirect chain and re-check every redirect target
+- cap the downloaded response body before passing HTML to Jsoup
+- return the same user-facing import failure style for blocked URLs, network failures, oversized responses, and parse failures
 
 ```java
 public record CreateRecipeRequest(
@@ -518,10 +608,10 @@ Run:
 
 ```bash
 cd /Users/joe.bor/code/family-hub/backend/family-hub-api
-./mvnw -Dtest=RecipeControllerTest,RecipeImportServiceTest,RecipeIntegrationTest test
+./mvnw -Dtest=RecipeServiceTest,RecipeControllerTest,RecipeImportServiceTest,RecipeIntegrationTest test
 ```
 
-Expected: PASS for list/detail/create/update/import flows and JSON-LD import parsing.
+Expected: PASS for list/detail/create/update/favorite/import flows and guarded JSON-LD import parsing.
 
 - [ ] **Step 5: Commit**
 
@@ -533,10 +623,12 @@ git add src/main/java/com/familyhub/demo/dto/CreateRecipeRequest.java \
   src/main/java/com/familyhub/demo/dto/RecipeSummaryResponse.java \
   src/main/java/com/familyhub/demo/dto/RecipeDetailResponse.java \
   src/main/java/com/familyhub/demo/mapper/RecipeMapper.java \
+  src/main/java/com/familyhub/demo/service/ImportedRecipe.java \
   src/main/java/com/familyhub/demo/service/RecipeImportService.java \
   src/main/java/com/familyhub/demo/service/RecipeService.java \
   src/main/java/com/familyhub/demo/controller/RecipeController.java \
   src/test/java/com/familyhub/demo/TestDataFactory.java \
+  src/test/java/com/familyhub/demo/service/RecipeServiceTest.java \
   src/test/java/com/familyhub/demo/service/RecipeImportServiceTest.java \
   src/test/java/com/familyhub/demo/controller/RecipeControllerTest.java \
   src/test/java/com/familyhub/demo/integration/RecipeIntegrationTest.java
@@ -642,6 +734,8 @@ export interface CreateRecipeRequest {
   tags: string[];
   favorite: boolean;
 }
+
+export interface UpdateRecipeRequest extends CreateRecipeRequest {}
 ```
 
 ```ts
@@ -728,6 +822,7 @@ git commit -m "feat(recipes): add frontend recipe contracts"
 - Create: `frontend/src/components/recipes/recipe-filter-bar.tsx`
 - Create: `frontend/src/components/recipes/recipe-form.tsx`
 - Create: `frontend/src/components/recipes/recipe-create-sheet.tsx`
+- Create: `frontend/src/components/recipes/recipe-edit-sheet.tsx`
 - Create: `frontend/src/components/recipes/recipe-import-sheet.tsx`
 - Create: `frontend/src/components/recipes/recipe-detail-view.tsx`
 - Create: `frontend/src/components/recipes-view.test.tsx`
@@ -764,6 +859,25 @@ it("opens recipe detail from the library card", async () => {
   await user.click(await screen.findByRole("button", { name: /sheet pan gnocchi/i }));
   expect(await screen.findByText("Ingredients")).toBeInTheDocument();
   expect(screen.getByText("Instructions")).toBeInTheDocument();
+});
+
+it("toggles favorite from recipe detail", async () => {
+  render(<RecipeDetailView recipeId="recipe-1" onBack={vi.fn()} />);
+
+  await user.click(await screen.findByRole("button", { name: /favorite/i }));
+
+  expect(await screen.findByRole("button", { name: /favorited/i })).toBeInTheDocument();
+});
+
+it("edits a saved recipe from recipe detail", async () => {
+  render(<RecipeDetailView recipeId="recipe-1" onBack={vi.fn()} />);
+
+  await user.click(await screen.findByRole("button", { name: /edit recipe/i }));
+  await user.clear(screen.getByLabelText(/recipe name/i));
+  await user.type(screen.getByLabelText(/recipe name/i), "Updated Gnocchi");
+  await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+  expect(await screen.findByText("Updated Gnocchi")).toBeInTheDocument();
 });
 ```
 
@@ -824,7 +938,6 @@ export function RecipesView() {
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const recipes = useRecipes();
-  const recipeCreationDraft = useAppStore((state) => state.recipeCreationDraft);
   const visibleRecipes = buildVisibleRecipes(recipes.data?.data ?? [], {
     searchValue,
     favoritesOnly,
@@ -876,6 +989,41 @@ export function RecipesView() {
 }
 ```
 
+```tsx
+export function RecipeDetailView({ recipeId, onBack }: RecipeDetailViewProps) {
+  const recipe = useRecipe(recipeId);
+  const updateRecipe = useUpdateRecipe();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const handleFavoriteToggle = () => {
+    if (!recipe.data?.data) return;
+    updateRecipe.mutate({
+      id: recipeId,
+      request: {
+        ...toUpdateRecipeRequest(recipe.data.data),
+        favorite: !recipe.data.data.favorite,
+      },
+    });
+  };
+
+  return (
+    <>
+      <Button type="button" variant="ghost" onClick={handleFavoriteToggle}>
+        {recipe.data?.data.favorite ? "Favorited" : "Favorite"}
+      </Button>
+      <Button type="button" variant="outline" onClick={() => setEditOpen(true)}>
+        Edit recipe
+      </Button>
+      <RecipeEditSheet
+        open={editOpen}
+        recipe={recipe.data?.data ?? null}
+        onOpenChange={setEditOpen}
+      />
+    </>
+  );
+}
+```
+
 - [ ] **Step 4: Run unit and mobile E2E verification for the recipe module**
 
 Run:
@@ -886,7 +1034,7 @@ npm test -- --run src/components/recipes-view.test.tsx src/components/shared/mob
 npm run test:e2e -- e2e/mobile-recipes.spec.ts
 ```
 
-Expected: PASS for shell registration, empty state, detail navigation, and the core mobile add/import flow.
+Expected: PASS for shell registration, empty state, detail navigation, favorite toggle, edit flow, and the core mobile add/import flow.
 
 - [ ] **Step 5: Commit**
 
@@ -904,6 +1052,7 @@ git add src/App.tsx \
   src/components/recipes/recipe-filter-bar.tsx \
   src/components/recipes/recipe-form.tsx \
   src/components/recipes/recipe-create-sheet.tsx \
+  src/components/recipes/recipe-edit-sheet.tsx \
   src/components/recipes/recipe-import-sheet.tsx \
   src/components/recipes/recipe-detail-view.tsx \
   src/components/recipes-view.test.tsx \
@@ -916,6 +1065,8 @@ git commit -m "feat(recipes): add recipes module ui"
 **Files:**
 - Modify: `frontend/src/stores/app-store.ts`
 - Modify: `frontend/src/stores/index.ts`
+- Modify: `frontend/src/lib/time-utils.ts`
+- Modify: `frontend/src/lib/time-utils.test.ts`
 - Modify: `frontend/src/components/recipes/recipe-detail-view.tsx`
 - Modify: `frontend/src/components/recipes-view.test.tsx`
 
@@ -935,6 +1086,10 @@ it("stores a meal-placement draft and switches to Meals when Add to Meals is tap
       kind: "recipes-library",
     },
   });
+});
+
+it("calculates a Sunday week start for the Add to Meals default week", () => {
+  expect(formatLocalDate(getWeekStartSunday(new Date(2026, 5, 10)))).toBe("2026-06-07");
 });
 
 it("returns to Meals after recipe creation when the flow started from a meal slot", async () => {
@@ -970,12 +1125,20 @@ Run:
 
 ```bash
 cd /Users/joe.bor/code/family-hub/frontend
-npm test -- --run src/components/recipes-view.test.tsx
+npm test -- --run src/components/recipes-view.test.tsx src/lib/time-utils.test.ts
 ```
 
 Expected: FAIL with missing `mealPlacementDraft` state or missing `Add to Meals` handler.
 
 - [ ] **Step 3: Add the shared handoff state and wire the recipe detail action**
+
+```ts
+export function getWeekStartSunday(date: Date): Date {
+  const copy = startOfDay(date);
+  copy.setDate(copy.getDate() - copy.getDay());
+  return copy;
+}
+```
 
 ```ts
 export interface MealPlacementDraft {
@@ -1094,10 +1257,10 @@ Run:
 
 ```bash
 cd /Users/joe.bor/code/family-hub/frontend
-npm test -- --run src/components/recipes-view.test.tsx
+npm test -- --run src/components/recipes-view.test.tsx src/lib/time-utils.test.ts
 ```
 
-Expected: PASS for the shared `Add to Meals` draft contract and no new `Meals` board behavior in this plan.
+Expected: PASS for the Sunday week-start helper, shared `Add to Meals` draft contract, and no new `Meals` board behavior in this plan.
 
 - [ ] **Step 5: Commit**
 
@@ -1105,10 +1268,42 @@ Expected: PASS for the shared `Add to Meals` draft contract and no new `Meals` b
 cd /Users/joe.bor/code/family-hub/frontend
 git add src/stores/app-store.ts \
   src/stores/index.ts \
+  src/lib/time-utils.ts \
+  src/lib/time-utils.test.ts \
   src/components/recipes/recipe-detail-view.tsx \
   src/components/recipes-view.test.tsx
 git commit -m "feat(recipes): add meals handoff intent"
 ```
+
+## Task 6: Review Recipes Delivery And Reconcile Contract Drift
+
+**Files:**
+- Read: `docs/superpowers/specs/2026-06-01-meals-and-recipes-foundation-design.md`
+- Read: `docs/superpowers/plans/2026-06-01-recipes-module-foundation.md`
+- Modify only if drifted: `docs/superpowers/specs/2026-06-01-meals-and-recipes-foundation-design.md`
+- Modify only if drifted: `docs/superpowers/plans/2026-06-01-meals-weekly-planning.md`
+
+- [ ] **Step 1: Review the completed Recipes implementation against the execution contract**
+
+Confirm these non-negotiables before creating or merging the Recipes PR:
+
+- standalone top-level `Recipes` module
+- family-scoped backend persistence
+- manual create with only name required
+- guarded URL import with auto-save on success
+- cook-first detail
+- favorite toggle and edit from detail
+- favorites/tags/light filters
+- shared `Recipes -> Meals` and `Meals -> Recipes -> back to Meals` draft state
+- Sunday week-start helper available before the Meals plan starts
+
+- [ ] **Step 2: Apply review findings that are within the Recipes contract**
+
+Fix only Recipes-owned issues in the delivery repos. If review discovers a cross-module contract change, update the root spec before proceeding to Meals.
+
+- [ ] **Step 3: Update docs only if the implemented contract drifted**
+
+If the implemented Recipes contract differs from this plan or the shared spec, update the root docs and commit those doc changes from the root workspace before issuing the Meals execution work.
 
 ## Spec Coverage Checklist
 
@@ -1116,8 +1311,9 @@ git commit -m "feat(recipes): add meals handoff intent"
 - Manual recipe creation with name-only requirement: Tasks 2-4
 - URL import with auto-save on success and import living inside the add flow: Task 2 and Task 4
 - Cook-first recipe detail: Task 4
-- Favorites, tags, light filters, and favorites surfacing higher in filtered/search contexts: Tasks 3-4
+- Favorite toggle, edit, tags, light filters, and favorites surfacing higher in filtered/search contexts: Tasks 2-4
 - Shared `Recipes -> Meals` and `Meals -> Recipes -> back to Meals` contract without building `Meals`: Task 5
+- Recipes review and doc-drift reconciliation before Meals starts: Task 6
 
 ## Risks To Watch During Execution
 
