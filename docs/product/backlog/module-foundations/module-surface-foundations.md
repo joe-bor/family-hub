@@ -5,10 +5,12 @@ epic: module-foundations
 status: in-progress
 priority: P1
 created: 2026-05-01
-updated: 2026-06-02
+updated: 2026-06-03
 issues:
   - BE #52
-prs: []
+  - BE #55
+prs:
+  - BE PR #53
 ---
 
 ## Context
