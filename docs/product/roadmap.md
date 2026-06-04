@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-05-21
+Last updated: 2026-06-04
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -37,20 +37,25 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 ### Module foundations
 
 Current story:
-- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md)
+- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — active Recipes/Meals FE handoff after backend `family-hub-api` `v1.5.0`
 
 Most recent shipped story:
 - [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) — replaces the initial one-off chores release with recurring day / week / month routines
 
-Next recommended story:
-- `Meals` — simple week-ahead planning as the next lightweight family coordination surface after `Chores` and `Lists`
+Active execution:
+- `Recipes` frontend foundation — FE #183, consumes backend release `family-hub-api` `v1.5.0`
+- `Meals` frontend foundation — FE #184, follows Recipes FE handoff and consumes backend release `family-hub-api` `v1.5.0`
+
+Next recommended story after Meals:
+- `Photos` — photo library / screensaver administration after source/storage decisions are tighter
 
 Exit criterion for this phase:
 - Turn the remaining placeholder module tabs into real product surfaces after `Chores` and `Lists` shipped.
 
 Recommended order:
-1. `Meals` — simple week-ahead planning
-2. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
+1. `Recipes` — reusable household recipe library and `Add to Meals` handoff
+2. `Meals` — simple week-ahead planning
+3. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
 
 ## Planned epics
 

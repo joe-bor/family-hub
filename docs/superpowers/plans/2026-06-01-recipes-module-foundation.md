@@ -22,6 +22,8 @@
 
 Per root shipping rules, live FE verification that depends on real `/api/recipes` behavior should wait for a published backend release. Mock-backed frontend work can start earlier, but real FE verification should target the released backend contract, not unreleased backend `main`.
 
+Handoff status as of 2026-06-04: backend Recipes issue [family-hub-api#52](https://github.com/joe-bor/family-hub-api/issues/52) and PR [family-hub-api#53](https://github.com/joe-bor/family-hub-api/pull/53) are merged and released in [family-hub-api v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0). Frontend Recipes issue [FamilyHub#183](https://github.com/joe-bor/FamilyHub/issues/183) consumes that release for real-backend verification.
+
 ## Execution Contract
 
 - `Recipes` is a standalone top-level module in this phase, not hidden inside `Meals`.
@@ -44,8 +46,8 @@ Per root shipping rules, live FE verification that depends on real `/api/recipes
 
 ## Execution Issue Mapping
 
-- Backend execution issue in `backend/family-hub-api`: Tasks 1-2. Contract: ships schema, `/api/recipes`, import guardrails, update/favorite support, and backend tests. It should produce published backend release `>= V15` before real FE verification depends on it.
-- Frontend execution issue in `frontend`: Tasks 3-5. Contract: consumes published backend release `>= V15` for live verification, while mock-backed unit work may start earlier.
+- Backend execution issue in `backend/family-hub-api`: [family-hub-api#52](https://github.com/joe-bor/family-hub-api/issues/52), closed by [PR #53](https://github.com/joe-bor/family-hub-api/pull/53). Contract: shipped schema, `/api/recipes`, import guardrails, update/favorite support, and backend tests in release [v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0).
+- Frontend execution issue in `frontend`: [FamilyHub#183](https://github.com/joe-bor/FamilyHub/issues/183). Contract: consumes backend release [v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0) for live verification, while mock-backed unit work may start earlier.
 - Root docs issue, if needed: spec/plan reconciliation only. Do not implement production code from the root workspace.
 
 ## File Structure

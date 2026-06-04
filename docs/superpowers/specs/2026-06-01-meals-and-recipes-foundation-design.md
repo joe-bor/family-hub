@@ -1,8 +1,8 @@
 # Meals And Recipes Foundation Design
 
-**Date:** 2026-06-01  
-**Status:** Proposed  
-**Owner:** Family Hub product / planning  
+**Date:** 2026-06-01
+**Status:** FE handoff ready
+**Owner:** Family Hub product / planning
 **Related backlog epic:** `docs/product/backlog/module-foundations/module-surface-foundations.md`
 
 ## Summary
@@ -18,6 +18,16 @@ The product split is:
 - `Meals` = week-ahead planning board for what the household will eat
 
 This design keeps the current module-foundations focus intact: family coordination first, not pantry management, shopping automation, or a full recipe-platform buildout.
+
+## Handoff Status
+
+As of 2026-06-04:
+
+- Backend `Recipes` issue [family-hub-api#52](https://github.com/joe-bor/family-hub-api/issues/52) and PR [family-hub-api#53](https://github.com/joe-bor/family-hub-api/pull/53) are merged.
+- Backend `Meals` issue [family-hub-api#55](https://github.com/joe-bor/family-hub-api/issues/55) and PR [family-hub-api#56](https://github.com/joe-bor/family-hub-api/pull/56) are merged.
+- Backend release [family-hub-api v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0) is the released contract for frontend real-backend verification.
+- Frontend `Recipes` issue [FamilyHub#183](https://github.com/joe-bor/FamilyHub/issues/183) should land first.
+- Frontend `Meals` issue [FamilyHub#184](https://github.com/joe-bor/FamilyHub/issues/184) should follow after the Recipes frontend handoff state exists.
 
 ## Goals
 
@@ -445,6 +455,13 @@ Each delivery plan should also map into repo-owned execution issues:
 - any root-docs issue only for spec/plan updates, not production implementation
 
 Frontend issues that depend on real backend behavior must state the released backend version they consume. They should not depend on unreleased backend `main`.
+
+Current issue mapping:
+
+- `Recipes` backend: [family-hub-api#52](https://github.com/joe-bor/family-hub-api/issues/52), [PR #53](https://github.com/joe-bor/family-hub-api/pull/53), released in [v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0)
+- `Recipes` frontend: [FamilyHub#183](https://github.com/joe-bor/FamilyHub/issues/183)
+- `Meals` backend: [family-hub-api#55](https://github.com/joe-bor/family-hub-api/issues/55), [PR #56](https://github.com/joe-bor/family-hub-api/pull/56), released in [v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0)
+- `Meals` frontend: [FamilyHub#184](https://github.com/joe-bor/FamilyHub/issues/184)
 
 ### Plan 1: Recipes
 

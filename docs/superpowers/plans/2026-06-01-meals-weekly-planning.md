@@ -23,6 +23,8 @@
 
 Per root shipping rules, FE live verification that depends on real `/api/meals` behavior should wait for a published backend release. Mock-backed FE work can start earlier, but E2E should use the released backend image instead of unreleased backend `main`.
 
+Handoff status as of 2026-06-04: backend Recipes issue [family-hub-api#52](https://github.com/joe-bor/family-hub-api/issues/52) and PR [family-hub-api#53](https://github.com/joe-bor/family-hub-api/pull/53), plus backend Meals issue [family-hub-api#55](https://github.com/joe-bor/family-hub-api/issues/55) and PR [family-hub-api#56](https://github.com/joe-bor/family-hub-api/pull/56), are merged and released in [family-hub-api v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0). Frontend Meals issue [FamilyHub#184](https://github.com/joe-bor/FamilyHub/issues/184) consumes that release after the Recipes frontend handoff state from [FamilyHub#183](https://github.com/joe-bor/FamilyHub/issues/183) exists.
+
 ## Execution Contract
 
 - `Meals` is a household-level weekly planning surface, not per-person meal assignment.
@@ -42,8 +44,8 @@ Per root shipping rules, FE live verification that depends on real `/api/meals` 
 
 ## Execution Issue Mapping
 
-- Backend execution issue in `backend/family-hub-api`: Tasks 1-2. Contract: consumes the released Recipes backend contract `>= V15`, ships meal schema/API behavior, lowercase enum wire values, board-level snapshots, collision semantics, and backend tests. It should produce published backend release `>= V16` before real FE verification depends on it.
-- Frontend execution issue in `frontend`: Tasks 3-5. Contract: consumes the released backend contract `>= V16` for live verification, while mock-backed unit work may start earlier.
+- Backend execution issue in `backend/family-hub-api`: [family-hub-api#55](https://github.com/joe-bor/family-hub-api/issues/55), closed by [PR #56](https://github.com/joe-bor/family-hub-api/pull/56). Contract: consumed the released Recipes backend contract, shipped meal schema/API behavior, lowercase enum wire values, board-level snapshots, collision semantics, and backend tests in release [v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0).
+- Frontend execution issue in `frontend`: [FamilyHub#184](https://github.com/joe-bor/FamilyHub/issues/184). Contract: consumes backend release [v1.5.0](https://github.com/joe-bor/family-hub-api/releases/tag/v1.5.0) for live verification after Recipes FE handoff state from [FamilyHub#183](https://github.com/joe-bor/FamilyHub/issues/183) exists, while mock-backed unit work may start earlier.
 - Root docs issue, if needed: Task 0/spec reconciliation only. Do not implement production code from the root workspace.
 
 ## File Structure
