@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-04
+Last updated: 2026-06-08
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -37,36 +37,45 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 ### Module foundations
 
 Current story:
-- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — active Recipes/Meals FE handoff after backend `family-hub-api` `v1.5.0`
+- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — Recipes/Meals implementation merged; FE release/deploy pending; Photos deferred
 
 Most recent shipped story:
 - [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) — replaces the initial one-off chores release with recurring day / week / month routines
 
 Active execution:
-- `Recipes` frontend foundation — FE #183, consumes backend release `family-hub-api` `v1.5.0`
-- `Meals` frontend foundation — FE #184, follows Recipes FE handoff and consumes backend release `family-hub-api` `v1.5.0`
+- `Recipes` frontend foundation — FE #183 closed by PR #185; consolidated fixes in PR #191
+- `Meals` frontend foundation — FE #184 closed by PR #187; consolidated fixes in PR #191
+- FE release PR #186 for `family-hub` `v0.3.11` is pending; production deploy should follow the released FE commit
 
-Next recommended story after Meals:
-- `Photos` — photo library / screensaver administration after source/storage decisions are tighter
+Next recommended story after FE release/deploy:
+- Mobile-first product polish for the current family organizer surfaces: `Home`, `Calendar`, `Chores`, `Lists`, `Recipes`, and `Meals`
 
 Exit criterion for this phase:
-- Turn the remaining placeholder module tabs into real product surfaces after `Chores` and `Lists` shipped.
+- Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
 
 Recommended order:
-1. `Recipes` — reusable household recipe library and `Add to Meals` handoff
-2. `Meals` — simple week-ahead planning
-3. `Photos` — photo library / screensaver administration after source/storage decisions are tighter
+1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; implementation merged, FE release/deploy pending
+2. `Meals` — simple week-ahead planning; implementation merged, FE release/deploy pending
+3. Mobile-first polish of current organizer workflows
+4. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
 
 ### Mobile UX polish backlog
 
-Still backlogged while module foundations continues through the remaining non-calendar modules:
+Next practical product focus after Recipes/Meals release and deploy. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
+
+Already captured polish stories:
 - [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md)
 - [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
+
+Recommended additions to shape before implementation:
+- Home dashboard should evolve from calendar-only into a true organizer summary now that `Chores`, `Lists`, `Recipes`, and `Meals` have real data.
+- Decide whether the `Photos` tab should be hidden, demoted, or left as an explicit deferred surface while the product is polished for daily use.
+- Run a phone-first production dogfood pass across create/edit/complete flows before adding new modules.
 
 ### Google Calendar read-only sync
 
@@ -83,6 +92,10 @@ Remaining story:
 - [Write-back (create/edit/delete to Google)](backlog/google-calendar/write-back.md) — [Google Cal integration design](../google-calendar-integration-design.md)
 
 ## Deferred
+
+### Module surfaces
+
+- `Photos` — deferred while the family uses and polishes the current organizer surfaces.
 
 ### Lower-priority PRD items
 
