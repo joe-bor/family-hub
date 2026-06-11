@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-08
+Last updated: 2026-06-11
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -66,7 +66,7 @@ Recommended order:
 Next practical product focus after Recipes/Meals release and deploy. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
 Already captured polish stories:
-- [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md)
+- [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md) — implementation merged (FE PR #198); real-device keyboard pass + FE release/deploy pending
 - [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
