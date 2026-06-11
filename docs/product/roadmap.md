@@ -67,7 +67,7 @@ Next practical product focus after Recipes/Meals release and deploy. The app is 
 
 Already captured polish stories:
 - [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md) — implementation merged (FE PR #198); real-device keyboard pass + FE release/deploy pending
-- [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md)
+- [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md) — done (FE #193, PR #194); on-device smoke pending for swipe-to-close + keyboard-above-input
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
