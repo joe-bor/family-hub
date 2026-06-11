@@ -25,6 +25,8 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Persistent bottom navigation](backlog/mobile-ux/persistent-bottom-nav.md) · FE #148, PR #152
 - [Home dashboard redesign](backlog/mobile-ux/home-dashboard-redesign.md) · FE #149, PR #154
 - [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md) · FE #155, PR #156
+- [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md) · FE #193, PR #194 · `0.3.12` (verified Galaxy S10/Chrome)
+- [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md) · FE PR #198 · `0.3.12` (verified Galaxy S10/Chrome)
 
 ### Module foundations
 
@@ -66,8 +68,7 @@ Recommended order:
 Next practical product focus after Recipes/Meals release and deploy. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
 Already captured polish stories:
-- [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md) — released in `0.3.12` (FE PR #198); real-device keyboard pass + production deploy still pending
-- [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md) — done, released in `0.3.12` (FE #193, PR #194); on-device smoke pending for swipe-to-close + keyboard-above-input
+- [Mobile module content polish](backlog/mobile-ux/mobile-module-content-polish.md) — per-module layout/density fixes found in 0.3.12 device testing (list filters, chores redundant labels, recipe card density, shared nav-header inconsistency, settings-dialog cutoff). Pre-existing; not introduced by the shell stories.
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)

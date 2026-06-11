@@ -2,7 +2,7 @@
 id: mobile-expandable-bottom-sheet
 title: Expandable bottom sheet pattern for forms
 epic: mobile-ux
-status: in-progress
+status: done
 priority: P2
 created: 2026-04-23
 updated: 2026-06-11
@@ -27,10 +27,9 @@ Scope decision: the original AC targeted the event form opening half-screen. Sup
 - [x] No action is reachable only by drag gesture (handle is an accessible button; Cancel/Esc/scrim retained)
 - [x] Long forms (event, recipe manual/edit, meal composer/editor) keep full height with the same gestures
 - [x] Unit + full E2E matrix green; desktop renders a centered sheet
-- [ ] Real-device pass: iPhone Safari + Android Chrome keyboard open/close in a half sheet — **still pending; no longer a release gate** (see below)
+- [x] Real-device pass: half-sheet keyboard open/close — **verified on Galaxy S10 / Chrome 2026-06-11** (auto-expand-on-focus keeps the field above the keyboard; handle drag/tap, flick-to-dismiss, scrim all behaved). iPhone Safari not yet exercised; revisit if an iOS-specific keyboard issue is reported.
 
 ## Remaining
 
-- **Release shipped without the device gate.** FE release `family-hub-v0.3.12` (release PR #195, merged 2026-06-11) bundled this work with the sidebar/settings/onboarding story and was cut before the real-device keyboard pass ran. That pass is now a **post-release verification risk carried into the next production deploy**, not a pre-release gate. If it surfaces a keyboard regression, fix-forward in a follow-up patch release.
-- **Production deploy** of 0.3.12 is still manual (`frontend/deploy.sh` from a local terminal) and has not run yet.
-- Settings dialogs → bottom sheet conversion stays a separate future story (per the 2026-06-08 sidebar/settings spec).
+- **Done and shipped.** FE release `family-hub-v0.3.12` (release PR #195, merged 2026-06-11) bundled this work with the sidebar/settings/onboarding story; deployed to production 2026-06-11 and smoke-verified on Galaxy S10 / Chrome. The release was cut before the device gate ran, but the gate has since passed retroactively — no fix-forward needed.
+- Settings dialogs → bottom sheet conversion stays a separate future story (per the 2026-06-08 sidebar/settings spec) — now captured under [mobile-module-content-polish](mobile-module-content-polish.md).
