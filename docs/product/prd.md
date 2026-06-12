@@ -376,7 +376,7 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 **Requirements:**
 - Display current date prominently at top of interface
 - Week View (Default):
-  - Show 7 days (Monday-Sunday)
+  - Show 7 days (Sunday-Saturday; Sunday week start confirmed 2026-06-12, see backlog story `mobile-ux/sidebar-settings-story.md`)
   - Time slots from 6am-10pm in 1-hour increments
   - Events displayed as blocks within time slots
   - Grid layout with dates across top, times down left side

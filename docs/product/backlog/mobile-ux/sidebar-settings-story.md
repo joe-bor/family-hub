@@ -168,7 +168,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 - [ ] No regression to Family Settings, Member Profile, Member Form, or Sign Out flows (existing unit + E2E suites green; new E2E covers open-Preferences → edit-timezone → persist).
 - [ ] Desktop sidebar and dialogs visually unchanged except for the new Preferences row.
 - [ ] BE change ships in a released BE version before the FE consuming it merges to `main` (shipping semantics).
-- [ ] PRD §7.1.1 ("Show 7 days (Monday-Sunday)") corrected to reflect the shipped Sunday-start week, per D3a.
+- [x] PRD §7.1.1 ("Show 7 days (Monday-Sunday)") corrected to reflect the shipped Sunday-start week, per D3a. — Done 2026-06-12 alongside the week-start decision.
 
 ## Non-goals
 
@@ -225,7 +225,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 
 ## Open questions
 
-1. **Does anyone in the family actually want Monday-start weeks?** The PRD says Monday–Sunday; the shipped product is Sunday everywhere. If yes → open a dedicated **one-time cross-stack re-anchor story** (FE ~8 call sites, BE Meals slot-key migration, Chores period cutover) — not a preference toggle. If no → the PRD correction in this story closes the question.
+1. ~~**Does anyone in the family actually want Monday-start weeks?**~~ **Decided 2026-06-12: keep Sunday** (Joe confirmed). The PRD §7.1.1 line has been corrected to Sunday–Saturday. If the family ever changes its mind, the path is a dedicated one-time cross-stack re-anchor story (FE ~8 call sites, BE Meals slot-key migration, Chores period cutover) — not a preference toggle.
 2. **Timezone picker breadth:** curated list (recommended: US zones + current value + device-detect) vs full IANA search. Decide at FE plan time; the BE accepts any valid IANA zone either way.
 3. **Credentials management** (password change, username surfacing): deferred backlog seed — when, if ever, does it matter for a shared-credential household? Likely trigger: a lost/leaked password event or a future member-identity story.
 
