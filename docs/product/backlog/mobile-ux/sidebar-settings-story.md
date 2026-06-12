@@ -2,11 +2,13 @@
 id: mobile-sidebar-settings-structure
 title: Sidebar structure + family preferences surface
 epic: mobile-ux
-status: proposed
+status: planned
 priority: P2
 created: 2026-06-12
 updated: 2026-06-12
-issues: []
+issues:
+  - BE #57 (family timezone expose/edit)
+  - FE #208 (sidebar Preferences entry + sheet; blocked on BE #57 release)
 prs: []
 ---
 
@@ -181,7 +183,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 
 ---
 
-## Suggested FE issue body (repo: joe-bor/FamilyHub)
+## Suggested FE issue body (repo: joe-bor/FamilyHub) — opened as [FE #208](https://github.com/joe-bor/FamilyHub/issues/208)
 
 > **Title:** Sidebar Preferences entry + family preferences sheet (timezone + roadmap stubs)
 >
@@ -197,7 +199,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 > 5. Depends on a **released** BE version exposing `timezone` in `FamilyResponse` and accepting it in `PUT /api/family` (BE issue below). Gate merge on that release per shipping semantics.
 > 6. Tests: unit for sidebar row + sheet rendering both breakpoints; E2E: open Preferences → change timezone → reload → persisted. Existing settings/sidebar E2E stays green.
 
-## Suggested BE issue body (repo: joe-bor/family-hub-api)
+## Suggested BE issue body (repo: joe-bor/family-hub-api) — opened as [BE #57](https://github.com/joe-bor/family-hub-api/issues/57)
 
 > **Title:** Expose and allow updating family timezone
 >

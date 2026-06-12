@@ -69,7 +69,7 @@ Next practical product focus after Recipes/Meals release and deploy. The app is 
 
 Already captured polish stories:
 - [Mobile module content polish](backlog/mobile-ux/mobile-module-content-polish.md) — per-module layout/density fixes found in 0.3.12 device testing (list filters, chores redundant labels, recipe card density, shared nav-header inconsistency, settings-dialog cutoff). Pre-existing; not introduced by the shell stories.
-- [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) — proposed spec: sidebar as the settled non-module surface, new Preferences sheet (editable family timezone + Notifications/Appearance stubs), week-start kept Sunday by decision.
+- [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) — planned: sidebar as the settled non-module surface, new Preferences sheet (editable family timezone + Notifications/Appearance stubs), week-start kept Sunday by decision · BE #57, FE #208
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
