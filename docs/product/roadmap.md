@@ -71,13 +71,13 @@ Recommended order:
 Next practical product focus after the mobile shell/preferences cleanup. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
 Next captured stories:
+- [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) — **in progress**: controlled update prompt, sidebar install row, honest offline banner, and PWA config cleanups (UI + config only; offline *data* is the separate Option C). Supersedes the loose sidebar install-row seed. FE issues (a) install affordance · (b) update prompt + offline banner · (c) config cleanups.
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md) — decide web push vs in-app reminders, then make event reminders configurable and testable.
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
 
 Recommended additions to shape before implementation:
 - Home dashboard should evolve from calendar-only into a true organizer summary now that `Chores`, `Lists`, `Recipes`, and `Meals` have real data. Path: create a new story under `docs/product/backlog/mobile-ux/`.
-- PWA install row in the sidebar is a high-leverage daily-use seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
 - Device-member association is the likely successor to Preferences if member-focused defaults become important; seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
 - Decide whether the `Photos` tab should be hidden, demoted, or left as an explicit deferred surface while the product is polished for daily use.
 - Run a phone-first production dogfood pass across create/edit/complete flows before adding new modules.

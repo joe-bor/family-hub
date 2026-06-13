@@ -832,14 +832,16 @@ Roadmap and backlog determine delivery order. This section only settles the prod
   - Theme color: Primary brand color
   - Background color: White
 - **Service Worker:**
-  - Cache static assets (HTML, CSS, JS, icons)
-  - Offline fallback page (show "No internet connection")
-  - Cache API responses (calendar data) for offline viewing
+  - Cache static assets (HTML, CSS, JS, icons) — Workbox precache
+  - Controlled update prompt instead of a silent reload — [PWA installability story](backlog/mobile-ux/pwa-installability.md)
+  - Honest offline indicator (banner: "You're offline — changes won't save until you reconnect") — same story
+  - ~~Cache API responses (calendar data) for offline viewing~~ — **deferred to Option C / offline reads** (the installability polish intentionally does not add offline data)
 - **HTTPS Requirement:**
   - PWA only works over HTTPS (already planned for Digital Ocean)
 
 **Installation Experience:**
-- Browser shows "Add to Home Screen" prompt after 2nd visit
+- An in-app **Install app** row (sidebar) one-taps install on Chromium and shows manual Add-to-Home-Screen instructions elsewhere; hidden once installed — see the [PWA installability story](backlog/mobile-ux/pwa-installability.md)
+- Browser may also show its own "Add to Home Screen" prompt
 - Icon on home screen launches app in standalone mode (no browser chrome)
 - Splash screen shows during app load (icon + background color)
 - App appears in app switcher like native app
@@ -848,9 +850,10 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 - [ ] App installable via "Add to Home Screen" (iOS Safari, Android Chrome)
 - [ ] Installed app launches without browser UI (standalone mode)
 - [ ] App icon appears correctly on home screen
-- [ ] Service worker caches assets for faster subsequent loads
-- [ ] Basic offline viewing (cached events) works without internet
-- [ ] Lighthouse PWA score 90+ (best practices)
+- [ ] Service worker caches assets for faster subsequent loads — delivered (Workbox precache)
+- [ ] Installable with a controlled update prompt + honest offline banner, no silent reloads — in progress via the [PWA installability story](backlog/mobile-ux/pwa-installability.md)
+- [ ] Basic offline *viewing* of cached events without internet — **deferred to Option C / offline reads** (installability polish intentionally excludes offline data)
+- [ ] Lighthouse PWA score — N/A: Lighthouse 12 removed the standalone PWA category; track installability via the manifest/SW checks and the performance/accessibility/best-practices/SEO categories instead
 
 ---
 

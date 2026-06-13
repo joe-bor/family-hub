@@ -250,7 +250,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 
 ## New ideas surfaced (backlog seeds, not in scope)
 
-- **PWA install row in the sidebar** — "Add Family Hub to your home screen." The manifest already ships (vite-plugin-pwa); on Android/Chrome (Partner's Galaxy S10) `beforeinstallprompt` makes this a one-tap install; hide the row when already installed/unsupported. Probably the single highest-leverage daily-use improvement available for one row of UI.
+- **PWA install row in the sidebar** — **Superseded 2026-06-13** by its own story: [Polished PWA installability + honest offline UX](pwa-installability.md), which delivers the install row plus a controlled update prompt, an honest offline banner, and PWA config cleanups. (Original seed: "Add Family Hub to your home screen" — one-tap install via `beforeinstallprompt` on Android/Chrome, hidden when already installed.)
 - **Device–member association** — a localStorage-only "This phone belongs to: \[member\]" selector in Preferences. Unlocks member-focused Home defaults, pre-filled event member, and per-person calendar filters without touching auth. Natural successor to D4.
 - **Home dashboard content settings** — when Home evolves into the organizer summary the roadmap calls for, its configuration belongs in the Preferences sheet established here.
 - **Remove the fake desktop weather** — the desktop header renders a hardcoded 72°. On a daily-use product a fabricated reading erodes trust; remove it (or gate it behind the future weather story). Candidate finding to append to [mobile-module-content-polish](mobile-module-content-polish.md) despite being desktop-side.
