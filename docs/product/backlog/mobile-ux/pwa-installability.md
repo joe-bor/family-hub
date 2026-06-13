@@ -11,9 +11,10 @@ issues:
   - FE #214 (b) controlled update prompt + offline banner
   - FE #215 (c) PWA config cleanups
 prs:
-  - FE #216 (c) config cleanups → closes #215
-  - FE #217 (b) update prompt + offline banner → closes #214
-  - FE #218 (a) install affordance → closes #213
+  - FE #216 (c) config cleanups → merged 2026-06-13 (closes #215)
+  - FE #217 (b) update prompt + offline banner → merged 2026-06-13 (closes #214)
+  - FE #218 (a) install affordance → merged 2026-06-13 (closes #213)
+  - FE #219 release-please → family-hub 0.3.15 (pending)
 ---
 
 ## Context
@@ -92,7 +93,7 @@ Three logically-grouped FE issues, each branch + PR, each linking Story/Spec/Pla
 
 The three are largely independent (different files/hunks); recommended merge order is (c) → (b) → (a). See the plan for the dependency notes.
 
-## Implementation / verification (PRs open, awaiting review/merge 2026-06-13)
+## Implementation / verification (all 3 PRs merged 2026-06-13; release `0.3.15` pending)
 
 All three PRs target `joe-bor/FamilyHub` `main` and were built with TDD (failing test → minimal code) on independent branches off the released `0.3.14`.
 
@@ -100,7 +101,9 @@ All three PRs target `joe-bor/FamilyHub` `main` and were built with TDD (failing
 - **PR #217 (b):** `registerType: "prompt"` + `PWAUpdater` (sticky update toast w/ working Reload), `useOnlineStatus` + accessible `OfflineBanner`. New unit/component tests; suite 918/918, build green, lint clean. Offline-banner E2E added (runs in CI against the released BE; the banner itself is SW-independent).
 - **PR #218 (a):** `isStandalone`/`isIOS`, `useInstallPrompt`, `InstallInstructionsSheet`, and the 3-state sidebar `InstallAppRow`. Suite 924/924, build green, lint clean.
 
-Pending before "shipped": CI green on each PR (incl. real-BE E2E + Lighthouse), device smoke (Android Chrome install, iOS Safari instructions, desktop install, SW update prompt on a production build), then merge in order (c) → (b) → (a) and a release.
+Independently audited (read-only Opus 4.8 session, 2026-06-13): all load-bearing claims verified true, no Blocker/High/Medium issues; only minor spec/PRD doc nits, since fixed. Each PR's CI was green (incl. real-BE E2E + Lighthouse). Merged with **rebase** in order (c) #216 → (b) #217 → (a) #218; feature branches deleted. release-please opened [PR #219](https://github.com/joe-bor/FamilyHub/pull/219) → `family-hub 0.3.15`.
+
+**Pending before "shipped":** merge #219 to cut the release, then a production deploy and a device smoke (Android Chrome install, iOS Safari instructions, desktop install, SW update prompt on a production build — see story notes / not testable on `npm run dev`).
 
 ## Spec / Plan
 
