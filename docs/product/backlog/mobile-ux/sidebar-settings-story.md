@@ -2,14 +2,16 @@
 id: mobile-sidebar-settings-structure
 title: Sidebar structure + family preferences surface
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-06-12
-updated: 2026-06-12
+updated: 2026-06-13
 issues:
-  - BE #57 (family timezone expose/edit)
-  - FE #208 (sidebar Preferences entry + sheet; blocked on BE #57 release)
-prs: []
+  - BE #57 (family timezone expose/edit; closed by BE PR #58)
+  - FE #208 (sidebar Preferences entry + sheet; closed by FE PR #210)
+prs:
+  - BE #58
+  - FE #210
 ---
 
 ## Context
@@ -18,7 +20,9 @@ The core modules (Calendar, Lists, Chores, Recipes, Meals) are in good shape, an
 
 This story is the exploration/spec for that. It is deliberately opinionated: each area below records the options considered, the trade-offs, and a single recommendation.
 
-### Current state (discovery summary, verified 2026-06-12)
+### Pre-implementation discovery summary (verified 2026-06-12)
+
+This section records the state that shaped the story before implementation. See **Shipped outcome** for the current product state.
 
 **Navigation.** Mobile module navigation is owned entirely by the bottom nav (`Home, Calendar, Lists, Chores` + More sheet with `Meals, Recipes`; Photos removed). The module-aware header (FE #201, merged) renders one row per screen with the Menu button on the right. The sidebar (`frontend/src/components/shared/sidebar-menu.tsx`, rebuilt on the Radix `SideSheet` in FE #194) contains: family-name header, family-member rows (→ `MemberProfileModal`), **Family Settings** (→ `FamilySettingsModal`), **Sign Out** (confirmed), and the app version footer. The sidebar carries **zero navigation** — it is already a de-facto settings/account surface.
 
@@ -40,6 +44,14 @@ This story is the exploration/spec for that. It is deliberately opinionated: eac
 **Notable non-facts** (assumptions worth correcting): there is **no family color** — colors are per-member only. Dark mode is **not** latent: a `next-themes` wrapper exists but is unused, and `src/index.css` has no `.dark` variable block, so dark mode is real styling work, not a toggle flip. The desktop header shows a **hardcoded fake weather reading (72°)**.
 
 **Architectural constraint that shapes everything below:** auth is family-level. There are no per-member sessions, so the app cannot know which member is holding a phone. "Per-member preference" cannot exist server-side today; "per-device preference" (localStorage) is the honest substitute and, for a 2-adult household with one phone each, is per-member in practice.
+
+### Shipped outcome (verified from merged PRs/releases 2026-06-13)
+
+Completed across BE [PR #58](https://github.com/joe-bor/family-hub-api/pull/58) and FE [PR #210](https://github.com/joe-bor/FamilyHub/pull/210).
+
+- BE release [`v1.6.0`](https://github.com/joe-bor/family-hub-api/releases/tag/v1.6.0) exposes `timezone` on `GET /api/family` and accepts optional `timezone` on `PUT /api/family`, validated through `FamilyTimezoneResolver`.
+- FE release [`family-hub-v0.3.14`](https://github.com/joe-bor/FamilyHub/releases/tag/family-hub-v0.3.14) adds the sidebar **Preferences** row, the `ResponsiveFormDialog`-based Preferences sheet, editable family timezone, and exactly two disabled stubs: Notifications and Appearance.
+- Release sequencing was honored: BE `v1.6.0` was published before FE PR #210 started consuming the family timezone contract.
 
 ---
 
@@ -161,16 +173,21 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 
 ## Acceptance criteria
 
-- [ ] The sidebar shows, in order: header, Family Members, Family Settings, Preferences, Sign Out, version footer. All existing entries behave as before.
-- [ ] Tapping Preferences opens a full-height bottom sheet on mobile (≤768px) and a centered dialog on desktop, via the existing `ResponsiveFormDialog` pattern; dismissal (Cancel/scrim/Esc/flick-down on mobile) and focus return work as in the FE #202 surfaces.
-- [ ] Preferences shows the family's current timezone (fetched from the API, not assumed); the family can change it from a curated list or via a "use this device's timezone" action; the change persists across reload and is reflected in `GET /api/family`.
-- [ ] An invalid timezone is rejected by the BE with a validation error and surfaced non-destructively in the FE form.
-- [ ] `GET /api/family` returns `timezone`; `PUT /api/family` with `timezone` omitted leaves it unchanged (existing partial-update semantics preserved for `name`/`username`).
-- [ ] Notifications and Appearance render as visibly disabled rows with a "Coming soon" indicator; they are not focusable as actions (or are `aria-disabled` with no handler); screen readers announce the disabled state.
-- [ ] No regression to Family Settings, Member Profile, Member Form, or Sign Out flows (existing unit + E2E suites green; new E2E covers open-Preferences → edit-timezone → persist).
-- [ ] Desktop sidebar and dialogs visually unchanged except for the new Preferences row.
-- [ ] BE change ships in a released BE version before the FE consuming it merges to `main` (shipping semantics).
+- [x] The sidebar shows, in order: header, Family Members, Family Settings, Preferences, Sign Out, version footer. All existing entries behave as before.
+- [x] Tapping Preferences opens a full-height bottom sheet on mobile (≤768px) and a centered dialog on desktop, via the existing `ResponsiveFormDialog` pattern; dismissal (Cancel/scrim/Esc/flick-down on mobile) and focus return work as in the FE #202 surfaces.
+- [x] Preferences shows the family's current timezone (fetched from the API, not assumed); the family can change it from a curated list or via a "use this device's timezone" action; the change persists across reload and is reflected in `GET /api/family`.
+- [x] An invalid timezone is rejected by the BE with a validation error and surfaced non-destructively in the FE form.
+- [x] `GET /api/family` returns `timezone`; `PUT /api/family` with `timezone` omitted leaves it unchanged (existing partial-update semantics preserved for `name`/`username`).
+- [x] Notifications and Appearance render as visibly disabled rows with a "Coming soon" indicator; they are not focusable as actions (or are `aria-disabled` with no handler); screen readers announce the disabled state.
+- [x] No regression to Family Settings, Member Profile, Member Form, or Sign Out flows (existing unit + E2E suites green; new E2E covers open-Preferences → edit-timezone → persist).
+- [x] Desktop sidebar and dialogs visually unchanged except for the new Preferences row.
+- [x] BE change ships in a released BE version before the FE consuming it merges to `main` (shipping semantics).
 - [x] PRD §7.1.1 ("Show 7 days (Monday-Sunday)") corrected to reflect the shipped Sunday-start week, per D3a. — Done 2026-06-12 alongside the week-start decision.
+
+## Implementation / verification
+
+- BE [PR #58](https://github.com/joe-bor/family-hub-api/pull/58) closed [BE #57](https://github.com/joe-bor/family-hub-api/issues/57), merged 2026-06-12, and shipped in [`v1.6.0`](https://github.com/joe-bor/family-hub-api/releases/tag/v1.6.0). PR verification: `./mvnw test` — 407 tests, 0 failures.
+- FE [PR #210](https://github.com/joe-bor/FamilyHub/pull/210) closed [FE #208](https://github.com/joe-bor/FamilyHub/issues/208), merged 2026-06-13, and shipped in [`family-hub-v0.3.14`](https://github.com/joe-bor/FamilyHub/releases/tag/family-hub-v0.3.14). PR verification: lint clean, unit suite 911 passed / 82 files, build green, focused Preferences E2E 8/8, and sidebar/settings/onboarding regression E2E 13 passed / 15 skipped.
 
 ## Non-goals
 
@@ -183,7 +200,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 
 ---
 
-## Suggested FE issue body (repo: joe-bor/FamilyHub) — opened as [FE #208](https://github.com/joe-bor/FamilyHub/issues/208)
+## FE implementation issue body (repo: joe-bor/FamilyHub) — opened as [FE #208](https://github.com/joe-bor/FamilyHub/issues/208), closed by [FE PR #210](https://github.com/joe-bor/FamilyHub/pull/210)
 
 > **Title:** Sidebar Preferences entry + family preferences sheet (timezone + roadmap stubs)
 >
@@ -199,7 +216,7 @@ Credentials remain the one acknowledged gap. Recommendation: defer — it's secu
 > 5. Depends on a **released** BE version exposing `timezone` in `FamilyResponse` and accepting it in `PUT /api/family` (BE issue below). Gate merge on that release per shipping semantics.
 > 6. Tests: unit for sidebar row + sheet rendering both breakpoints; E2E: open Preferences → change timezone → reload → persisted. Existing settings/sidebar E2E stays green.
 
-## Suggested BE issue body (repo: joe-bor/family-hub-api) — opened as [BE #57](https://github.com/joe-bor/family-hub-api/issues/57)
+## BE implementation issue body (repo: joe-bor/family-hub-api) — opened as [BE #57](https://github.com/joe-bor/family-hub-api/issues/57), closed by [BE PR #58](https://github.com/joe-bor/family-hub-api/pull/58)
 
 > **Title:** Expose and allow updating family timezone
 >

@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-11
+Last updated: 2026-06-13
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -27,6 +27,8 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Visual identity refinement](backlog/mobile-ux/visual-identity-refinement.md) · FE #155, PR #156
 - [Sidebar + settings + onboarding mobile pass](backlog/mobile-ux/sidebar-settings-onboarding-mobile.md) · FE #193, PR #194 · `0.3.12` (verified Galaxy S10/Chrome)
 - [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md) · FE PR #198 · `0.3.12` (verified Galaxy S10/Chrome)
+- [Mobile module content polish](backlog/mobile-ux/mobile-module-content-polish.md) · FE #199–#202, PR #203/#205/#206/#207 · `0.3.13`
+- [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) · BE #57, PR #58, `v1.6.0`; FE #208, PR #210, `0.3.14`
 
 ### Module foundations
 
@@ -39,7 +41,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 ### Module foundations
 
 Current story:
-- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — Recipes/Meals implementation merged; FE release/deploy pending; Photos deferred
+- [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — Recipes/Meals implementation merged and released in FE `0.3.11`; Photos deferred
 
 Most recent shipped story:
 - [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) — replaces the initial one-off chores release with recurring day / week / month routines
@@ -47,35 +49,36 @@ Most recent shipped story:
 Active execution:
 - `Recipes` frontend foundation — FE #183 closed by PR #185; consolidated fixes in PR #191
 - `Meals` frontend foundation — FE #184 closed by PR #187; consolidated fixes in PR #191
-- FE release PR #186 for `family-hub` `v0.3.11` is pending; production deploy should follow the released FE commit
+- FE release PR #186 for `family-hub` `v0.3.11` merged 2026-06-09
 
-Next recommended story after FE release/deploy:
-- Mobile-first product polish for the current family organizer surfaces: `Home`, `Calendar`, `Chores`, `Lists`, `Recipes`, and `Meals`
+Next recommended product focus:
+- Continue from the Mobile UX queue below. The module surfaces are now functional enough that the next work should either add reminders or shape the Home organizer summary, rather than start a new module.
 
 Exit criterion for this phase:
 - Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
 
 Recommended order:
-1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; implementation merged, FE release/deploy pending
-2. `Meals` — simple week-ahead planning; implementation merged, FE release/deploy pending
-3. Mobile-first polish of current organizer workflows
-4. `Photos` — deferred; no longer the next product slice
+1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; shipped in FE `0.3.11`
+2. `Meals` — simple week-ahead planning; shipped in FE `0.3.11`
+3. Mobile-first polish of current organizer workflows — shipped through FE `0.3.14`
+4. Remaining Mobile UX stories — Notifications first if reminder value is the priority; calendar gestures if creation/view ergonomics are the priority
+5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
 
 ### Mobile UX polish backlog
 
-Next practical product focus after Recipes/Meals release and deploy. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
+Next practical product focus after the mobile shell/preferences cleanup. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
-Already captured polish stories:
-- [Mobile module content polish](backlog/mobile-ux/mobile-module-content-polish.md) — per-module layout/density fixes found in 0.3.12 device testing (list filters, chores redundant labels, recipe card density, shared nav-header inconsistency, settings-dialog cutoff). Pre-existing; not introduced by the shell stories.
-- [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) — planned: sidebar as the settled non-module surface, new Preferences sheet (editable family timezone + Notifications/Appearance stubs), week-start kept Sunday by decision · BE #57, FE #208
-- [Notifications (event reminders)](backlog/mobile-ux/notifications.md)
-- [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md)
-- [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md)
+Next captured stories:
+- [Notifications (event reminders)](backlog/mobile-ux/notifications.md) — decide web push vs in-app reminders, then make event reminders configurable and testable.
+- [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
+- [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
 
 Recommended additions to shape before implementation:
-- Home dashboard should evolve from calendar-only into a true organizer summary now that `Chores`, `Lists`, `Recipes`, and `Meals` have real data.
+- Home dashboard should evolve from calendar-only into a true organizer summary now that `Chores`, `Lists`, `Recipes`, and `Meals` have real data. Path: create a new story under `docs/product/backlog/mobile-ux/`.
+- PWA install row in the sidebar is a high-leverage daily-use seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
+- Device-member association is the likely successor to Preferences if member-focused defaults become important; seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
 - Decide whether the `Photos` tab should be hidden, demoted, or left as an explicit deferred surface while the product is polished for daily use.
 - Run a phone-first production dogfood pass across create/edit/complete flows before adding new modules.
 

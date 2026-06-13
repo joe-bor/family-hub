@@ -5,7 +5,7 @@ epic: module-foundations
 status: in-progress
 priority: P1
 created: 2026-05-01
-updated: 2026-06-08
+updated: 2026-06-13
 issues:
   - BE #52
   - BE #55
@@ -22,9 +22,9 @@ prs:
 
 ## Context
 
-The shell now exposes first-class tabs for `Lists`, `Chores`, `Meals`, and `Photos`. `Home`, `Calendar`, `Chores`, and `Lists` have crossed the line into real product surfaces. `Recipes` and `Meals` implementation is merged and awaiting FE release/deploy. `Photos` is deferred while the family uses and polishes the current organizer surfaces.
+The shell now exposes first-class tabs for `Lists`, `Chores`, `Meals`, and `Photos`. `Home`, `Calendar`, `Chores`, and `Lists` have crossed the line into real product surfaces. `Recipes` and `Meals` shipped in FE `0.3.11`. `Photos` is deferred while the family uses and polishes the current organizer surfaces.
 
-After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary-setting into phased module delivery. The current product focus is finishing the Recipes/Meals release path, then tightening the existing product for daily phone use by Joe and Partner. The larger-screen/tablet vision remains, but phone polish is the near-term practical target until dedicated touchscreen hardware exists.
+After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary-setting into phased module delivery. The current product focus is tightening the existing product for daily phone use by Joe and Partner, then adding the highest-value Mobile UX stories. The larger-screen/tablet vision remains, but phone polish is the near-term practical target until dedicated touchscreen hardware exists.
 
 ## Scope
 
@@ -46,9 +46,9 @@ After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary
 1. `Chores` core loop (shipped 2026-05-06, superseded 2026-05-17 by recurring routines)
 2. `Chores` recurring routines (shipped 2026-05-21)
 3. `Lists` simple shared checklists (shipped 2026-05-17)
-4. `Recipes` module foundation (backend released 2026-06-04 in `family-hub-api` `v1.5.0`; FE #183 closed by PR #185; fixes in PR #191; FE release PR #186 pending)
-5. `Meals` week-ahead planning (backend released 2026-06-04 in `family-hub-api` `v1.5.0`; FE #184 closed by PR #187; fixes in PR #191; FE release PR #186 pending)
-6. Mobile-first polish of the current organizer surfaces
+4. `Recipes` module foundation (backend released 2026-06-04 in `family-hub-api` `v1.5.0`; FE #183 closed by PR #185; fixes in PR #191; FE release PR #186 merged 2026-06-09)
+5. `Meals` week-ahead planning (backend released 2026-06-04 in `family-hub-api` `v1.5.0`; FE #184 closed by PR #187; fixes in PR #191; FE release PR #186 merged 2026-06-09)
+6. Mobile-first polish of the current organizer surfaces (initial pass shipped through FE `0.3.14`)
 7. `Photos` library / screensaver administration (deferred)
 
 ## Follow-on implementation stories
@@ -56,8 +56,8 @@ After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary
 - [Chores recurring routines](./chores-recurring-routines.md) — current shipped chores contract
 - [Chores core loop (real data, create, complete)](./chores-core-loop.md) — historical shipped one-off chores release, superseded 2026-05-17
 - [Lists simple shared checklists](./lists-simple-shared-checklists.md) — shipped 2026-05-17
-- [Recipes and Meals foundation](../../../superpowers/specs/2026-06-01-meals-and-recipes-foundation-design.md) — implementation merged; FE release/deploy pending
-- Mobile-first organizer polish — next planning focus after Recipes/Meals release and production dogfood
+- [Recipes and Meals foundation](../../../superpowers/specs/2026-06-01-meals-and-recipes-foundation-design.md) — backend released in `v1.5.0`; FE released in `0.3.11`
+- Mobile-first organizer polish — initial pass shipped through FE `0.3.14`; remaining Mobile UX queue is tracked in [roadmap.md](../../roadmap.md)
 
 ## Acceptance Criteria
 
@@ -73,5 +73,5 @@ After `mobile-ux/visual-identity-refinement.md`, this epic moved from vocabulary
 - `Chores recurring routines` is now the live chores story. `Chores core loop` remains historical context only.
 - `Chores` and `Lists` now anchor the module vocabulary in shipped product behavior; `Recipes` and `Meals` should build on that clarity rather than re-open it.
 - Backend `Recipes` and `Meals` foundations are merged through BE PR #53 and BE PR #56 and released in `family-hub-api` `v1.5.0`.
-- Frontend `Recipes` and `Meals` foundations are merged through FE PR #185 and FE PR #187, with consolidated review fixes in FE PR #191. FE release PR #186 should be merged and deployed before treating Recipes/Meals as shipped.
-- Remaining mobile-UX polish stories are now the next practical product focus because the family needs a polished phone experience before dedicated touchscreen hardware exists.
+- Frontend `Recipes` and `Meals` foundations are merged through FE PR #185 and FE PR #187, with consolidated review fixes in FE PR #191; FE release PR #186 merged 2026-06-09 as `family-hub-v0.3.11`.
+- Remaining mobile-UX stories are now the next practical product focus because the family needs a polished phone experience before dedicated touchscreen hardware exists.
