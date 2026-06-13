@@ -2,7 +2,7 @@
 id: mobile-pwa-installability
 title: Polished PWA installability + honest offline UX
 epic: mobile-ux
-status: in-progress
+status: done
 priority: P2
 created: 2026-06-13
 updated: 2026-06-13
@@ -14,7 +14,7 @@ prs:
   - FE #216 (c) config cleanups → merged 2026-06-13 (closes #215)
   - FE #217 (b) update prompt + offline banner → merged 2026-06-13 (closes #214)
   - FE #218 (a) install affordance → merged 2026-06-13 (closes #213)
-  - FE #219 release-please → family-hub 0.3.15 (pending)
+  - FE #219 release-please → released `family-hub-v0.3.15` + deployed to prod 2026-06-13
 ---
 
 ## Context
@@ -93,7 +93,7 @@ Three logically-grouped FE issues, each branch + PR, each linking Story/Spec/Pla
 
 The three are largely independent (different files/hunks); recommended merge order is (c) → (b) → (a). See the plan for the dependency notes.
 
-## Implementation / verification (all 3 PRs merged 2026-06-13; release `0.3.15` pending)
+## Implementation / verification (shipped: `family-hub-v0.3.15` deployed to prod 2026-06-13)
 
 All three PRs target `joe-bor/FamilyHub` `main` and were built with TDD (failing test → minimal code) on independent branches off the released `0.3.14`.
 
@@ -103,7 +103,7 @@ All three PRs target `joe-bor/FamilyHub` `main` and were built with TDD (failing
 
 Independently audited (read-only Opus 4.8 session, 2026-06-13): all load-bearing claims verified true, no Blocker/High/Medium issues; only minor spec/PRD doc nits, since fixed. Each PR's CI was green (incl. real-BE E2E + Lighthouse). Merged with **rebase** in order (c) #216 → (b) #217 → (a) #218; feature branches deleted. release-please opened [PR #219](https://github.com/joe-bor/FamilyHub/pull/219) → `family-hub 0.3.15`.
 
-**Pending before "shipped":** merge #219 to cut the release, then a production deploy and a device smoke (Android Chrome install, iOS Safari instructions, desktop install, SW update prompt on a production build — see story notes / not testable on `npm run dev`).
+**Shipped 2026-06-13:** #219 merged → release-please created `family-hub-v0.3.15`; `deploy.sh` deployed it to https://familyhub.joe-bor.me (in-script lint + full unit suite + build all passed; HTTPS 200 health check). Prod-verified server-side: manifest `orientation: "any"` + reconciled description, `mobile-web-app-capable` present, and the leaked `stats.html` bundle report is gone (`/stats.html` now returns the SPA shell, not the report). **Remaining (manual UX, optional):** on-device smoke — Android Chrome install row → home screen; iOS Safari instructions sheet; the SW update prompt will appear on the *next* deploy after this build is installed.
 
 ## Spec / Plan
 

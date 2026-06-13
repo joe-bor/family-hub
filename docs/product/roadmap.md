@@ -29,6 +29,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Expandable bottom sheet pattern](backlog/mobile-ux/expandable-bottom-sheet.md) · FE PR #198 · `0.3.12` (verified Galaxy S10/Chrome)
 - [Mobile module content polish](backlog/mobile-ux/mobile-module-content-polish.md) · FE #199–#202, PR #203/#205/#206/#207 · `0.3.13`
 - [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) · BE #57, PR #58, `v1.6.0`; FE #208, PR #210, `0.3.14`
+- [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) · FE #216/#217/#218 · `0.3.15` (deployed to prod; on-device smoke pending)
 
 ### Module foundations
 
@@ -71,7 +72,6 @@ Recommended order:
 Next practical product focus after the mobile shell/preferences cleanup. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
 Next captured stories:
-- [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) — **merged 2026-06-13, release `0.3.15` pending**: controlled update prompt, sidebar install row, honest offline banner, and PWA config cleanups (UI + config only; offline *data* is the separate Option C). Supersedes the loose sidebar install-row seed. FE PRs merged (rebase, order c→b→a): (c) #215→[#216](https://github.com/joe-bor/FamilyHub/pull/216) · (b) #214→[#217](https://github.com/joe-bor/FamilyHub/pull/217) · (a) #213→[#218](https://github.com/joe-bor/FamilyHub/pull/218); release-please [#219](https://github.com/joe-bor/FamilyHub/pull/219).
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md) — decide web push vs in-app reminders, then make event reminders configurable and testable.
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
@@ -81,6 +81,7 @@ Recommended additions to shape before implementation:
 - Device-member association is the likely successor to Preferences if member-focused defaults become important; seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
 - Decide whether the `Photos` tab should be hidden, demoted, or left as an explicit deferred surface while the product is polished for daily use.
 - Run a phone-first production dogfood pass across create/edit/complete flows before adding new modules.
+- **Option C / offline reads** — the deferred follow-up to the shipped [PWA installability](backlog/mobile-ux/pwa-installability.md) story: cache API/module responses (TanStack Query persistence and/or SW `runtimeCaching`) so the app shows cached data offline instead of only the honest "changes won't save" banner. The offline banner is the placeholder until this lands.
 
 ### Google Calendar read-only sync
 
