@@ -7,9 +7,9 @@ priority: P2
 created: 2026-06-13
 updated: 2026-06-13
 issues:
-  - FE (a) install affordance + standalone detection
-  - FE (b) controlled update prompt + offline banner
-  - FE (c) PWA config cleanups
+  - FE #213 (a) install affordance + standalone detection
+  - FE #214 (b) controlled update prompt + offline banner
+  - FE #215 (c) PWA config cleanups
 prs: []
 ---
 
