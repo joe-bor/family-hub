@@ -10,7 +10,10 @@ issues:
   - FE #213 (a) install affordance + standalone detection
   - FE #214 (b) controlled update prompt + offline banner
   - FE #215 (c) PWA config cleanups
-prs: []
+prs:
+  - FE #216 (c) config cleanups → closes #215
+  - FE #217 (b) update prompt + offline banner → closes #214
+  - FE #218 (a) install affordance → closes #213
 ---
 
 ## Context
@@ -83,11 +86,21 @@ Rationale: keeps the established "command center" brand phrasing (PRD vision lan
 
 Three logically-grouped FE issues, each branch + PR, each linking Story/Spec/Plan with an execution contract:
 
-- **(a) Install affordance + standalone detection** — `use-install-prompt`, standalone/iOS detection, sidebar Install row + instructions sheet.
-- **(b) Controlled update prompt + offline banner** — `registerType: "prompt"`, tsconfig types, `PWAUpdater`/`useRegisterSW`, `use-online-status`, offline banner.
-- **(c) PWA config cleanups** — stats.html gating + `globIgnores`, dead font rules, Lighthouse PWA category, description reconcile, `mobile-web-app-capable`, orientation, plus a tech-debt sweep.
+- **(a) Install affordance + standalone detection** — `use-install-prompt`, standalone/iOS detection, sidebar Install row + instructions sheet. [FE #213](https://github.com/joe-bor/FamilyHub/issues/213) → [PR #218](https://github.com/joe-bor/FamilyHub/pull/218).
+- **(b) Controlled update prompt + offline banner** — `registerType: "prompt"`, tsconfig types, `PWAUpdater`/`useRegisterSW`, `use-online-status`, offline banner. [FE #214](https://github.com/joe-bor/FamilyHub/issues/214) → [PR #217](https://github.com/joe-bor/FamilyHub/pull/217).
+- **(c) PWA config cleanups** — stats.html gating + `globIgnores`, dead font rules, Lighthouse PWA category, description reconcile, `mobile-web-app-capable`, orientation, plus a tech-debt sweep. [FE #215](https://github.com/joe-bor/FamilyHub/issues/215) → [PR #216](https://github.com/joe-bor/FamilyHub/pull/216).
 
 The three are largely independent (different files/hunks); recommended merge order is (c) → (b) → (a). See the plan for the dependency notes.
+
+## Implementation / verification (PRs open, awaiting review/merge 2026-06-13)
+
+All three PRs target `joe-bor/FamilyHub` `main` and were built with TDD (failing test → minimal code) on independent branches off the released `0.3.14`.
+
+- **PR #216 (c):** `npm run build` → `dist/` has no `stats.html`, not in the `dist/sw.js` precache; no Google-Fonts CDN rules (fonts still precached); `lighthouserc.cjs` drops the removed PWA category; description reconciled; `mobile-web-app-capable` added; orientation `any`. `npm run test -- --run` 911/911, lint clean.
+- **PR #217 (b):** `registerType: "prompt"` + `PWAUpdater` (sticky update toast w/ working Reload), `useOnlineStatus` + accessible `OfflineBanner`. New unit/component tests; suite 918/918, build green, lint clean. Offline-banner E2E added (runs in CI against the released BE; the banner itself is SW-independent).
+- **PR #218 (a):** `isStandalone`/`isIOS`, `useInstallPrompt`, `InstallInstructionsSheet`, and the 3-state sidebar `InstallAppRow`. Suite 924/924, build green, lint clean.
+
+Pending before "shipped": CI green on each PR (incl. real-BE E2E + Lighthouse), device smoke (Android Chrome install, iOS Safari instructions, desktop install, SW update prompt on a production build), then merge in order (c) → (b) → (a) and a release.
 
 ## Spec / Plan
 

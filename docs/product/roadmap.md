@@ -71,7 +71,7 @@ Recommended order:
 Next practical product focus after the mobile shell/preferences cleanup. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
 Next captured stories:
-- [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) — **in progress**: controlled update prompt, sidebar install row, honest offline banner, and PWA config cleanups (UI + config only; offline *data* is the separate Option C). Supersedes the loose sidebar install-row seed. FE issues (a) install affordance · (b) update prompt + offline banner · (c) config cleanups.
+- [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) — **in progress**: controlled update prompt, sidebar install row, honest offline banner, and PWA config cleanups (UI + config only; offline *data* is the separate Option C). Supersedes the loose sidebar install-row seed. FE PRs open (awaiting review): (c) #215→[#216](https://github.com/joe-bor/FamilyHub/pull/216) · (b) #214→[#217](https://github.com/joe-bor/FamilyHub/pull/217) · (a) #213→[#218](https://github.com/joe-bor/FamilyHub/pull/218).
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md) — decide web push vs in-app reminders, then make event reminders configurable and testable.
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
