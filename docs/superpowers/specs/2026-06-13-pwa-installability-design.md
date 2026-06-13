@@ -52,9 +52,9 @@ Family Hub ships as a PWA but it is configured, not polished. Four concrete prob
 - `tsconfig.app.json:8`: `"types": ["vite/client", "vite-plugin-pwa/react"]` so `virtual:pwa-register/react` types resolve.
 - New `src/components/pwa/pwa-updater.tsx`: a render-light component using `useRegisterSW()` from `virtual:pwa-register/react`.
   - `onNeedRefresh` → show a **sticky** toast (see [Toast extension](#toast-extension-sticky-duration)): title "Update available", description "A new version of Family Hub is ready.", `action` = a `<ToastAction>` "Reload" that calls `updateServiceWorker(true)`.
-  - `onOfflineReady` → optional one-time default-duration toast "Ready to work offline" (honest: this only means the *app shell* is cached — it does **not** imply data offline; copy must not over-promise).
+  - `onOfflineReady` → optional one-time default-duration toast titled "Ready to use" ("Family Hub is installed and the app shell is cached") — honest: this only means the *app shell* is cached, it does **not** imply data offline; copy must not over-promise.
   - Renders `null`; its only job is the effect + toast.
-- **Mount:** render `<PWAUpdater />` once at the top of `App.tsx`'s returned tree (it must coexist with a mounted `<Toaster />`; mounting it inside the authenticated shell next to `<Toaster/>` is sufficient — updates surface while the app is in use).
+- **Mount:** render `<PWAUpdater />` once at the root — in `main.tsx` as a sibling of `<App/>` inside `<QueryProvider>`. The toast store is module-global, so the `<Toaster/>` mounted inside `App` still renders the prompt; mounting at the root guarantees a single, always-present updater.
 - **Why this ships atomically with the `registerType` change:** with `"prompt"` and no updater, a new SW would wait forever and updates would silently never apply. The `registerType` flip and `PWAUpdater` therefore live in the **same PR** (group b).
 
 ```tsx

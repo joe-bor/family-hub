@@ -824,8 +824,8 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 
 **PWA Basics:**
 - **Web App Manifest** (`manifest.json`):
-  - App name: "Family Calendar"
-  - Short name: "Calendar"
+  - App name: "FamilyHub"
+  - Short name: "FamilyHub"
   - Icons: 192x192 and 512x512 (PNG, SVG fallback)
   - Start URL: `/`
   - Display mode: `standalone` (looks like native app)
