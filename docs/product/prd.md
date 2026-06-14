@@ -835,7 +835,7 @@ Roadmap and backlog determine delivery order. This section only settles the prod
   - Cache static assets (HTML, CSS, JS, icons) — Workbox precache
   - Controlled update prompt instead of a silent reload — [PWA installability story](backlog/mobile-ux/pwa-installability.md)
   - Honest offline indicator (banner: "You're offline — changes won't save until you reconnect") — same story
-  - ~~Cache API responses (calendar data) for offline viewing~~ — **deferred to Option C / offline reads** (the installability polish intentionally does not add offline data)
+  - Persist already-fetched read data (calendar, chores, lists, meals, recipes, family) for offline viewing — **delivered via Option C / offline reads** (FE Issue #222): the TanStack Query read cache is persisted to IndexedDB (not a Workbox `/api` runtime cache), read-only, with per-account clearing on logout/401
 - **HTTPS Requirement:**
   - PWA only works over HTTPS (already planned for Digital Ocean)
 
@@ -852,7 +852,7 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 - [ ] App icon appears correctly on home screen
 - [ ] Service worker caches assets for faster subsequent loads — delivered (Workbox precache)
 - [ ] Installable with a controlled update prompt + honest offline banner, no silent reloads — in progress via the [PWA installability story](backlog/mobile-ux/pwa-installability.md)
-- [ ] Basic offline *viewing* of cached events without internet — **deferred to Option C / offline reads** (installability polish intentionally excludes offline data)
+- [x] Basic offline *viewing* of cached data (events, chores, lists, meals, recipes, family) without internet — **delivered via Option C / offline reads** (read-only; FE Issue #222)
 - [ ] Lighthouse PWA score — N/A: Lighthouse 12 removed the standalone PWA category; track installability via the manifest/SW checks and the performance/accessibility/best-practices/SEO categories instead
 
 ---
@@ -887,12 +887,13 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 - Filter changed → Only affects local client (not synced)
 
 **Offline Handling:**
-- If device loses internet:
-  - Show warning banner: "Offline - changes will sync when reconnected"
-  - Allow local changes (optimistic UI updates)
-  - Queue changes in memory
-  - When reconnected, send queued changes to server
-  - Resolve conflicts (server wins if data changed remotely)
+- **Reads delivered (Option C, read-only — FE Issue #222):** already-fetched data stays viewable offline from the persisted IndexedDB query cache, and the offline banner is honest ("showing saved data; changes won't save until you reconnect").
+- **Queued writes remain deferred / out of scope for Option C.** The following describe the future offline-writes capability (PRD §7.5.3) and are **not** yet implemented — Option C is deliberately read-only (no optimistic local changes, no in-memory queue, no outbox, no background sync):
+  - If device loses internet:
+    - ~~Allow local changes (optimistic UI updates)~~ — deferred
+    - ~~Queue changes in memory~~ — deferred
+    - ~~When reconnected, send queued changes to server~~ — deferred
+    - ~~Resolve conflicts (server wins if data changed remotely)~~ — deferred
 
 **Acceptance Criteria:**
 - [ ] Changes on mobile appear on touchscreen within 2 seconds
