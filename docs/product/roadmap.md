@@ -30,6 +30,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Mobile module content polish](backlog/mobile-ux/mobile-module-content-polish.md) · FE #199–#202, PR #203/#205/#206/#207 · `0.3.13`
 - [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) · BE #57, PR #58, `v1.6.0`; FE #208, PR #210, `0.3.14`
 - [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) · FE #216/#217/#218 · `0.3.15` (deployed to prod; on-device smoke pending)
+- Option C — read-only offline data persistence · FE #222 (TanStack Query read cache persisted to IndexedDB; cached calendar/chores/lists/meals/recipes/family viewable offline, read-only; per-account clearing on logout/401; no Workbox `/api` cache). Offline *writes* remain deferred (PRD §7.5.3).
 
 ### Module foundations
 
@@ -81,7 +82,7 @@ Recommended additions to shape before implementation:
 - Device-member association is the likely successor to Preferences if member-focused defaults become important; seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
 - Decide whether the `Photos` tab should be hidden, demoted, or left as an explicit deferred surface while the product is polished for daily use.
 - Run a phone-first production dogfood pass across create/edit/complete flows before adding new modules.
-- **Option C / offline reads** — the deferred follow-up to the shipped [PWA installability](backlog/mobile-ux/pwa-installability.md) story: cache API/module responses (TanStack Query persistence and/or SW `runtimeCaching`) so the app shows cached data offline instead of only the honest "changes won't save" banner. The offline banner is the placeholder until this lands.
+- ~~**Option C / offline reads**~~ — **delivered** (FE #222): TanStack Query read cache persisted to IndexedDB so already-fetched data shows offline, read-only. See the "Mobile shell + home" shipped list above. Remaining offline-**writes** work (outbox/queue/background sync, PRD §7.5.3) is still deferred and intentionally out of scope.
 
 ### Google Calendar read-only sync
 
