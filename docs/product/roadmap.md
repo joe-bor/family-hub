@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -63,7 +63,7 @@ Recommended order:
 1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; shipped in FE `0.3.11`
 2. `Meals` — simple week-ahead planning; shipped in FE `0.3.11`
 3. Mobile-first polish of current organizer workflows — shipped through FE `0.3.14`
-4. Remaining Mobile UX stories — Notifications first if reminder value is the priority; calendar gestures if creation/view ergonomics are the priority
+4. Remaining Mobile UX stories — Notifications first if reminder value is the priority; calendar gestures if creation/view ergonomics are the priority; native-feel polish (transitions/press feedback, back-button, haptics) if daily-use delight and "feels native" is the priority
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
@@ -72,10 +72,15 @@ Recommended order:
 
 Next practical product focus after the mobile shell/preferences cleanup. The app is still intended for a tablet/bigger-screen home hub, but near-term daily use will be on phones until dedicated touchscreen hardware exists.
 
-Next captured stories:
+Next captured stories — calendar gestures + reminders:
 - [Notifications (event reminders)](backlog/mobile-ux/notifications.md) — decide web push vs in-app reminders, then make event reminders configurable and testable.
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
+
+Next captured stories — native-feel polish (surfaced from phone dogfooding, 2026-06-16):
+- [Native hardware back-button handling](backlog/mobile-ux/native-back-button.md) — make the Android PWA back button dismiss overlays / go back one step, and double-tap-to-exit at root, instead of exiting immediately.
+- [Optional haptic feedback](backlog/mobile-ux/optional-haptics.md) — opt-in Vibration-API haptics on key taps via a Preferences toggle; supersedes the old "No haptics" exclusion for Android.
+- [Native-feel interaction polish](backlog/mobile-ux/native-feel-interaction-polish.md) — smooth the harsh module/tab and sheet transitions and add immediate pressed-state feedback, extending the existing motion vocabulary.
 
 Recommended additions to shape before implementation:
 - Home dashboard should evolve from calendar-only into a true organizer summary now that `Chores`, `Lists`, `Recipes`, and `Meals` have real data. Path: create a new story under `docs/product/backlog/mobile-ux/`.
