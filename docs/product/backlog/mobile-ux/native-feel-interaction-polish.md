@@ -8,6 +8,7 @@ created: 2026-06-16
 updated: 2026-06-16
 issues: []
 prs: []
+spec: ../../../superpowers/specs/2026-06-16-native-feel-interaction-polish-design.md
 ---
 
 ## Context
