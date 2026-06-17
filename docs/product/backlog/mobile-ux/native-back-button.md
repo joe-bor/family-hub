@@ -5,9 +5,10 @@ epic: mobile-ux
 status: planned
 priority: P2
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-17
 issues: []
 prs: []
+spec: ../../../superpowers/specs/2026-06-17-native-back-button-design.md
 ---
 
 ## Context
@@ -22,22 +23,26 @@ Surfaced from phone dogfooding (Galaxy S10 / Chrome), 2026-06-16.
 
 ## Acceptance Criteria
 
-- [ ] In standalone (installed) mode, a single back press first dismisses any open
-      bottom sheet, dialog, or sidebar; if none is open, it navigates back one in-app step
-      (previous view/tab) instead of exiting
-- [ ] At a root view with nothing to go back to, the first back press shows a transient
-      "Press back again to exit" hint; a second back press within ~2s exits the app
-- [ ] Gated to standalone/PWA on devices with a hardware/gesture back (Android); browser
-      tabs and iOS standalone (no hardware back — uses edge-swipe) are unaffected
-- [ ] No back-button trap loops or history leaks; refresh and deep-link still land on the
-      correct view
+- [ ] In the installed Android PWA, a single back press first dismisses the top-most open
+      bottom sheet, dialog, or sidebar (most-recently-opened closes first); if none is open
+      and the active module is not Home, it goes up to Home instead of exiting
+- [ ] At Home with nothing open, the first back press shows a transient "Press back again to
+      exit" toast; a second back press within ~2s exits the app
+- [ ] Gated to Android standalone (display-mode: standalone, not iOS, coarse pointer);
+      browser tabs, iOS standalone (edge-swipe), and desktop installed PWAs are unaffected
+- [ ] No back-button trap loops or history leaks; refresh lands on Home with the history
+      buffer intact (no router/URL view state to desync)
+- [ ] Drives the existing close handlers only — the sibling native-feel transitions animate
+      the back with no new motion code
 
 ## Notes
 
-Standard Android pattern: push a sentinel history entry on app/root mount and intercept
-`popstate`; on first back at root, re-push the entry and show the toast, allow exit on the
-second. Family Hub currently switches modules via `useAppStore.setActiveModule()` with no
-router (per the persistent-bottom-nav spec), so "in-app back" needs an explicit
-navigation/history stack rather than relying on routes — that's the main design question
-for the spec. Pairs with `native-feel-interaction-polish.md` (a back that animates the
-outgoing view feels more native than an instant swap).
+Design resolved in [`2026-06-17-native-back-button-design.md`](../../../superpowers/specs/2026-06-17-native-back-button-design.md).
+Because Family Hub has no router (modules switch via `useAppStore.setActiveModule()`, per the
+persistent-bottom-nav spec) and dismiss state is scattered across local `useState` and two
+Zustand stores, the design uses a single `popstate`-sentinel interceptor plus a LIFO registry
+of "dismissable now" handlers — not route history. The in-app model is **single-root**:
+overlays/details first, then up to Home, then double-press-to-exit — deliberately not a
+"previous tab" history stack (which would be polluted by the draft-driven `setActiveModule`
+jumps). It drives the existing close handlers, so the `native-feel-interaction-polish.md`
+transitions animate the back for free. Pairs with `optional-haptics.md`.
