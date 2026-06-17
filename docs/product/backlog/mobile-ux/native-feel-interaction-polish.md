@@ -6,7 +6,8 @@ status: planned
 priority: P2
 created: 2026-06-16
 updated: 2026-06-16
-issues: []
+issues:
+  - FE #229
 prs: []
 spec: ../../../superpowers/specs/2026-06-16-native-feel-interaction-polish-design.md
 plan: ../../../superpowers/plans/2026-06-16-native-feel-interaction-polish.md
