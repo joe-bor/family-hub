@@ -9,6 +9,7 @@ updated: 2026-06-17
 issues: []
 prs: []
 spec: ../../../superpowers/specs/2026-06-17-native-back-button-design.md
+plan: ../../../superpowers/plans/2026-06-17-native-back-button.md
 ---
 
 ## Context
