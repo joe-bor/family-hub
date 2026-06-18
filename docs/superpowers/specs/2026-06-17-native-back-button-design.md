@@ -28,12 +28,12 @@ The "dismissable universe" a back press must drive is stored **three different w
   - `src/components/lists-view.tsx` — `selectedListId` (`:14`); back is `setSelectedListId(null)` (`:34`); already wrapped in `ScreenTransition` keyed on `selectedListId ?? "__list__"` (`:164-170`).
   - `src/components/recipes-view.tsx` — `selectedRecipeId` (`:87`); back is `setSelectedRecipeId(null)` (`:194-197`); already wrapped in `ScreenTransition` (`:175-179`).
   - "More" sheet — `moreOpen` local state in `mobile-bottom-nav.tsx` (`:43`), a `MobileSheet` (`:107-109`).
-  - meals/chores open **sheets** (covered by the sheet primitives), not in-place detail views.
-- **Raw `<Dialog>` call sites** (open-state at the call site, so each needs explicit wiring on mobile): `event-detail-modal.tsx`, `event-form-modal.tsx`, `edit-scope-dialog.tsx`, the family-settings reset-confirm (`settings/family-settings-modal.tsx`), the sidebar sign-out-confirm (`shared/sidebar-menu.tsx`), and `settings/google-calendar-picker-modal.tsx`.
+  - meals/chores open **sheets** (`MobileSheet`, covered by the primitive), not in-place detail views — **but** the meals module also renders raw `<Dialog>` collision/move confirms as *siblings* of the sheet (`meal-composer-sheet.tsx:377` `collisionRequest`, `meal-editor-sheet.tsx:413` `pendingCollision`, `meal-move-picker.tsx:62` `open`), which the sheet primitive does **not** cover and which therefore need explicit registration (see D4).
+- **Raw `<Dialog>` / custom-mobile call sites** (open-state at the call site → explicit wiring). Register **once per overlay**: a surface whose *mobile* path is `MobileSheet`/`SideSheet` is already covered by the leaf primitive and must NOT self-register. Sites needing explicit registration: `event-detail-modal.tsx` (its mobile path is the **custom** `MobileEventDetail`, not a sheet — early returns at `:61`/`:79`), `edit-scope-dialog.tsx`, `settings/google-calendar-picker-modal.tsx`, the family-settings reset-confirm (`:255`), the sidebar sign-out-confirm (`:198`), and the meals confirms (`meal-composer-sheet.tsx:377`, `meal-editor-sheet.tsx:413`, `meal-move-picker.tsx:62`). **Excluded:** `event-form-modal.tsx` — its mobile path is `MobileEventSheet` → `MobileSheet` (already covered; registering it too would double-register).
 - **PWA + platform detection already exists** — `src/lib/pwa.ts`: `isStandalone()` (`:15`, matches `display-mode: standalone` **or** iOS `navigator.standalone`) and `isIOS()` (`:25`). Note `isStandalone()` is `true` on iOS too, so the Android gate must be `isStandalone() && !isIOS()`.
 - **Toast is imperative and already mounted** — `src/components/ui/toaster.tsx`: `toast({ description, duration })` (`:40`) honors a custom `duration` (`:63-69`); `<Toaster />` is at `App.tsx:180`. The codebase already uses custom-duration toasts (the PWA update prompt).
 - **App root** — `src/App.tsx`: authenticated shell at `:162-182`; `isAuthenticated` (`:107`), `setupComplete` (`:108`), `isMobile` (`:109`) are all computed **before** the early returns; module render is wrapped in `<ScreenTransition token={activeModule} mode="fade">` (`:170`).
-- **Barrels & test infra** — `src/hooks/index.ts` and `src/stores/index.ts` are the export barrels; `src/test/setup.ts` auto-resets every Zustand store after each test and mocks `matchMedia`.
+- **Barrels & test infra** — `src/hooks/index.ts` and `src/stores/index.ts` are the export barrels; `src/test/setup.ts`'s `resetAllStores()` resets stores **by explicit name** (not generically — a new store must be added there) and mocks `matchMedia`.
 
 ## Goals
 
@@ -60,7 +60,7 @@ The "dismissable universe" a back press must drive is stored **three different w
 
 Because the dismissable state is **scattered** (local `useState` + two stores), a central handler can't *read* it all — so surfaces **register** a dismiss handler while they are open, and the interceptor pops the most-recent one. This collapses the story's open question ("explicit stack vs. priority resolver") into a single registry: a registration-fed LIFO stack *is* the priority resolver.
 
-**`src/stores/back-stack-store.ts`** (Zustand for codebase consistency + free per-test reset via `src/test/setup.ts`):
+**`src/stores/back-stack-store.ts`** (Zustand for codebase consistency; note `src/test/setup.ts`'s `resetAllStores()` resets stores by **explicit name**, not generically — so the plan adds `useBackStack` to that reset list, otherwise its `stack` leaks across tests):
 
 ```ts
 import { create } from "zustand";
@@ -195,7 +195,7 @@ Register at the **leaf primitives** (covers the bulk with no consumer changes), 
 - `MobileSheet` → `useBackHandler(isOpen, onClose)`. Covers the "More" sheet **and** every `ResponsiveFormDialog` on mobile (it delegates to `MobileSheet`, so RFD itself is not touched → no double-registration), plus meal sheets.
 - `SideSheet` → `useBackHandler(open, () => onOpenChange(false))`. Covers the sidebar.
 - `lists-view.tsx` / `recipes-view.tsx` → `useBackHandler(selectedListId !== null, () => setSelectedListId(null))` (and the recipe equivalent). Exactly the sibling D5 close handlers, so the reverse slide is free.
-- **Raw centered `<Dialog>` sites** (open-state at the call site, one line each): `event-detail-modal.tsx`, `event-form-modal.tsx`, `edit-scope-dialog.tsx`, the family-settings reset-confirm, the sidebar sign-out-confirm, `google-calendar-picker-modal.tsx`. (Audit for any further raw `<Dialog>` usages at implementation time.)
+- **Raw `<Dialog>` / custom-mobile sites** (one line each, placed with the other hooks **above any early returns** to respect the Rules of Hooks): `event-detail-modal.tsx` (`isOpen`/`onClose`), `edit-scope-dialog.tsx` (`isOpen`/`onClose`), `google-calendar-picker-modal.tsx` (`open`/`onOpenChange`), the family-settings reset-confirm (`showResetConfirm`), the sidebar sign-out-confirm (`showSignOutConfirm`), and the meals confirms (`meal-composer-sheet.tsx` `collisionRequest`, `meal-editor-sheet.tsx` `pendingCollision`, `meal-move-picker.tsx` `open`). **Register once:** skip surfaces already covered by `MobileSheet`/`SideSheet` on mobile — notably `event-form-modal.tsx` (mobile → `MobileEventSheet` → `MobileSheet`). Run `rg -n "<Dialog\b" src` to confirm no raw site is missed.
 
 *Considered & rejected:* dispatching a synthetic `Escape` on back to let Radix/vaul self-close — it would cover all dialogs in one place but can't be ordered against the detail/module layers and is focus-brittle. The explicit registry is testable and deterministic.
 
@@ -213,6 +213,7 @@ Register at the **leaf primitives** (covers the bulk with no consumer changes), 
 |---|---|---|
 | `src/stores/back-stack-store.ts` | Create | `useBackStack` LIFO registry of dismiss handlers |
 | `src/stores/index.ts` | Modify | Export `useBackStack` |
+| `src/test/setup.ts` | Modify | Add `useBackStack` reset to `resetAllStores()` (resets by explicit name, not generically) |
 | `src/hooks/use-back-handler.ts` | Create | `useBackHandler(enabled, handler)` per-surface seam |
 | `src/hooks/use-android-back-button.ts` | Create | Single `popstate`/sentinel interceptor + cascade + exit hint |
 | `src/hooks/index.ts` | Modify | Export both hooks |
@@ -221,12 +222,16 @@ Register at the **leaf primitives** (covers the bulk with no consumer changes), 
 | `src/components/ui/side-sheet.tsx` | Modify | `useBackHandler(open, () => onOpenChange(false))` |
 | `src/components/lists-view.tsx` | Modify | Register `setSelectedListId(null)` when a list is open |
 | `src/components/recipes-view.tsx` | Modify | Register `setSelectedRecipeId(null)` when a recipe is open |
-| `src/components/calendar/components/event-detail-modal.tsx` | Modify | `useBackHandler(isOpen, onClose)` |
-| `src/components/calendar/components/event-form-modal.tsx` | Modify | `useBackHandler` on open |
-| `src/components/calendar/components/edit-scope-dialog.tsx` | Modify | `useBackHandler` on open |
-| `src/components/settings/family-settings-modal.tsx` | Modify | `useBackHandler` on the reset-confirm `<Dialog>` |
-| `src/components/settings/google-calendar-picker-modal.tsx` | Modify | `useBackHandler` on open |
-| `src/components/shared/sidebar-menu.tsx` | Modify | `useBackHandler` on the sign-out-confirm `<Dialog>` |
+| `src/components/calendar/components/event-detail-modal.tsx` | Modify | `useBackHandler(isOpen, onClose)` above its `:61`/`:79` early returns (custom mobile path) |
+| `src/components/calendar/components/edit-scope-dialog.tsx` | Modify | `useBackHandler(isOpen, onClose)` |
+| `src/components/settings/google-calendar-picker-modal.tsx` | Modify | `useBackHandler(open, () => onOpenChange(false))` |
+| `src/components/settings/family-settings-modal.tsx` | Modify | `useBackHandler` on the reset-confirm (`showResetConfirm`) |
+| `src/components/shared/sidebar-menu.tsx` | Modify | `useBackHandler` on the sign-out-confirm (`showSignOutConfirm`) |
+| `src/components/meals/meal-composer-sheet.tsx` | Modify | `useBackHandler(collisionRequest !== null, () => setCollisionRequest(null))` |
+| `src/components/meals/meal-editor-sheet.tsx` | Modify | `useBackHandler(pendingCollision !== null, () => setPendingCollision(null))` |
+| `src/components/meals/meal-move-picker.tsx` | Modify | `useBackHandler(open, () => onCancel())` |
+
+(`event-form-modal.tsx` is intentionally **not** listed — its mobile path is `MobileSheet`, covered by the leaf primitive.)
 
 ## Testing strategy
 
@@ -240,7 +245,7 @@ Register at the **leaf primitives** (covers the bulk with no consumer changes), 
 - **Integration (Vitest + Testing Library):** render `MobileSheet` open inside a harness that also mounts `useAndroidBackButton(true)` (gate mocked on) → dispatch `popstate` → its `onClose` runs. A refresh-shape test: fresh mount pushes exactly one sentinel; `activeModule` defaults to `null`.
 - **Manual device pass (the real gate):** Galaxy S10 / Chrome, installed PWA — open a list detail: back closes it (slides left), back again goes Home (fades), back shows the hint toast, back again exits; repeat with a sheet, a dialog-in-dialog (confirm closes before its parent), and the sidebar; verify a single browser-tab session and iOS are unaffected.
 - **E2E (Playwright):** limited — Playwright can't emulate `display-mode: standalone`, so standalone-gated behavior isn't E2E-testable. Optionally assert the **negative**: in a normal (non-standalone) context, `page.goBack()` does not trap. Primary coverage is unit + manual.
-- Follow `frontend/CLAUDE.md` test gotchas: stores (incl. `useBackStack`) auto-reset between tests; use fake timers for the 2s window; the existing `matchMedia` mock in `src/test/setup.ts` must be extended per-test for `(pointer: coarse)` / `(display-mode: standalone)`.
+- Follow `frontend/CLAUDE.md` test gotchas: `src/test/setup.ts`'s `resetAllStores()` resets stores by explicit name, so **`useBackStack` must be added there** (otherwise its `stack` leaks across tests in a file); use fake timers for the 2s window; the existing `matchMedia` mock in `src/test/setup.ts` must be extended per-test for `(pointer: coarse)` / `(display-mode: standalone)`.
 
 ## Out of scope
 
@@ -264,4 +269,6 @@ Router; module-history ("previous tab") stack; login/onboarding back-handling; h
 - **Single-root resolved unambiguously:** "up to Home, then exit," not a tab-history stack — stated as a non-goal so it isn't mistaken for full history; rationale (draft-driven `activeModule` jumps) recorded.
 - **Correctness nailed:** single re-pushed sentinel (no leak), deferred `history.back()` for true two-press exit, refresh→Home by construction (unpersisted store), no `Escape`/`popstate` double-handling.
 - **Seam honesty:** consumes the sibling's D5 seam; ships zero motion code and leaves `usePressable().onPointerDown` for optional-haptics untouched.
-- **Churn honesty:** leaf-primitive registration covers sheets/sidebar/RFD with no call-site changes; the ~6 raw `<Dialog>` one-liners are unavoidable because Radix `Dialog` open-state lives at the call site — enumerated, with an audit note.
+- **Churn honesty:** leaf-primitive registration covers sheets/sidebar/RFD with no call-site changes; the 8 raw-`<Dialog>`/custom-mobile one-liners (5 calendar/settings/sidebar + 3 meals confirms) are unavoidable because Radix `Dialog` open-state lives at the call site — enumerated, hooks placed above early returns, with an `rg` audit note.
+- **Register-once rule (post-review):** a surface whose mobile path is `MobileSheet`/`SideSheet` is auto-covered and must NOT self-register; `event-form-modal` is excluded for exactly this reason, while `event-detail-modal` self-registers because its mobile path is a custom overlay.
+- **Test-harness reset (post-review):** `src/test/setup.ts` resets stores by explicit name, so `useBackStack` is added to `resetAllStores()` — without it the registration tests would leak `stack` state across a file.

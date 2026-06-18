@@ -18,7 +18,7 @@
 - Implement in the **FamilyHub FE repo** (`frontend/` in the workspace; standalone `joe-bor/FamilyHub`). All paths below are relative to the FE repo root.
 - Branch: `feat/native-back-button`. Regular merge commits (not squash) per FE `CLAUDE.md` versioning; these are `feat:` commits (minor bump).
 - Single-file test run: `npx vitest run <path>`. Full check before PR: `npm run lint && npm test -- --run`.
-- Test gotchas (`frontend/CLAUDE.md`): all Zustand stores (incl. the new `useBackStack`) auto-reset between tests via `src/test/setup.ts`; use **fake timers** for the 2s exit window; `matchMedia` is mocked globally — override per-test where the gate matters.
+- Test gotchas (`frontend/CLAUDE.md`): `src/test/setup.ts`'s `resetAllStores()` resets stores by **explicit name** (not generically), so **`useBackStack` must be added there** (Task 1) or its `stack` leaks across tests in a file; use **fake timers** for the 2s exit window; `matchMedia` is mocked globally — override per-test where the gate matters.
 
 ## File structure
 
@@ -26,13 +26,14 @@
 |---|---|
 | `src/stores/back-stack-store.ts` (create) | `useBackStack` — LIFO registry of `{ id, handler }` dismiss entries |
 | `src/stores/index.ts` (modify) | Barrel export `useBackStack` |
+| `src/test/setup.ts` (modify) | Add `useBackStack` reset to `resetAllStores()` (resets by explicit name) |
 | `src/hooks/use-back-handler.ts` (create) | `useBackHandler(enabled, handler)` — per-surface registration seam (stale-closure-safe) |
 | `src/hooks/use-android-back-button.ts` (create) | Single `popstate`/sentinel interceptor + cascade + exit hint + Android gate |
 | `src/hooks/index.ts` (modify) | Barrel export both hooks |
 | `src/App.tsx` (modify) | Mount `useAndroidBackButton(isAuthenticated && setupComplete)` |
 | `src/components/ui/mobile-sheet.tsx`, `src/components/ui/side-sheet.tsx` (modify) | Register their close handler while open |
 | `src/components/lists-view.tsx`, `src/components/recipes-view.tsx` (modify) | Register `setSelected…(null)` while a detail is open |
-| `src/components/calendar/components/{event-detail-modal,event-form-modal,edit-scope-dialog}.tsx`, `src/components/settings/{family-settings-modal,google-calendar-picker-modal}.tsx`, `src/components/shared/sidebar-menu.tsx` (modify) | Register the close handler on each raw `<Dialog>` |
+| `src/components/calendar/components/{event-detail-modal,edit-scope-dialog}.tsx`, `src/components/settings/{family-settings-modal,google-calendar-picker-modal}.tsx`, `src/components/shared/sidebar-menu.tsx`, `src/components/meals/{meal-composer-sheet,meal-editor-sheet,meal-move-picker}.tsx` (modify) | Register the close handler on each raw `<Dialog>` / custom-mobile site (hooks above early returns; `event-form-modal` excluded — covered by `MobileSheet`) |
 
 ---
 
@@ -54,7 +55,7 @@ git checkout -b feat/native-back-button
 **Files:**
 - Create: `src/stores/back-stack-store.ts`
 - Test: `src/stores/back-stack-store.test.ts`
-- Modify: `src/stores/index.ts`
+- Modify: `src/stores/index.ts`, `src/test/setup.ts`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -138,11 +139,19 @@ export const useBackStack = create<BackStackState>((set, get) => ({
 export { useBackStack } from "./back-stack-store";
 ```
 
-- [ ] **Step 5: Run it — expect PASS**, then commit
+- [ ] **Step 5: Register the per-test reset** — `src/test/setup.ts`'s `resetAllStores()` resets stores by explicit name (it is NOT generic), so add `useBackStack` there or its `stack` leaks across tests. Add the import and a reset line inside `resetAllStores()`:
+
+```ts
+import { useBackStack } from "@/stores/back-stack-store";
+// ...inside resetAllStores(), alongside the other store resets:
+useBackStack.setState({ stack: [] });
+```
+
+- [ ] **Step 6: Run it — expect PASS**, then commit
 
 ```bash
 npx vitest run src/stores/back-stack-store.test.ts
-git add src/stores/back-stack-store.ts src/stores/back-stack-store.test.ts src/stores/index.ts
+git add src/stores/back-stack-store.ts src/stores/back-stack-store.test.ts src/stores/index.ts src/test/setup.ts
 git commit -m "feat(back-button): add useBackStack dismiss registry"
 ```
 
@@ -650,10 +659,10 @@ git commit -m "feat(back-button): register list and recipe detail back handlers"
 ## Task 7: Register the raw `<Dialog>` sites
 
 **Files:**
-- Modify: `src/components/calendar/components/event-detail-modal.tsx`, `src/components/calendar/components/event-form-modal.tsx`, `src/components/calendar/components/edit-scope-dialog.tsx`, `src/components/settings/family-settings-modal.tsx`, `src/components/settings/google-calendar-picker-modal.tsx`, `src/components/shared/sidebar-menu.tsx`
+- Modify: `src/components/calendar/components/event-detail-modal.tsx`, `src/components/calendar/components/edit-scope-dialog.tsx`, `src/components/settings/family-settings-modal.tsx`, `src/components/settings/google-calendar-picker-modal.tsx`, `src/components/shared/sidebar-menu.tsx`, `src/components/meals/meal-composer-sheet.tsx`, `src/components/meals/meal-editor-sheet.tsx`, `src/components/meals/meal-move-picker.tsx`
 - Test: `src/components/calendar/components/event-detail-modal.test.tsx` (extend — representative)
 
-> These use raw Radix `Dialog` whose open-state lives at the call site, so each needs the one-liner. Pattern: `useBackHandler(<openFlag>, <close>)`.
+> These render a raw Radix `Dialog` (or a custom mobile overlay) whose open-state lives at the call site, so each needs the one-liner `useBackHandler(<openFlag>, <close>)`, placed **with the other hooks at the top of the component, above any early returns** (Rules of Hooks). **Register once:** a surface whose mobile path is `MobileSheet`/`SideSheet` is already covered by Task 5 — `event-form-modal.tsx` is therefore **excluded** (mobile → `MobileEventSheet` → `MobileSheet`), while `event-detail-modal.tsx` IS included because its mobile path is the custom `MobileEventDetail`.
 
 - [ ] **Step 1: Write the failing test** — extend `event-detail-modal.test.tsx`. Its `vi.mock("@/hooks", …)` is a *full* barrel mock, so it must now also provide a **real** `useBackHandler` (spread the actual module) for the registration to occur:
 
@@ -685,22 +694,24 @@ Add the imports this test needs at the top of the file: `import { act } from "@/
 npx vitest run src/components/calendar/components/event-detail-modal.test.tsx
 ```
 
-- [ ] **Step 3: Implement** — add `import { useBackHandler } from "@/hooks";` and one registration line in each component, matching its existing open/close props:
+- [ ] **Step 3: Implement** — add `import { useBackHandler } from "@/hooks";` and one registration line **near the top of each component (above any early returns)**, matching its existing open/close identifiers:
 
-  - `event-detail-modal.tsx`: `useBackHandler(isOpen, onClose);`
-  - `event-form-modal.tsx`: `useBackHandler(isOpen, onClose);`
+  - `event-detail-modal.tsx`: `useBackHandler(isOpen, onClose);` — place above the `if (!event) return null;` (`:61`) and `if (isMobile && member) return …` (`:79`) early returns.
   - `edit-scope-dialog.tsx`: `useBackHandler(isOpen, onClose);`
   - `google-calendar-picker-modal.tsx`: `useBackHandler(open, () => onOpenChange(false));`
-  - `family-settings-modal.tsx` (the reset-confirm `<Dialog>`): `useBackHandler(showResetConfirm, () => setShowResetConfirm(false));`
-  - `sidebar-menu.tsx` (the sign-out-confirm `<Dialog>`): `useBackHandler(showSignOutConfirm, () => setShowSignOutConfirm(false));`
+  - `family-settings-modal.tsx` (reset-confirm): `useBackHandler(showResetConfirm, () => setShowResetConfirm(false));`
+  - `sidebar-menu.tsx` (sign-out-confirm): `useBackHandler(showSignOutConfirm, () => setShowSignOutConfirm(false));`
+  - `meal-composer-sheet.tsx` (collision confirm): `useBackHandler(collisionRequest !== null, () => setCollisionRequest(null));`
+  - `meal-editor-sheet.tsx` (collision confirm): `useBackHandler(pendingCollision !== null, () => setPendingCollision(null));`
+  - `meal-move-picker.tsx`: `useBackHandler(open, () => onCancel());`
 
-  (Audit for any further raw `<Dialog>` usages with `rg -n "<Dialog\b" src` and apply the same one-liner.)
+  Do **not** add a registration to `event-form-modal.tsx` — its mobile path is `MobileSheet` (covered by Task 5); a second registration would mean an extra back press. Then run `rg -n "<Dialog\b" src` and confirm every remaining raw site is either covered by a sheet primitive on mobile or registered here.
 
 - [ ] **Step 4: Run it — expect PASS**, then commit
 
 ```bash
 npx vitest run src/components/calendar/components/event-detail-modal.test.tsx
-git add src/components/calendar/components/event-detail-modal.tsx src/components/calendar/components/event-form-modal.tsx src/components/calendar/components/edit-scope-dialog.tsx src/components/settings/family-settings-modal.tsx src/components/settings/google-calendar-picker-modal.tsx src/components/shared/sidebar-menu.tsx src/components/calendar/components/event-detail-modal.test.tsx
+git add src/components/calendar/components/event-detail-modal.tsx src/components/calendar/components/edit-scope-dialog.tsx src/components/settings/family-settings-modal.tsx src/components/settings/google-calendar-picker-modal.tsx src/components/shared/sidebar-menu.tsx src/components/meals/meal-composer-sheet.tsx src/components/meals/meal-editor-sheet.tsx src/components/meals/meal-move-picker.tsx src/components/calendar/components/event-detail-modal.test.tsx
 git commit -m "feat(back-button): register raw dialog close handlers"
 ```
 
@@ -744,4 +755,5 @@ gh pr create --title "feat: native hardware back-button (single-root + dismiss r
 - **Type consistency:** `useBackStack` exposes `register(handler) → number` / `unregister(id)` / `peek()` used identically in Tasks 1, 2, 3, 5, 6, 7. `useBackHandler(enabled, handler)` signature identical in Tasks 5, 6, 7. `useAndroidBackButton(enabled)` identical in Tasks 3, 4. The exit-hint string `"Press back again to exit"` matches between Task 3 implementation and its test.
 - **Placeholders:** none — every step has real code; selectors (`/Trader Joe's Run/i`, `Open recipe: …`, `/new list/i`, `/add recipe/i`) and fixtures (`groceryList`, `testRecipeDetail`) are the ones already used in those test files; the raw-`<Dialog>` open/close props are named per call site with an `rg` audit step.
 - **Known sharp edge:** `event-detail-modal.test.tsx` must switch its full `@/hooks` mock to a partial (spread-actual) mock so `useBackHandler` is real — called out explicitly in Task 7 Step 1.
+- **Post-review corrections (verified against source):** (1) `useBackStack` is reset in `src/test/setup.ts`'s `resetAllStores()` — it resets by explicit name, not generically (Task 1 Step 5); (2) Task 7 adds the 3 meals raw-`<Dialog>` confirms (`meal-composer-sheet:377`, `meal-editor-sheet:413`, `meal-move-picker:62`), which are siblings of `MobileSheet` and not auto-covered; (3) every raw-Dialog hook is placed above its component's early returns (Rules of Hooks); (4) `event-form-modal` is excluded — its mobile path is `MobileSheet`, so registering it would double-register.
 - **No new dependency:** reuses Zustand, `toast`, `pwa.ts`, History API; no router, no motion lib.
