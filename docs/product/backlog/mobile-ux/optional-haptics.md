@@ -5,9 +5,10 @@ epic: mobile-ux
 status: planned
 priority: P2
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-18
 issues: []
 prs: []
+spec: ../../../superpowers/specs/2026-06-18-optional-haptics-design.md
 ---
 
 ## Context
@@ -37,6 +38,14 @@ Surfaced from phone dogfooding (Galaxy S10 / Chrome), 2026-06-16.
       `navigator.vibrate` calls
 
 ## Notes
+
+Design resolved in [`2026-06-18-optional-haptics-design.md`](../../../superpowers/specs/2026-06-18-optional-haptics-design.md):
+default **off**; **per-device** localStorage (`family-hub-haptics`), not synced; **independent**
+of `prefers-reduced-motion` (the toggle is the single source of truth); **master + per-category**
+toggles (Taps / Completions / Back). `warning()`/destructive-confirm and the bottom-sheet-snap
+pulse are **deferred** (out of scope for v1). Built entirely on the existing PR #230
+(`usePressable().onPointerDown`) and PR #234 (`useAndroidBackButton` `onPop`) seams — no new
+press/motion/back infrastructure.
 
 Vibration API only (`navigator.vibrate(ms)`); no iOS support, so frame strictly as
 progressive enhancement. Open decisions for the spec: per-device setting (localStorage)
