@@ -6,7 +6,8 @@ status: planned
 priority: P2
 created: 2026-06-16
 updated: 2026-06-17
-issues: []
+issues:
+  - FE #231
 prs: []
 spec: ../../../superpowers/specs/2026-06-17-native-back-button-design.md
 plan: ../../../superpowers/plans/2026-06-17-native-back-button.md
