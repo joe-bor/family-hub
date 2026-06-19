@@ -5,8 +5,9 @@ epic: mobile-ux
 status: planned
 priority: P2
 created: 2026-06-16
-updated: 2026-06-18
-issues: []
+updated: 2026-06-19
+issues:
+  - FE #235
 prs: []
 spec: ../../../superpowers/specs/2026-06-18-optional-haptics-design.md
 plan: ../../../superpowers/plans/2026-06-18-optional-haptics.md
