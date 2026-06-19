@@ -9,6 +9,7 @@ updated: 2026-06-18
 issues: []
 prs: []
 spec: ../../../superpowers/specs/2026-06-18-optional-haptics-design.md
+plan: ../../../superpowers/plans/2026-06-18-optional-haptics.md
 ---
 
 ## Context
