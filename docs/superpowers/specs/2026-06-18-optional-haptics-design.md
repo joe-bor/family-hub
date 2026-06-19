@@ -7,7 +7,7 @@
 
 Touch interactions in the installed Android PWA are visually acknowledged (press scale + tint from `usePressable`, screen transitions) but not *tactile*. Native apps add a subtle vibration on key touches — a tap, a completion, a back-dismiss — which makes the app feel physical. Surfaced from phone dogfooding (Galaxy S10 / Chrome, 2026-06-16).
 
-`navigator.vibrate()` is supported in Android Chrome PWAs but **not** iOS Safari or desktop. So haptics are a **progressive enhancement**: present where capable, absent (silent no-op) everywhere else. This story **supersedes** the "No haptics (PWA limits)" exclusion in the home-dashboard redesign spec (`docs/superpowers/specs/2026-04-25-home-dashboard-redesign-design.md` — that note predates the Android-Chrome dogfood finding).
+`navigator.vibrate()` does real work only on touch devices like Android Chrome PWAs; iOS Safari omits it entirely and desktop Chrome/Edge/Firefox expose only a silent no-op. So haptics are a **progressive enhancement**: present where capable (Vibration API **and** a coarse pointer), a silent no-op everywhere else. This story **supersedes** the "No haptics (PWA limits)" exclusion in the home-dashboard redesign spec (`docs/superpowers/specs/2026-04-25-home-dashboard-redesign-design.md` — that note predates the Android-Chrome dogfood finding).
 
 This is the behavioral sibling of [native-feel-interaction-polish](2026-06-16-native-feel-interaction-polish-design.md) (PR #230, which left `usePressable().onPointerDown` as an explicit haptic seam) and pairs with [native-back-button](2026-06-17-native-back-button-design.md) (PR #234, whose `onPop` cascade is the single central back-dismiss point). Both PRs deliberately left seams this story consumes — it adds **no** new press/motion/back infrastructure.
 
@@ -70,9 +70,17 @@ const PATTERNS = {
 const THROTTLE_MS = 40; // guard against pointerdown storms / rapid repeats (overuse AC)
 let lastFireAt = 0;
 
-/** Feature-detect the Vibration API. Android Chrome → true; iOS Safari + desktop → false. */
+/**
+ * Detect a device that can actually deliver haptics: the Vibration API AND a
+ * touch-primary (coarse) pointer. Android Chrome → true; iOS Safari → false (no
+ * `navigator.vibrate`); desktop Chrome/Edge/Firefox → false too, because they
+ * define a *no-op* `navigator.vibrate` on mouse-primary hardware.
+ */
 export function canVibrate(): boolean {
-  return typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+    return false;
+  }
+  return window.matchMedia?.("(pointer: coarse)").matches === true;
 }
 
 function fire(category: keyof typeof PATTERNS): void {
@@ -94,7 +102,7 @@ export const haptics = {
 ```
 
 - **Gate order is capability → master → category → throttle.** Any failing gate is a silent return; nothing throws on unsupported platforms.
-- **`canVibrate()` lives in `haptics.ts`** (not `pwa.ts`): it is vibration-capability detection, distinct from `pwa.ts`'s install-context detection, and is only consumed by haptics + the Preferences visibility gate.
+- **`canVibrate()` lives in `haptics.ts`** (not `pwa.ts`): it is vibration-capability + touch-primary detection (`navigator.vibrate` **and** `(pointer: coarse)`), distinct from `pwa.ts`'s install-context detection, and is only consumed by haptics + the Preferences visibility gate.
 - **One shared throttle** across categories is sufficient: completion rows don't fire `tap()` (verified — they lack `usePressable`), and `back()` fires from `popstate`, so categories don't collide within 40ms in practice. (Per-category throttling is YAGNI.)
 - **Patterns are deliberately subtle:** `tap` 10ms, `back` 8ms (single brief pulses); `success` a short `[12, 40, 12]` double so a completion feels distinct from a tap. Final values are confirmed on-device (the manual gate), not asserted as "feel" in tests.
 
@@ -138,15 +146,17 @@ export const useHapticsPreference = create<HapticsPreferenceState>()(
 
 Exported from the `src/stores/index.ts` barrel. The helper (D1) reads it via `getState()` (non-reactive, correct for fire-and-forget); the Preferences UI (D4) reads/writes it reactively.
 
-### D3. Activation gate: capability-only (no install/context gate in the helper)
+### D3. Activation gate: capability + touch-primary (no install/context gate in the helper)
 
-The helper gates **only** on `canVibrate()` + opt-in — it does **not** check `isStandalone()`/`isIOS()`/pointer-coarseness. Rationale:
+> **Correction (2026-06-19, post-implementation review of FE PR #236):** the original draft of this section claimed `navigator.vibrate` is *absent* on desktop, so a bare `typeof navigator.vibrate === "function"` check would exclude it. That premise is **wrong** — desktop Chrome/Edge/Firefox define a silent **no-op** `navigator.vibrate`, so the bare check is `true` there and the Preferences section rendered on desktop. `canVibrate()` therefore also requires `(pointer: coarse)`. The text below is the corrected design.
 
-- On iOS Safari and desktop, `navigator.vibrate` is absent, so `canVibrate()` is already `false` → no-op. The capability check *is* the platform gate for vibration.
-- On Android Chrome **in a browser tab** (not installed), `navigator.vibrate` exists and works; firing subtle haptics there is harmless and arguably desirable. Requiring standalone would add complexity for no user benefit.
-- This keeps the helper a pure function of capability + preference — trivially testable, no platform branches.
+The helper gates **only** on `canVibrate()` + opt-in — it does **not** check `isStandalone()`/`isIOS()`. Rationale:
 
-(Contrast: `useAndroidBackButton` *does* gate on standalone+Android+coarse, because hardware-back interception is only meaningful in the installed app. The `haptics.back()` call sits *inside* that already-gated cascade, so back-haptics inherit that gate for free; taps/completions are intentionally capability-only.)
+- `canVibrate()` is `true` only with the Vibration API **and** a coarse (touch) pointer. iOS Safari is excluded (no `navigator.vibrate`); desktop Chrome/Edge/Firefox are excluded by the coarse-pointer requirement (their `navigator.vibrate` is a no-op). The capability check *is* the platform gate for vibration.
+- On Android Chrome **in a browser tab** (not installed), `navigator.vibrate` exists and the pointer is coarse, so haptics fire; that is harmless and arguably desirable. Requiring standalone would add complexity for no user benefit.
+- This keeps the helper a pure function of capability + preference — trivially testable, with one capability branch and no install-context branches.
+
+(Contrast: `useAndroidBackButton` *does* gate on standalone+Android+coarse, because hardware-back interception is only meaningful in the installed app. The `haptics.back()` call sits *inside* that already-gated cascade, so back-haptics inherit that gate for free; taps/completions are gated on capability + coarse pointer only.)
 
 ### D4. Preferences UI: capability-gated section with master + sub-switches
 
@@ -226,7 +236,7 @@ No call-site churn beyond these four files: the tap path is fully covered by the
   - **Reset every gate input in `beforeEach`** — `navigator.vibrate` presence, store state, and `lastFireAt` (re-import/reset) — not just the one a given test mutates (the factory-mock isolation gotcha from PR #234).
 - **Unit — `useHapticsPreference` (`haptics-store.test.ts`):** defaults (`enabled` false, all categories true); `setEnabled`/`setCategory` mutate correctly; **persists** to `localStorage["family-hub-haptics"]` (mirror calendar-store's persist assertion).
 - **Component — `switch.test.tsx`:** renders a Radix switch, `onCheckedChange` fires, `checked`/`aria-checked` reflect state.
-- **Component — `preferences-sheet.test.tsx` (extend):** with `navigator.vibrate = vi.fn()` defined → the Haptics section + master switch render; toggling the master writes `enabled` and reveals the 3 sub-switches; toggling a sub-switch writes `categories`; sub-switches hidden when master off. With `navigator.vibrate` undefined → the section is **absent**.
+- **Component — `preferences-sheet.test.tsx` (extend):** with a capable device mocked (`navigator.vibrate = vi.fn()` **and** `matchMedia("(pointer: coarse)")` → `matches: true`) → the Haptics section + master switch render; toggling the master writes `enabled` and reveals the 3 sub-switches; toggling a sub-switch writes `categories`; sub-switches hidden when master off. With `navigator.vibrate` undefined **or** a fine pointer → the section is **absent**.
 - **Integration:** `usePressable` → `pointerdown` calls `navigator.vibrate` when opted-in (spy); the back seam fires `haptics.back()` on a handled `popstate` (extend the existing `use-android-back-button` test harness, gate mocked on, `navigator.vibrate` spied).
 - **Manual device pass (the real acceptance gate):** Galaxy S10 / Chrome, installed PWA — toggle master on → feel a tap on buttons/nav, a double on list/chore completion, a pulse on hardware back-dismiss; turn off individual categories → those stop; master off → nothing; verify iOS Safari and desktop feel nothing and show no Haptics section. **If this device pass can't be run, say so explicitly in the PR for the human to verify.**
 - Follow `frontend/CLAUDE.md` gotchas: new store added to `resetAllStores()` by name (D5); reset all mocked gate inputs each test; prefer real store + `setState` over `vi.mock` of `@/` alias modules.
@@ -241,7 +251,7 @@ No call-site churn beyond these four files: the tap path is fully covered by the
 
 - A "Haptics" master toggle in Preferences, **default off**, persisted per-device in `localStorage["family-hub-haptics"]`, with per-category sub-toggles (Taps / Completions / Back, default on) shown only when the master is on.
 - When enabled, a short vibration fires on: primary-action taps (`usePressable`), task/list completion, and hardware back-dismiss — each gated by its category.
-- Capability-detected: silently no-ops where `navigator.vibrate` is unavailable (iOS Safari, desktop) and whenever the master or category toggle is off; the Haptics section is hidden where unsupported.
+- Capability-detected: silently no-ops where the device is not touch-primary or lacks a working Vibration API — iOS Safari (no `navigator.vibrate`) and desktop Chrome/Edge/Firefox (no-op `navigator.vibrate`, fine pointer) — and whenever the master or category toggle is off; the Haptics section is hidden where unsupported.
 - Patterns are short and subtle (single brief pulses for tap/back; a brief double for success), throttled against rapid repeats.
 - All vibration goes through the single `haptics.tap()/success()/back()` helper — no scattered `navigator.vibrate`.
 - Built entirely on the PR #230 (`usePressable`) and PR #234 (`useAndroidBackButton`) seams — no new press/motion/back code.
@@ -251,7 +261,7 @@ No call-site churn beyond these four files: the tap path is fully covered by the
 - **Placeholders:** none — every change names a real file/symbol verified 2026-06-18; the helper, store, and gate logic have full sketches.
 - **No new dependency:** `@radix-ui/react-switch` already in `package.json`; reuses Zustand `persist`, the existing seams, and the History/Vibration APIs.
 - **Decisions resolved (from brainstorming):** default **off**; **master + per-category** (Taps/Completions/Back) toggles; **per-device** localStorage; **independent** of reduced-motion; **back-dismiss included** behind the same toggle as its own category; `warning()`/destructive-confirm and sheet-snap **deferred**.
-- **Capability-only gate honesty:** the helper gates on `canVibrate()` + opt-in only (not standalone), because absence of `navigator.vibrate` already excludes iOS/desktop and tab-Android haptics are harmless; the back-haptic still inherits `useAndroidBackButton`'s stricter standalone gate by virtue of sitting inside its cascade.
+- **Capability gate honesty:** the helper gates on `canVibrate()` + opt-in only (not standalone). `canVibrate()` requires the Vibration API **and** a coarse pointer, which excludes iOS Safari and all desktop browsers (whose `navigator.vibrate` is a no-op); tab-Android (coarse + working vibrate) haptics are harmless. The back-haptic still inherits `useAndroidBackButton`'s stricter standalone gate by virtue of sitting inside its cascade. (The earlier "absence of `navigator.vibrate` excludes desktop" rationale was corrected post-PR-#236 — see D3.)
 - **Seam honesty:** consumes PR #230's `usePressable().onPointerDown` and PR #234's `onPop` cascade; ships zero new motion/press/back infrastructure — exactly the seams those PRs left.
 - **No double-pulse:** completion rows (`list-item-row`, `chore-row`) verified to lack `usePressable`, so `success()` does not stack with `tap()`.
 - **Test-harness reset (critical):** `src/test/setup.ts` resets by explicit name, so `useHapticsPreference` is added to `resetAllStores()` — without it `enabled`/`categories` leak across a file; and every mocked gate input (`navigator.vibrate`, store, throttle clock) is reset per test.
