@@ -580,7 +580,7 @@ describe("usePressable", () => {
   it("fires haptics.tap() on pointer down", () => {
     const tap = vi.spyOn(haptics, "tap").mockImplementation(() => {});
     const { result } = renderHook(() => usePressable());
-    result.current.onPointerDown({} as React.PointerEvent);
+    result.current.onPointerDown({} as never); // matches the existing test file
     expect(tap).toHaveBeenCalledTimes(1);
   });
 });
@@ -628,9 +628,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { haptics } from "@/lib/haptics";
+import type { ListItem } from "@/lib/types";
 import { ListItemRow } from "./list-item-row";
 
-const baseItem = { id: "1", text: "Milk", completed: false } as const;
+// Cast: the row only reads id/text/completed; ListItem requires more fields.
+const baseItem = { id: "1", text: "Milk", completed: false } as ListItem;
 
 describe("ListItemRow haptics", () => {
   it("fires success() when completing an item", async () => {
@@ -664,14 +666,16 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { haptics } from "@/lib/haptics";
+import type { ChoreBoardItem } from "@/lib/types";
 import { ChoreRow } from "./chore-row";
 
+// Cast: the row only reads templateId/title/cadence/completed.
 const baseChore = {
   templateId: "t1",
   title: "Dishes",
   cadence: "DAILY",
   completed: false,
-} as const;
+} as ChoreBoardItem;
 
 describe("ChoreRow haptics", () => {
   it("fires success() on the complete path", async () => {
