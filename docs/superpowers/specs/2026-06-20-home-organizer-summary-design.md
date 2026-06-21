@@ -144,7 +144,7 @@ ActivityItem {
 - Home today fetches only a **3-day** events query (`use-dashboard-events.ts`). The feed needs more, so Home will **mount additional queries**: a **dedicated wider events query** for detection (e.g. `[startOfToday, +28d]` — tunable; this is what lets "Dentist next Tuesday" surface, which a 3-day window would miss) and `useLists()` for the feed, plus `useMealsBoard(thisWeek)` and `useChoresBoard()` for the state line.
 - Honest cost: these are **real first-load fetches** on Home (deduped by TanStack Query and shared with the module tabs / offline cache, but not free). There is **no new backend endpoint** and no duplicate of an existing in-flight query; "reuse" means reusing the existing query definitions, not avoiding fetches.
 - The diff/feed compute runs over in-memory data **after** the hero paints; it must not block first paint.
-- The feed's visibility/timing logic shares **one** `visibilitychange` listener with the existing hero recompute (`use-hero-state.ts`) — not a second competing handler — and runs in the order: render feed from `changeLog` at the current `lastSeen`, then advance `lastSeen` if meaningful.
+- The feed owns a single, dedicated visibility hook (records `hiddenAt` on hide; re-runs detection on return-to-visible). It must **not** duplicate the hero's `now`-recompute logic (`use-hero-state.ts`); a separate single-purpose listener for the hidden-timestamp is acceptable (relaxed 2026-06-21 — two passive single-purpose listeners are cleaner than coupling the hero hook to the feed). Order on a meaningful open: render feed from `changeLog` at the current `lastSeen`, then advance `lastSeen`.
 
 ## 5. Feed presentation & interaction
 
@@ -217,7 +217,7 @@ Rule: **group only when grouping reduces noise.** A module with ≥2 changes col
 
 ### Quality
 - [ ] No new design tokens; spacing/type/color/motion from the existing system; `prefers-reduced-motion` respected.
-- [ ] Feed rows inherit shipped press-feedback + optional-haptics seams; no new interaction infra; one shared `visibilitychange` listener with the hero.
+- [ ] Feed rows inherit shipped press-feedback + optional-haptics seams; no new interaction infra. Visibility handling is consolidated into single-purpose hooks with no duplicated `now`-recompute logic (a dedicated feed listener for the hidden-timestamp is acceptable).
 - [ ] Layout holds 320px–768px without horizontal overflow; rows ≥44px touch target.
 - [ ] Gated to mobile; the tablet/touchscreen surface never mounts the feed logic.
 
