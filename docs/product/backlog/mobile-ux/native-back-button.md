@@ -2,16 +2,19 @@
 id: mobile-native-back-button
 title: Native hardware back-button handling (double-tap to exit PWA)
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-06-16
-updated: 2026-06-17
+updated: 2026-06-20
 issues:
   - FE #231
-prs: []
+prs:
+  - FE #234
 spec: ../../../superpowers/specs/2026-06-17-native-back-button-design.md
 plan: ../../../superpowers/plans/2026-06-17-native-back-button.md
 ---
+
+**Shipped** in `0.3.18` — [FE #234](https://github.com/joe-bor/FamilyHub/pull/234), closed [FE #231](https://github.com/joe-bor/FamilyHub/issues/231).
 
 ## Context
 
@@ -25,16 +28,16 @@ Surfaced from phone dogfooding (Galaxy S10 / Chrome), 2026-06-16.
 
 ## Acceptance Criteria
 
-- [ ] In the installed Android PWA, a single back press first dismisses the top-most open
+- [x] In the installed Android PWA, a single back press first dismisses the top-most open
       bottom sheet, dialog, or sidebar (most-recently-opened closes first); if none is open
       and the active module is not Home, it goes up to Home instead of exiting
-- [ ] At Home with nothing open, the first back press shows a transient "Press back again to
+- [x] At Home with nothing open, the first back press shows a transient "Press back again to
       exit" toast; a second back press within ~2s exits the app
-- [ ] Gated to Android standalone (display-mode: standalone, not iOS, coarse pointer);
+- [x] Gated to Android standalone (display-mode: standalone, not iOS, coarse pointer);
       browser tabs, iOS standalone (edge-swipe), and desktop installed PWAs are unaffected
-- [ ] No back-button trap loops or history leaks; refresh lands on Home with the history
+- [x] No back-button trap loops or history leaks; refresh lands on Home with the history
       buffer intact (no router/URL view state to desync)
-- [ ] Drives the existing close handlers only — the sibling native-feel transitions animate
+- [x] Drives the existing close handlers only — the sibling native-feel transitions animate
       the back with no new motion code
 
 ## Notes

@@ -2,16 +2,19 @@
 id: mobile-native-feel-interaction-polish
 title: Native-feel interaction polish (transitions + press feedback)
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-06-16
-updated: 2026-06-16
+updated: 2026-06-20
 issues:
   - FE #229
-prs: []
+prs:
+  - FE #230
 spec: ../../../superpowers/specs/2026-06-16-native-feel-interaction-polish-design.md
 plan: ../../../superpowers/plans/2026-06-16-native-feel-interaction-polish.md
 ---
+
+**Shipped** in `0.3.17` — [FE #230](https://github.com/joe-bor/FamilyHub/pull/230), closed [FE #229](https://github.com/joe-bor/FamilyHub/issues/229).
 
 ## Context
 
@@ -31,15 +34,15 @@ Surfaced from phone dogfooding (Galaxy S10 / Chrome), 2026-06-16.
 
 ## Acceptance Criteria
 
-- [ ] Audit and smooth the transitions that read as harsh today (module/tab switch, sheet
+- [x] Audit and smooth the transitions that read as harsh today (module/tab switch, sheet
       and dialog open/close, sidebar) using the existing duration/easing tokens — no new
       competing motion system
-- [ ] Every interactive control has a clear pressed/active state that fires immediately on
+- [x] Every interactive control has a clear pressed/active state that fires immediately on
       touch (not hover-only), giving instant acknowledgment even before navigation/data
       resolves
-- [ ] All motion gated behind `prefers-reduced-motion: no-preference`; reduced-motion users
+- [x] All motion gated behind `prefers-reduced-motion: no-preference`; reduced-motion users
       get instant, non-animated states
-- [ ] No added jank: transitions hold 60fps on the target device with no layout thrash
+- [x] No added jank: transitions hold 60fps on the target device with no layout thrash
 
 ## Notes
 

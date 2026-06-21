@@ -2,16 +2,19 @@
 id: mobile-optional-haptics
 title: Optional haptic feedback (Vibration API) with settings toggle
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-06-16
-updated: 2026-06-19
+updated: 2026-06-20
 issues:
   - FE #235
-prs: []
+prs:
+  - FE #236
 spec: ../../../superpowers/specs/2026-06-18-optional-haptics-design.md
 plan: ../../../superpowers/plans/2026-06-18-optional-haptics.md
 ---
+
+**Shipped** in `0.3.18` — [FE #236](https://github.com/joe-bor/FamilyHub/pull/236), closed [FE #235](https://github.com/joe-bor/FamilyHub/issues/235). Default off, per-device toggles (Taps / Completions / Back); bottom-sheet-snap + destructive-confirm pulses deferred post-v1.
 
 ## Context
 
@@ -28,15 +31,15 @@ Surfaced from phone dogfooding (Galaxy S10 / Chrome), 2026-06-16.
 
 ## Acceptance Criteria
 
-- [ ] A "Haptic feedback" toggle in Preferences (default off — confirm in spec), persisted
+- [x] A "Haptic feedback" toggle in Preferences (default off — confirm in spec), persisted
       alongside existing preferences
-- [ ] When enabled, a short vibration fires on a defined set of interactions (final list in
-      spec): primary action taps, task/list completion, bottom-sheet snap, destructive
-      confirm
-- [ ] Capability-detected: silently no-ops where `navigator.vibrate` is unavailable
+- [x] When enabled, a short vibration fires on the v1 interaction set — primary action taps
+      and task/list completion (master + per-category toggles: Taps / Completions / Back);
+      bottom-sheet snap and destructive-confirm/`warning()` deferred post-v1
+- [x] Capability-detected: silently no-ops where `navigator.vibrate` is unavailable
       (iOS Safari, desktop) and whenever the toggle is off
-- [ ] Patterns are short and subtle (single brief pulses, not long buzzes)
-- [ ] Centralized helper (e.g. `haptics.tap()/success()/warning()`) instead of scattered
+- [x] Patterns are short and subtle (single brief pulses, not long buzzes)
+- [x] Centralized helper (e.g. `haptics.tap()/success()/warning()`) instead of scattered
       `navigator.vibrate` calls
 
 ## Notes
