@@ -176,7 +176,7 @@ ActivityItem {
 
 Rule: **group only when grouping reduces noise.** A module with ≥2 changes collapses into one summary line with an expander; a single change renders directly. Lists are inherently per-list.
 
-- **Calendar** — coalesces all event changes into one expandable group; expand reveals each change with a marker (`+` added · `~` changed · `−` removed) and a time/affix; recurring series collapse to one sub-row (§4.2). Each sub-row deep-links to that event/date.
+- **Calendar** — coalesces all event changes into one expandable group; expand reveals each change with a marker (`+` added · `~` changed · `−` removed) and a time/affix; recurring series collapse to one sub-row per distinct rendered signature `(kind, title, memberId, detail)` (§4.2). Each sub-row deep-links to that event/date.
 - **Lists** — one row per changed list, **name first** for scannability: "Groceries · +3 items", "Camping · 2 checked off", "Party · New list" (a created list reads `<name> · New list`, consistent with the others — not "New list · Party"). Tap opens the list. No item-level expansion in v1.
 
 ```
@@ -239,7 +239,7 @@ Rule: **group only when grouping reduces noise.** A module with ≥2 changes col
 - [ ] Changes are detected on every load and accumulated; a brief background→foreground (quick peek) neither advances the divider nor drops unseen changes.
 - [ ] The "new since you last looked" divider advances only on a meaningful **open** (cold start, visible after `MEANINGFUL_GAP`, or device-local day rollover) — **never on a background data-change/refetch cycle**, and never spuriously before the first hide (the `hiddenAt = 0` default must not read as "hidden 4h+"). It is shown only when both "new" and "earlier" sections are non-empty.
 - [ ] Detection never runs against partial data: while either source query is pending/errored the persisted log still renders, but no new snapshot is taken and nothing is mis-reported as added/removed. The first real data arrival does not dump every entity as "added." Window-edge churn from the daily-sliding calendar window is suppressed (§4.4).
-- [ ] Calendar changes coalesce into one expandable group when ≥2; a single change renders directly; recurring series collapse to one sub-row via `recurringEventId`.
+- [ ] Calendar changes coalesce into one expandable group when ≥2; a single change renders directly; recurring instances collapse only when `(recurringEventId, kind, title, memberId, detail)` matches, yielding one sub-row per distinct rendered series-change (§4.2).
 - [ ] Lists changes render one row per changed list using summary signals only (created/renamed/removed + count deltas) — no per-item data required.
 - [ ] An entity added then removed before a meaningful open produces **no** lingering "added" row (reconcile against `fresh`); a removed entity present in the snapshot shows as "removed" with its prior title.
 - [ ] After a long absence (> `STALE_RESEED`), the feed reseeds silently and shows "all caught up" rather than a bulk dump.

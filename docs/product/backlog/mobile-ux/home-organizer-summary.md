@@ -27,7 +27,7 @@ Design + mechanics: [spec](../../../superpowers/specs/2026-06-20-home-organizer-
 - [ ] A state line under the hero shows chores remaining today + tonight's dinner; each segment omits when empty, the whole line omits when both are empty; it is family-wide (ignores member-chip focus, which still filters the hero + agenda).
 - [ ] A "Since you last opened" feed shows recent changes for **calendar + lists only** (chores, meals, and recipes never appear in the feed).
 - [ ] Changes are detected on every load and accumulated; the "new since you last looked" divider advances **only** on a meaningful open (cold start, visible after the configured gap, or device-local day rollover); a quick peek neither advances the divider nor drops unseen changes.
-- [ ] Calendar changes coalesce (≥2 → one expandable group; recurring series collapse via `recurringEventId`); lists use summary signals only (created/renamed/removed + item-count deltas), no per-item identity diffing in v1.
+- [ ] Calendar changes coalesce (≥2 → one expandable group; recurring instances collapse only when the full visible signature `(recurringEventId, kind, title, memberId, detail)` matches); lists use summary signals only (created/renamed/removed + item-count deltas), no per-item identity diffing in v1.
 - [ ] An item added then removed before a meaningful open leaves no phantom row; a long absence reseeds silently rather than dumping a backlog.
 - [ ] Client-side diff only — no new backend endpoint; a new `idb-keyval` activity store + `lastSeen`/`hiddenAt` markers, cleared on logout and the 401 handler.
 - [ ] No new design tokens; reuses the existing motion system and the shipped press-feedback (#230) + optional-haptics (#236) seams; dates are device-local.

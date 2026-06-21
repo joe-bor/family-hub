@@ -12,7 +12,7 @@
 
 **Verified codebase facts (do not re-litigate):**
 - No entity exposes `updatedAt` → ordering uses on-device `detectedAt`. The snapshot stores all watched fields so "edited" is a field compare, not a timestamp compare.
-- Calendar returns **expanded instances with `id: string | null`**; key them with `getEventKey` (`event.id ?? ` `` `${recurringEventId}_${formatLocalDate(date)}` `` ). Coalesce series in the calendar group by `(recurringEventId, kind, detail)` — **not `recurringEventId` alone**, which would hide a second, different change to the same series.
+- Calendar returns **expanded instances with `id: string | null`**; key them with `getEventKey` (`event.id ?? ` `` `${recurringEventId}_${formatLocalDate(date)}` `` ). Coalesce series in the calendar group by `(recurringEventId, kind, title, memberId, detail)` — **not `recurringEventId` alone**, which would hide a second, visibly different change to the same series.
 - `useLists()` returns `ListSummary[]` = `{id,name,kind,totalItems,completedItems}` — **no items, no timestamps**. Lists detection = created/renamed/removed + count deltas only. A bare `completedItems` *decrease* (un-check) is **not** surfaced (no generic "updated" signal).
 - The offline persister (FE #222) is a single-key TanStack persister — **not** a reusable KV store. Build a **new** `idb-keyval` store in its **own database** (`family-hub-home-activity`, *not* the shared `family-hub-offline` DB — `idb-keyval.createStore` opens with no version, so it cannot add a store to an existing DB). Wire its clear (IDB **+ both localStorage markers**) into `useLogout()` and `handleUnauthorized()`.
 - `refetchOnWindowFocus` is **off** (`providers/query-client.ts`) → return-to-visible must `refetch()` explicitly before diffing.
@@ -768,8 +768,9 @@ export function buildFeed(
   entryCap: number,
   subRowCap: number = entryCap,
 ): Feed {
-  // Calendar: collapse series by (recurringEventId, kind, detail), then group all
-  // calendar items together. Non-recurring events are never collapsed.
+  // Calendar: collapse series by the full visible signature
+  // (recurringEventId, kind, title, memberId, detail), then group all calendar
+  // items together. Non-recurring events are never collapsed.
   const seenSig = new Set<string>();
   const calItems: ActivityItem[] = [];
   for (const i of log.filter((x) => x.module === "calendar").sort(byRecency)) {
@@ -1201,17 +1202,71 @@ describe("useActivityFeed — orchestration", () => {
     expect(io.getLastSeen()).toBe(seenAfterOpen); // divider baseline did not move
   });
 
-  it("refetches BOTH sources on return-to-visible before detecting", async () => {
+  it("keeps the rendered divider baseline frozen across background cycles", async () => {
+    querySettled = true;
+    events = [];
+    lists = [
+      { id: "l1", name: "Earlier", kind: "todo", totalItems: 0, completedItems: 0 },
+      { id: "l2", name: "New", kind: "todo", totalItems: 0, completedItems: 0 },
+    ];
+    const initial: ActivityState = {
+      snapshot: {
+        "lists:l1": { storeKey: "lists:l1", module: "lists", title: "Earlier", totalItems: 0, completedItems: 0, entityId: "l1" },
+        "lists:l2": { storeKey: "lists:l2", module: "lists", title: "New", totalItems: 0, completedItems: 0, entityId: "l2" },
+      },
+      log: [
+        { storeKey: "lists:l1", module: "lists", kind: "edited", title: "Earlier", detail: "+1 items", detectedAt: 100, entityId: "l1" },
+        { storeKey: "lists:l2", module: "lists", kind: "edited", title: "New", detail: "+1 items", detectedAt: 300, entityId: "l2" },
+      ],
+      snapshotSavedAt: 500,
+      eventWindow: { start: "2000-01-01", end: "2100-01-01" },
+    };
+    const io = makeMemoryIo(initial, 200);
+    const now = vi.fn(() => 1000);
+    const { result, rerender } = renderHook(() => useActivityFeed({ io, nowProvider: now }), { wrapper });
+    await waitFor(() => expect(result.current.feed.dividerAfter).toBe(0));
+
+    // Add another new group on an automatic cycle. The original "New" row must
+    // remain above the divider; rereading the advanced lastSeen would move it below.
+    now.mockReturnValue(2000);
+    lists = [...lists, { id: "l3", name: "Newest", kind: "todo", totalItems: 1, completedItems: 0 }];
+    rerender();
+    await waitFor(() => expect(result.current.feed.groups).toHaveLength(3));
+    expect(result.current.feed.dividerAfter).toBe(1);
+  });
+
+  it("refetches BOTH sources before detecting and incorporates refreshed data", async () => {
     querySettled = true;
     events = [];
     lists = [];
     const io = makeMemoryIo();
-    renderHook(() => useActivityFeed({ io, nowProvider: () => 1000 }), { wrapper });
+    const { result, rerender } = renderHook(() => useActivityFeed({ io, nowProvider: () => 1000 }), { wrapper });
     await waitFor(() => expect(io.loadState).toHaveBeenCalled());
+    lists = [{ id: "l1", name: "Refetched", kind: "todo", totalItems: 1, completedItems: 0 }];
+    let releaseRefetch = () => {};
+    const refetchGate = new Promise<void>((resolve) => { releaseRefetch = resolve; });
+    eventsRefetch.mockImplementationOnce(async () => {
+      await refetchGate;
+      return { data: { data: events } };
+    });
+    listsRefetch.mockImplementationOnce(async () => {
+      await refetchGate;
+      return { data: { data: lists } };
+    });
     // jsdom visibilityState defaults to "visible" → the listener takes the visible branch.
     document.dispatchEvent(new Event("visibilitychange"));
-    await waitFor(() => expect(eventsRefetch).toHaveBeenCalled());
-    expect(listsRefetch).toHaveBeenCalled();
+    await waitFor(() => expect(eventsRefetch).toHaveBeenCalledTimes(1));
+    expect(listsRefetch).toHaveBeenCalledTimes(1);
+    expect(io.loadState).toHaveBeenCalledTimes(1); // detection is blocked on BOTH refetches
+    releaseRefetch();
+    await waitFor(() => expect(io.loadState).toHaveBeenCalledTimes(2));
+    expect(eventsRefetch.mock.invocationCallOrder[0]).toBeLessThan(io.loadState.mock.invocationCallOrder[1]);
+    expect(listsRefetch.mock.invocationCallOrder[0]).toBeLessThan(io.loadState.mock.invocationCallOrder[1]);
+
+    // The mock query hooks expose the refetched arrays on the next observer render,
+    // matching TanStack Query's post-refetch notification.
+    rerender();
+    await waitFor(() => expect(result.current.feed.groups[0]?.summary).toContain("Refetched"));
   });
 
   it("serializes writes: a slow earlier save cannot overwrite a newer cycle", async () => {
@@ -1247,12 +1302,15 @@ describe("useActivityFeed — orchestration", () => {
 });
 
 // minimal in-memory IO double for the hook's injected dependencies
-function makeMemoryIo() {
-  let state: ActivityState | null = {
+function makeMemoryIo(
+  initialState: ActivityState | null = {
     snapshot: {}, log: [], snapshotSavedAt: 0,
     eventWindow: { start: "2000-01-01", end: "2100-01-01" },
-  };
-  let lastSeen = 0;
+  },
+  initialLastSeen = 0,
+) {
+  let state = initialState;
+  let lastSeen = initialLastSeen;
   let hiddenAt = 0;
   return {
     loadState: vi.fn(async () => state),
@@ -1787,7 +1845,7 @@ function ActivityGroup({
           the sub-list is `inert` + aria-hidden, so it is fully non-interactive and out
           of the a11y tree — not merely untabbable. */}
       <div
-        className={cn("grid motion-safe:transition-[grid-template-rows] motion-safe:duration-[250ms]", `motion-safe:${EASE}`)}
+        className="grid motion-safe:transition-[grid-template-rows] motion-safe:duration-[250ms] motion-safe:ease-[cubic-bezier(0.32,0.72,0,1)]"
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <ul
@@ -1844,7 +1902,7 @@ function markerFor(kind: FeedRow["kind"]): string {
 }
 ```
 
-> Notes: every interactive element (group row, sub-row) uses `usePressable` and a `min-h-11` (44px) target. Expansion is animated via a pure-CSS `grid-template-rows` transition (no `tailwindcss-animate` dependency) and the chevron rotates; both honor `prefers-reduced-motion` via `motion-reduce:transition-none`. The member dot resolves `memberId → color` through the `memberColorOf` prop (wired from `useFamilyMemberMap` in Task 11), so it is implemented in v1, not deferred. Expansion resets on the `meaningfulOpenId` epoch (the group key), satisfying "ephemeral expansion" across background→foreground.
+> Notes: every interactive element (group row, sub-row) uses `usePressable` and a `min-h-11` (44px) target. Expansion is animated via a pure-CSS `grid-template-rows` transition (no `tailwindcss-animate` dependency); height and chevron motion are disabled under reduced motion while the opacity transition remains. The complete `motion-safe:ease-[…]` class is written literally so Tailwind's static scanner emits it. The member dot resolves `memberId → color` through the `memberColorOf` prop (wired from `useFamilyMemberMap` in Task 11), so it is implemented in v1, not deferred. Expansion resets on the `meaningfulOpenId` epoch (the group key), satisfying "ephemeral expansion" across background→foreground.
 
 - [ ] **Step 4: Run it, expect PASS.**
 
