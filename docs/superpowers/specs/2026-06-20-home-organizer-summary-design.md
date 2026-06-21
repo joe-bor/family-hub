@@ -1,12 +1,14 @@
 # Home Organizer Summary — Design Spec
 
 **Date:** 2026-06-20
-**Status:** Approved (design); revised after Opus 4.8 spec review, meals cut from feed (2026-06-21)
+**Status:** Approved (design); revised after Opus 4.8 spec review, meals cut from feed (2026-06-21); orchestration/seam hardened after Codex plan review (2026-06-21)
 **Story:** `docs/product/backlog/mobile-ux/home-organizer-summary.md`
 **Concept:** "The Now" + "What changed" — a calm hero plus a since-you-last-opened activity feed
 **Scope:** Mobile breakpoints (≤768px), adult users. Extends the shipped home-dashboard redesign.
 
 > **Revision note (2026-06-20):** A high-effort review verified the original §10 assumptions against the codebase and found several were false. This revision bakes the verified constraints into the design: calendar exposes only **expanded instances with nullable `id`** over a narrow query window; `ListSummary` carries **no items/timestamps**; no entity exposes `updatedAt`; FE #222's persister is **not** a reusable KV store; and the FE has **no family-local date helper** (it is device-local). The diff algorithm is also fully specified for re-edit, add-then-delete, and long-absence cases. See §4 and §10.
+
+> **Revision note (2026-06-21, post-Codex plan review):** A plan-level review surfaced orchestration and integration defects that this revision now closes in the spec (the plan carries the code). Verified against the codebase: (a) `idb-keyval.createStore` opens its database with **no version**, so a second object store cannot be added to the existing `family-hub-offline` DB — the activity store needs its **own database name** (§4.1); (b) detection must be **gated until both source queries settle** and serialized so concurrent cycles cannot lose writes, and a **meaningful open** is classified only on cold start or a real visible transition — never on a data-change cycle (§4.1, §4.5); (c) `refetchOnWindowFocus` is **off** app-wide, so return-to-visible must **explicitly refetch** before diffing (§4.5); (d) the calendar detection window **slides daily**, so window-boundary churn must be suppressed (§4.4); (e) deep-links must carry an **entity id** via the existing app-store navigation-intent pattern, not a bare module switch (§5); (f) the mobile gate must be **synchronous** because `App.tsx` renders Home before its desktop-redirect effect runs (§7); (g) `clearHomeActivity()` must clear the **localStorage markers too**, not only IndexedDB (§9). The `ActivityItem` seam is also reconciled to the built shape (§4.1).
 
 ## 1. Context
 
@@ -71,55 +73,69 @@ Coalesced, expandable, reverse-chronological recent changes with a "new since yo
 
 Derived on-device from data the app fetches. No new backend endpoint. **New** persistent state (the FE #222 persister is a single-key TanStack persister and cannot host this — see §10.3):
 
-- A **new dedicated `idb-keyval` store** (e.g. `home-activity`) holding:
+- A **new dedicated `idb-keyval` store in its own database** (e.g. database `family-hub-home-activity`, store `home-activity`). It must **not** reuse the offline cache's `family-hub-offline` database: `idb-keyval.createStore` calls `indexedDB.open(dbName)` with no version number, so `onupgradeneeded` fires only when the database is first created. The offline cache already created `family-hub-offline` at version 1 with the `query-cache` store; opening it again without a version bump will **not** create a second object store, and every transaction against the missing store throws (silently swallowed by the persistence guards). A distinct database name sidesteps versioned-upgrade plumbing entirely. The store holds:
   - `snapshot` — last-seen state of feed entities, keyed by a per-module composite key (§4.2), storing the fields needed to detect change + the title/detail needed to render a later "removed".
   - `changeLog: ActivityItem[]` — accumulated, coalesced changes within the window.
   - `snapshotSavedAt` — when `snapshot` was last written (drives stale-reseed, §4.4).
 - localStorage markers: `lastSeen` (last *meaningful* open → divider), `hiddenAt` (last hide → classify next open).
 
 ```
-on app load (ANY load, incl. quick peeks):
-  fresh = feed-window queries (events[today..+W], all list summaries)   // meals not in feed (state line only)
-  if (now - snapshotSavedAt > STALE_RESEED):     // long absence — see §4.4(d)
-      snapshot = fresh; snapshotSavedAt = now; return   // reseed silently, no dump
-  deltas = diff(fresh, snapshot)                  // added / edited / removed, per composite key
-  changeLog = reconcile(changeLog, fresh)         // drop phantom adds; demote vanished edits → removed (§4.4)
-  changeLog = mergeCoalesced(changeLog, deltas, detectedAt = now)   // §4.4 merge rule
+detect(now, isOpenEvent):                          // serialized: one cycle at a time
+  if (events query or lists query not yet settled): // §4.5 — never diff partial data
+      render feed from persisted changeLog; return  // show what we have; wait for data
+  fresh = feed-window queries (events[today..+W], all list summaries)   // meals not in feed
+  if (no prior snapshot) OR (now - snapshotSavedAt > STALE_RESEED):     // first run / long absence §4.4
+      snapshot = fresh; snapshotSavedAt = now; window = currentWindow
+      lastSeen = now                               // nothing is "new" yet
+      render empty feed; return                     // reseed silently, no dump
+  deltas = diff(fresh, snapshot, prevWindow, currentWindow)  // window-bounds-aware §4.4
+  changeLog = mergeCoalesced(changeLog, deltas, detectedAt = now)   // merge FIRST (§4.4)
+  changeLog = reconcile(changeLog, fresh)          // then drop phantom adds; demote vanished edits
   changeLog = prune(changeLog, olderThan 48h)
-  snapshot = fresh; snapshotSavedAt = now         // never miss a change
+  snapshot = fresh; snapshotSavedAt = now; window = currentWindow   // never miss a change
+  // Classify the OPEN, not the data change: only an open can advance the divider.
+  meaningful = isOpenEvent AND (coldStart || (now - hiddenAt > MEANINGFUL_GAP) || dayChanged(lastSeen))
+  displayBaseline = lastSeen                        // freeze the divider position for THIS render
+  render feed from changeLog; draw divider at displayBaseline (§5)
+  if meaningful: lastSeen = now                     // persist advance AFTER render; does not move displayBaseline
 
-on visibilitychange→hidden:  hiddenAt = now
-
-on becoming visible / cold start:
-  meaningful = coldStart || (now - hiddenAt > MEANINGFUL_GAP) || dayChanged(lastSeen)
-  render feed from changeLog; draw divider at lastSeen (§5)
-  if meaningful: lastSeen = now                    // advance divider AFTER render
+triggers:
+  cold start                  → detect(now, isOpenEvent = true)
+  source data changed         → detect(now, isOpenEvent = false)   // refresh log; never advance divider
+  visibilitychange→hidden     → hiddenAt = now
+  becoming visible            → refetch(events, lists); then detect(now, isOpenEvent = true)   // §4.5
 ```
 
-Key property: detection runs on **every** load (nothing is lost), but the **divider advances only on a meaningful open** — a brief peek captures-and-keeps without marking anything seen.
+Key properties: (1) detection runs on **every** settled load (nothing is lost), but the **divider advances only on a meaningful *open*** — a data-change cycle refreshes the log without marking anything seen, and a brief peek captures-and-keeps; (2) a single `detect` cycle is **in flight at a time** (a generation guard drops stale cycles before they persist), so concurrent triggers cannot save out of order; (3) the rendered divider uses a **frozen baseline** captured before `lastSeen` advances, so a later harmless cycle cannot re-flag the same rows as "earlier."
 
-`ActivityItem` is the integration seam — a future backend `GET /api/activity` (the AI phase) replaces the source with no UI change:
+`ActivityItem` is the integration seam — a future backend `GET /api/activity` (the AI phase) replaces the source with no UI change. The fields are **flat** (the `{module, entityId, date}` triple *is* the deep-link payload; there is no nested `deepLink` object) so the same record drives both diffing and navigation without a second mapping:
 
 ```
 ActivityItem {
-  key: string              // per-module composite key (§4.2) — stable across loads
+  storeKey: string         // `${module}:${entityKey}` per-module composite key (§4.2) — stable across loads
   module: "calendar" | "lists"
   kind: "added" | "edited" | "removed"
   title: string            // from fresh, or from snapshot for removals
   detail?: string          // "+3 items", "moved to 5:00 PM", "Tue 9:00 AM"
-  memberColor?: string     // assigned member's color, if any (assignment, not authorship)
-  occurredAt: number       // detectedAt (no entity updatedAt exists today — §10.1)
-  deepLink: { module, entityRef, date? }
+  memberId?: string        // assigned member's id (assignment, not authorship); color resolved at
+                           //   render via useFamilyMemberMap — store the stable id, not a color string
+  recurringEventId?: string// series id, for calendar coalescing (§4.2)
+  date?: string            // formatLocalDate — part of the deep-link target
+  entityId?: string | null // raw calendar id (may be null) / list id — the deep-link target
+  detectedAt: number       // = occurredAt; no entity updatedAt exists today (§10.1)
 }
 ```
+
+> Seam note: the original draft carried a `memberColor` and a nested `deepLink`. We store **`memberId`** instead (member colors can change; the id is stable, and `useFamilyMemberMap()` already resolves id→color at render — see §6), and keep the deep-link fields flat. A future server `GET /api/activity` returns this same flat shape, so the UI is unchanged.
 
 ### 4.2 What counts as a change, per module (with composite keys)
 
 - **Calendar** — added / edited / removed. Source data is **expanded instances with `id: string | null`** over a query window (§4.5), so:
   - **Composite key** = `id` when non-null, else `` `${recurringEventId}_${formatLocalDate(date)}` `` (per the existing `getEventKey` fallback).
   - "Edited" = a meaningful field moved: `title`, `startTime`/`endTime`, `date`/`endDate`, `isAllDay`, `location`, `memberId`. Ignore `htmlLink`/`source`/sync noise.
-  - **Recurring:** there is **no source-event accessor** on the FE. We diff at the occurrence level, then **coalesce within the calendar group by `recurringEventId`**: identical edits across instances of one series render as a single sub-row ("Soccer (weekly) · moved to 5:00 PM"). The original "series = one item" guarantee is **dropped**; practically, coalescing yields one row per distinct series-change.
-- **Lists** — source is `useLists()` → `ListSummary[]` = `{id,name,kind,totalItems,completedItems}` (**no items, no timestamps**; per-item data needs `useList(id)` per list, only cached for opened lists). So the feed detects, **per list (key = list `id`)**: list **created** (new id), **renamed** (name changed), **removed** (id gone), and **item count deltas** surfaced as `+N items` (totalItems rose) / `N checked off` (completedItems rose) / `N removed` (totalItems fell). **No per-item identity diffing in v1.** This matches the §5 mockups and needs no per-item data.
+  - **Recurring:** there is **no source-event accessor** on the FE. We diff at the occurrence level, then **coalesce within the calendar group by `(recurringEventId, change-signature)`** — where the signature is `(kind, detail)`. *Identical* edits across instances of one series collapse to a single sub-row ("Soccer (weekly) · moved to 5:00 PM"); **distinct** changes to the same series (e.g. one instance moved, another deleted) stay as **separate** sub-rows. Coalescing by `recurringEventId` *alone* would hide the second change, so the signature is part of the group key. The original "series = one item" guarantee is **dropped**; practically, coalescing yields one row per distinct series-change.
+- **Lists** — source is `useLists()` → `ListSummary[]` = `{id,name,kind,totalItems,completedItems}` (**no items, no timestamps**; per-item data needs `useList(id)` per list, only cached for opened lists). So the feed detects, **per list (key = list `id`)**: list **created** (new id, rendered "<name> · New list" per §5), **renamed** (name changed), **removed** (id gone), and **item count deltas** surfaced as `+N items` (totalItems rose) / `N checked off` (completedItems rose) / `N removed` (totalItems fell). **No per-item identity diffing in v1.** This matches the §5 mockups and needs no per-item data.
+  - **Decreasing `completedItems` (an item un-checked), with no other field change, is *not* surfaced** — it is a low-signal correction, and "since you last opened" is about forward progress and additions, not undo. It must **not** fall through to a generic "updated" row (there is no such signal). Concretely: if the only change is `completedItems` decreasing, the list produces **no delta**. A simultaneous `totalItems` change still surfaces via the `+N items` / `N removed` signals above.
 - **Meals** — excluded from the feed (state line only; meals-as-activity cut from v1 — §7).
 - **Chores** — excluded from the feed (state line only).
 - **Recipes** — excluded entirely.
@@ -128,7 +144,7 @@ ActivityItem {
 
 - `MEANINGFUL_GAP` default ~4h; `STALE_RESEED` = the 48h window; both tuned in the plan.
 - **Dates are device-local.** The FE has no family-local date helper (`family.timezone` is backend-only and never used for FE date math; all of `time-utils.ts` is device-local). `dayChanged`, "today," and `weekStart` all use device-local time. Acceptable for the single-home personas; family-tz correctness is a noted future enhancement, not v1.
-- Window = 48h on `detectedAt`; cap to ~20 rows **post-coalesce**, with an "and N more" affix if exceeded.
+- Window = 48h on `detectedAt`. Two independent caps, both **post-coalesce**, each with an "and N more" affix when exceeded: (1) **top-level feed entries** (the calendar group counts as one entry; each changed list is one entry) cap at ~20 — this is what bounds vertical length; (2) **calendar sub-rows inside the expanded group** cap separately (~10) so a busy week cannot produce an unbounded expansion. Capping only the *entry* count (without the inner sub-row cap) would let one calendar group hold arbitrarily many rows while counting as a single entry — hence both caps.
 
 ### 4.4 Algorithm edge cases (fully specified)
 
@@ -138,13 +154,18 @@ ActivityItem {
 - **(long absence / stale snapshot)** If `now - snapshotSavedAt > STALE_RESEED`, the next load **reseeds silently** (refresh snapshot, emit no deltas) so a returning user is **not** shown a 20-item dump of changes they can't act on; the feed reads "all caught up" and populates from the next real change. (Trade-off: changes made during a multi-day absence are not retro-listed — acceptable, and the correct call given no server history.)
 - **(first run / no snapshot)** Seed `snapshot` silently; feed shows the calm empty state.
 - **(null/duplicate keys)** Composite keys (§4.2) make expanded event instances safely keyable despite `id: null`.
+- **(sliding detection window)** The calendar query window is `[today, today+W]`, so it **slides forward every device-local day**. A naive snapshot diff would then fabricate changes at both edges on each rollover: events that drop below the new `today` vanish from `fresh` and read as **removed**; events newly inside the top edge read as **added** — neither was actually edited. To prevent this, the snapshot stores the **window bounds it was captured under**, and the diff only compares calendar entities within the **overlap** of the previous and current windows (`[max(prevStart,freshStart), min(prevEnd,freshEnd)]`). Calendar entities outside that overlap are treated as **pre-existing context, not deltas** (lists are unwindowed and unaffected). Trade-off: a genuinely new event scheduled beyond the previous window's far edge surfaces on the *next* cycle once it falls inside the overlap, not the instant the window grows over it — acceptable, and consistent with the "no retro-dump" stance of the long-absence case.
 
 ### 4.5 Data dependencies & performance
 
 - Home today fetches only a **3-day** events query (`use-dashboard-events.ts`). The feed needs more, so Home will **mount additional queries**: a **dedicated wider events query** for detection (e.g. `[startOfToday, +28d]` — tunable; this is what lets "Dentist next Tuesday" surface, which a 3-day window would miss) and `useLists()` for the feed, plus `useMealsBoard(thisWeek)` and `useChoresBoard()` for the state line.
 - Honest cost: these are **real first-load fetches** on Home (deduped by TanStack Query and shared with the module tabs / offline cache, but not free). There is **no new backend endpoint** and no duplicate of an existing in-flight query; "reuse" means reusing the existing query definitions, not avoiding fetches.
 - The diff/feed compute runs over in-memory data **after** the hero paints; it must not block first paint.
-- The feed owns a single, dedicated visibility hook (records `hiddenAt` on hide; re-runs detection on return-to-visible). It must **not** duplicate the hero's `now`-recompute logic (`use-hero-state.ts`); a separate single-purpose listener for the hidden-timestamp is acceptable (relaxed 2026-06-21 — two passive single-purpose listeners are cleaner than coupling the hero hook to the feed). Order on a meaningful open: render feed from `changeLog` at the current `lastSeen`, then advance `lastSeen`.
+- **Detection is gated until both source queries have settled with data.** While `useCalendarEvents`/`useLists` are pending or errored, the hook renders the persisted `changeLog` and does **not** snapshot or diff. Treating a not-yet-loaded query as an empty array would seed an empty first snapshot (then report everything as "added" when data arrives) or read a pending module as fully "removed." The source arrays must also be **stable identities** when empty (a shared `EMPTY` constant, not a fresh `?? []` each render) so the detection effect does not re-fire on every render.
+- **Detection cycles are serialized.** A cold start, a data-change, and a return-to-visible can each trigger a cycle; because each cycle is `load → diff → save`, overlapping cycles can persist out of order and lose writes. A **generation guard** (bump a counter per cycle; a cycle only persists if it is still the latest) ensures only the newest complete cycle writes, and stale cycles abort before `saveState`.
+- **Return-to-visible must explicitly refetch.** `refetchOnWindowFocus` is **off** app-wide (`providers/query-client.ts`), so simply re-running detection on visible would re-diff the *same stale cache* and surface nothing changed on another device. The feed's visibility handler `await`s `events.refetch()` + `lists.refetch()` **before** detecting. (Cross-device freshness is still pull-only/no-websockets per §7; this just makes "open the app and see what changed" actually refetch.)
+- The wider events query's range is **memoized by a local-date string** (`formatLocalDate(today)`), not by a `Date` object — `startOfDay(new Date())` is a new reference every render and would churn the range (and thus the query key / detection effect) needlessly. The injected `nowProvider` is likewise stabilized (a ref or `useCallback`) so the visibility listener is not torn down and re-registered on every Home render.
+- The feed owns a single, dedicated visibility hook (records `hiddenAt` on hide; refetches + re-runs detection on return-to-visible). It must **not** duplicate the hero's `now`-recompute logic (`use-hero-state.ts`); a separate single-purpose listener for the hidden-timestamp is acceptable (relaxed 2026-06-21 — two passive single-purpose listeners are cleaner than coupling the hero hook to the feed). The plan's Tech-Stack "reuse" list should name this as a *new* feed-owned listener, not as reuse of `useDashboardNow`. Order on a meaningful open: capture `displayBaseline = lastSeen`, render feed from `changeLog` at `displayBaseline`, **then** advance `lastSeen` — without moving the baseline used for the current render.
 
 ## 5. Feed presentation & interaction
 
@@ -164,15 +185,16 @@ Rule: **group only when grouping reduces noise.** A module with ≥2 changes col
 - **Ordering:** newest-first by `occurredAt`; a group sits at its most-recent change. Tiebreak within a same-`detectedAt` batch: module priority (calendar > lists > meals), then title — so the order is deterministic and doesn't reshuffle between renders.
 - **Divider:** drawn at `lastSeen`; shown **only** when both a non-empty "new" and a non-empty "earlier" section exist (otherwise omitted). This means the divider appears only right after a meaningful open that had prior context — intended, not a bug.
 - **Empty state:** a calm "You're all caught up" line mirroring the hero's all-clear tone.
-- **Expansion is ephemeral** — collapses on the next open; no persisted toggle.
-- **Deep links:** a row opens the relevant module/entity (calendar event sheet at its date; the list detail; meals at the day), consistent with the dashboard's "rows open detail, don't switch tabs."
+- **Expansion is ephemeral** — collapses on the next meaningful open; no persisted toggle. Because `HomeDashboard` stays mounted across background→foreground, the expanded/collapsed state must be **reset on the meaningful-open epoch** (e.g. key the group list on a `meaningfulOpenId` that the orchestration hook bumps on a meaningful open), not left to persist in component state.
+- **Deep links carry an entity id, not just a module.** A row opens the relevant **entity**: a list row opens that list's detail; an in-window calendar row opens its event sheet; an out-of-window calendar row opens the Calendar module focused on that event/date. A bare `setActiveModule("lists")` cannot do this — `selectedListId` is component-local in `ListsView`. Use the existing **app-store navigation-intent pattern** (the same `start*Draft` / `consume*Draft` shape already used for meal-placement and recipe-creation): the feed sets a `listDetailIntent` / `calendarFocusIntent` alongside the module switch, and `ListsView` / `CalendarModule` consume it on mount to open the target. In-window calendar rows still open directly via the dashboard's existing `handleEventClick` (no module switch), consistent with "rows open detail, don't switch tabs."
 
 ## 6. Visual & motion vocabulary
 
 - **No new tokens.** Reuse cream/purple, Nunito, member colors, and the 4/8 spacing system.
 - **Motion** reuses the shipped system: easing `cubic-bezier(0.32, 0.72, 0, 1)`, durations 150/250/400ms; expand/collapse and divider use these; respect `prefers-reduced-motion` (opacity-only).
-- **Press feedback & haptics** come free via shipped seams — `usePressable` (FE #230) and optional-haptics (FE #236, behind its per-device toggle). No new interaction infra.
-- Feed rows use quiet field styling (no per-row card chrome), consistent with the agenda; member color appears only as a small leading dot where an item has an assignment.
+- **Press feedback & haptics** come free via shipped seams — `usePressable` (FE #230) and optional-haptics (FE #236, behind its per-device toggle). No new interaction infra. **Every interactive row is pressable** — the collapsed group/list rows *and* the expanded calendar sub-rows; the sub-rows must not be plain buttons missing the press seam.
+- Feed rows use quiet field styling (no per-row card chrome), consistent with the agenda; member color appears only as a small leading dot where an item has an assignment. The dot is **part of v1, not deferred**: `useFamilyMemberMap()` (`api/hooks/use-family.ts`) already resolves `memberId → color`, so the dot is a small, available wiring — pass the member map into the feed and tint the leading dot from `row.memberId`.
+- **Touch targets:** every row holds a **≥44px** target (`min-h-11`); the compact `py-2` on expanded sub-rows is below that and must be raised.
 
 ## 7. Scope
 
@@ -208,23 +230,24 @@ Rule: **group only when grouping reduces noise.** A module with ≥2 changes col
 - [ ] State line and feed are family-wide and unaffected by member-chip focus; chips still filter the hero + agenda.
 - [ ] The feed shows recent changes for calendar and lists only (chores, meals, and recipes never appear in the feed).
 - [ ] Changes are detected on every load and accumulated; a brief background→foreground (quick peek) neither advances the divider nor drops unseen changes.
-- [ ] The "new since you last looked" divider advances only on a meaningful open (cold start, visible after `MEANINGFUL_GAP`, or device-local day rollover), and is shown only when both "new" and "earlier" sections are non-empty.
+- [ ] The "new since you last looked" divider advances only on a meaningful **open** (cold start, visible after `MEANINGFUL_GAP`, or device-local day rollover) — **never on a background data-change/refetch cycle**, and never spuriously before the first hide (the `hiddenAt = 0` default must not read as "hidden 4h+"). It is shown only when both "new" and "earlier" sections are non-empty.
+- [ ] Detection never runs against partial data: while either source query is pending/errored the persisted log still renders, but no new snapshot is taken and nothing is mis-reported as added/removed. The first real data arrival does not dump every entity as "added." Window-edge churn from the daily-sliding calendar window is suppressed (§4.4).
 - [ ] Calendar changes coalesce into one expandable group when ≥2; a single change renders directly; recurring series collapse to one sub-row via `recurringEventId`.
 - [ ] Lists changes render one row per changed list using summary signals only (created/renamed/removed + count deltas) — no per-item data required.
 - [ ] An entity added then removed before a meaningful open produces **no** lingering "added" row (reconcile against `fresh`); a removed entity present in the snapshot shows as "removed" with its prior title.
 - [ ] After a long absence (> `STALE_RESEED`), the feed reseeds silently and shows "all caught up" rather than a bulk dump.
-- [ ] Each feed row deep-links to the relevant module/entity; expansion is ephemeral.
+- [ ] Each feed row deep-links to the relevant **entity** (list detail by id; calendar event/date), via the app-store navigation-intent pattern — not a bare module switch. A row-click test asserts the entity target (list id / event), not merely that `activeModule` changed. Expansion is ephemeral and resets on the meaningful-open epoch.
 
 ### Quality
 - [ ] No new design tokens; spacing/type/color/motion from the existing system; `prefers-reduced-motion` respected.
 - [ ] Feed rows inherit shipped press-feedback + optional-haptics seams; no new interaction infra. Visibility handling is consolidated into single-purpose hooks with no duplicated `now`-recompute logic (a dedicated feed listener for the hidden-timestamp is acceptable).
 - [ ] Layout holds 320px–768px without horizontal overflow; rows ≥44px touch target.
-- [ ] Gated to mobile; the tablet/touchscreen surface never mounts the feed logic.
+- [ ] Gated to mobile **synchronously** (via `useIsMobile`), so the tablet/touchscreen surface never mounts the feed logic — *not* relying on the desktop→Calendar redirect, which is a post-render `useEffect`: `App.tsx` renders `HomeDashboard` for `activeModule === null` on the first render before that effect runs, so a redirect-only gate would still fire the wider queries and persist a snapshot once on desktop. A desktop-width test asserts the feed/state-line do **not** mount.
 
 ### Performance / data
 - [ ] No new backend endpoint. The feed/state line derive from existing query definitions; Home mounting the wider events query + lists/meals/chores is acknowledged as real first-load fetching (deduped by TanStack Query).
 - [ ] Diff/feed compute runs after the hero paints and does not block first paint.
-- [ ] The new `idb-keyval` store and `lastSeen`/`hiddenAt` markers are per-device and **explicitly cleared on logout and on the 401 handler** (alongside `clearOfflineReadCache`), preventing cross-account leakage on a shared device.
+- [ ] The new `idb-keyval` store and `lastSeen`/`hiddenAt` markers are per-device and **explicitly cleared on logout and on the 401 handler** (alongside `clearOfflineReadCache`), preventing cross-account leakage on a shared device. `clearHomeActivity()` clears **both** the IndexedDB store **and** the two localStorage markers — neither logout nor the 401 handler does a blanket `localStorage.clear()`, so a store-only clear would leave one account's divider baseline for the next. **Both** the logout path and the 401 path have a test asserting the clear is awaited.
 
 ## 10. Resolved constraints (verified against code) + plan-time tunings
 
@@ -235,8 +258,13 @@ Verified during the spec review (file:line evidence in the review record):
 3. **FE #222 persister is a single-key TanStack `PersistedClient` persister with an allowlist** — not a KV store; `clearOfflineReadCache()` clears only its store. → new `idb-keyval` store + explicit clearing wired into both `useLogout()` and the 401 handler.
 4. **No family-local date helper; FE is device-local** (`time-utils.ts`; `family.timezone` is BE-only). → device-local dates in v1.
 5. **Chores expose `today.summary.remaining` cleanly; meals require weekStart+dayIndex+mealType derivation** for tonight's dinner (§3.1).
+6. **`idb-keyval.createStore` opens its DB with no version** (`indexedDB.open(dbName)`); `onupgradeneeded` fires only at DB creation, so a second object store cannot be added to the already-created `family-hub-offline` DB. → the activity store uses its **own database** (§4.1).
+7. **`refetchOnWindowFocus` is `false` app-wide** (`providers/query-client.ts`). → return-to-visible must explicitly `refetch()` before diffing (§4.5); it cannot rely on focus refetch.
+8. **`App.tsx` renders `HomeDashboard` for `activeModule === null` before** its desktop→Calendar redirect `useEffect` runs. → the mobile gate must be **synchronous** (`useIsMobile`), not redirect-based (§7, §9).
+9. **Neither `useLogout()` nor `handleUnauthorized()` blanket-clears `localStorage`** (they remove only specific auth/family keys). → `clearHomeActivity()` must clear the `lastSeen`/`hiddenAt` markers itself (§9).
+10. **The app-store already has a navigation-intent pattern** (`startMealPlacementFromRecipe`/`consumeMealPlacementDraft`, `startRecipeCreationFromMealSlot`/`consumeRecipeCreationDraft`). → reuse it for feed deep-links carrying a list id / calendar focus (§5).
 
-Plan-time tunings: exact `MEANINGFUL_GAP`, `STALE_RESEED`, the detection-window length (`+W` days), and the post-coalesce row cap.
+Plan-time tunings: exact `MEANINGFUL_GAP`, `STALE_RESEED`, the detection-window length (`+W` days), the post-coalesce entry cap, and the calendar sub-row cap.
 
 ## 11. Story-file & roadmap updates required
 
