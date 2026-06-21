@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-16
+Last updated: 2026-06-21
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -31,6 +31,9 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md) · BE #57, PR #58, `v1.6.0`; FE #208, PR #210, `0.3.14`
 - [Polished PWA installability + honest offline UX](backlog/mobile-ux/pwa-installability.md) · FE #216/#217/#218 · `0.3.15` (deployed to prod; on-device smoke pending)
 - Option C — read-only offline data persistence · FE #222 (TanStack Query read cache persisted to IndexedDB; cached calendar/chores/lists/meals/recipes/family viewable offline, read-only; per-account clearing on logout/401; no Workbox `/api` cache). Offline *writes* remain deferred (PRD §7.5.3).
+- [Native-feel interaction polish (transitions + press feedback)](backlog/mobile-ux/native-feel-interaction-polish.md) · FE #229, PR #230 · `0.3.17`
+- [Native hardware back-button handling](backlog/mobile-ux/native-back-button.md) · FE #231, PR #234 · `0.3.18`
+- [Optional haptic feedback (Vibration API)](backlog/mobile-ux/optional-haptics.md) · FE #235, PR #236 · `0.3.18` (bottom-sheet-snap + destructive-confirm pulses deferred post-v1)
 
 ### Module foundations
 
@@ -63,7 +66,7 @@ Recommended order:
 1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; shipped in FE `0.3.11`
 2. `Meals` — simple week-ahead planning; shipped in FE `0.3.11`
 3. Mobile-first polish of current organizer workflows — shipped through FE `0.3.14`
-4. Remaining Mobile UX stories — Notifications first if reminder value is the priority; calendar gestures if creation/view ergonomics are the priority; native-feel polish (transitions/press feedback, back-button, haptics) if daily-use delight and "feels native" is the priority
+4. Remaining Mobile UX stories — native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18`; remaining picks are Notifications (reminder value), calendar gestures (creation/view ergonomics), or shaping the Home organizer summary into a story
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
@@ -77,13 +80,12 @@ Next captured stories — calendar gestures + reminders:
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
 
-Next captured stories — native-feel polish (surfaced from phone dogfooding, 2026-06-16):
-- [Native hardware back-button handling](backlog/mobile-ux/native-back-button.md) — make the Android PWA back button dismiss overlays / go back one step, and double-tap-to-exit at root, instead of exiting immediately.
-- [Optional haptic feedback](backlog/mobile-ux/optional-haptics.md) — opt-in Vibration-API haptics on key taps via a Preferences toggle; supersedes the old "No haptics" exclusion for Android.
-- [Native-feel interaction polish](backlog/mobile-ux/native-feel-interaction-polish.md) — smooth the harsh module/tab and sheet transitions and add immediate pressed-state feedback, extending the existing motion vocabulary.
+Next captured story — home organizer:
+- [Home organizer summary](backlog/mobile-ux/home-organizer-summary.md) — keep "The Now" hero, add a quiet state line (chores left + tonight's dinner) and a "since you last opened" activity feed for calendar + lists (client-side diff behind an `ActivityItem` seam; meals/chores live in the state line; BE activity log + AI day-summary are future siblings). [Spec](../superpowers/specs/2026-06-20-home-organizer-summary-design.md) reviewed 2026-06-21.
+
+Native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18` — see the Shipped list above.
 
 Recommended additions to shape before implementation:
-- Home dashboard should evolve from calendar-only into a true organizer summary now that `Chores`, `Lists`, `Recipes`, and `Meals` have real data. Path: create a new story under `docs/product/backlog/mobile-ux/`.
 - Device-member association is the likely successor to Preferences if member-focused defaults become important; seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).
 - Decide whether the `Photos` tab should be hidden, demoted, or left as an explicit deferred surface while the product is polished for daily use.
 - Run a phone-first production dogfood pass across create/edit/complete flows before adding new modules.
