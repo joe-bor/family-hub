@@ -4,7 +4,7 @@
 
 **Goal:** Evolve the mobile Home surface from calendar-only "The Now" into an organizer summary by adding a quiet state line (chores left + tonight's dinner) and a "Since you last opened" activity feed for calendar + lists — all derived on-device, no backend.
 
-**Architecture:** A set of **pure functions** (`src/lib/home-activity/`) do the work — normalize calendar events + list summaries into a comparable snapshot, diff against the previous snapshot (window-bounds-aware) into coalesced `ActivityItem`s, and group them for display. A thin **orchestration hook** (`use-activity-feed`) wires those pure functions to the existing TanStack queries, an `idb-keyval` store in its **own database** (DI pattern mirroring the FE #222 offline persister — but a separate DB, see Task 6), and `lastSeen`/`hiddenAt` localStorage markers. It gates detection until both queries settle, serializes cycles with a generation guard, classifies a meaningful open only on cold-start/visible-transition, and refetches on return-to-visible. Two small presentational components (`StateLine`, `ActivityFeed`) render inside the unchanged `HomeDashboard`, which is mounted **only on mobile** by a synchronous `useIsMobile` gate.
+**Architecture:** A set of **pure functions** (`src/lib/home-activity/`) do the work — normalize calendar events + list summaries into a comparable snapshot, diff against the previous snapshot (window-bounds-aware) into coalesced `ActivityItem`s, and group them for display. A thin **orchestration hook** (`use-activity-feed`) wires those pure functions to the existing TanStack queries, an `idb-keyval` store in its **own database** (DI pattern mirroring the FE #222 offline persister — but a separate DB, see Task 6), and `lastSeen`/`hiddenAt` localStorage markers. It gates detection until both queries settle, serializes cycles through a promise-queue mutex, classifies a meaningful open only on cold-start/visible-transition, and refetches on return-to-visible. Two small presentational components (`StateLine`, `ActivityFeed`) render inside the unchanged `HomeDashboard`, which is mounted **only on mobile** by a synchronous `useIsMobile` gate.
 
 **Tech Stack:** React 19, TanStack Query v5, `idb-keyval` (already a dep), Vitest + @testing-library/react, Tailwind v4. Reuses `getEventKey` (`time-utils.ts`), `usePressable` (`hooks/use-pressable.ts`), the persister DI pattern (`lib/offline/persister.ts`), `useFamilyMemberMap` (`api/hooks/use-family.ts`, member-color dot), and the app-store navigation-intent pattern (`stores/app-store.ts`, deep-links). The feed owns a **new** single-purpose `visibilitychange` listener (records `hiddenAt`, refetches + re-detects on visible) — this is *not* a reuse of `useDashboardNow`, which has its own separate visibility listener; the two passive listeners coexist by design (spec §4.5).
 
@@ -509,6 +509,23 @@ describe("reconcileLog", () => {
     const log = [mk({ storeKey: "calendar:e1" })];
     expect(reconcileLog(log, new Set(["calendar:e1"]))).toHaveLength(1);
   });
+
+  it("preserves out-of-window calendar entries instead of dropping/demoting them", () => {
+    const window = { start: "2026-06-21", end: "2026-07-19" };
+    const log = [
+      mk({ kind: "added", storeKey: "calendar:past", module: "calendar", date: "2026-06-01" }),  // below start
+      mk({ kind: "edited", storeKey: "calendar:future", module: "calendar", date: "2026-12-31" }), // above end
+    ];
+    const next = reconcileLog(log, new Set(), window); // neither key is in fresh (aged out)
+    expect(next).toHaveLength(2);
+    expect(next.map((i) => i.kind).sort()).toEqual(["added", "edited"]); // unchanged, not demoted
+  });
+
+  it("still drops/demotes an IN-window entry that genuinely vanished", () => {
+    const window = { start: "2026-06-21", end: "2026-07-19" };
+    const log = [mk({ kind: "edited", storeKey: "calendar:gone", module: "calendar", date: "2026-06-25" })];
+    expect(reconcileLog(log, new Set(), window)[0].kind).toBe("removed");
+  });
 });
 
 describe("pruneLog", () => {
@@ -549,13 +566,27 @@ export function mergeLog(log: ActivityItem[], deltas: ActivityItem[]): ActivityI
   return [...byKey.values()];
 }
 
-export function reconcileLog(log: ActivityItem[], freshKeys: Set<string>): ActivityItem[] {
+export function reconcileLog(
+  log: ActivityItem[],
+  freshKeys: Set<string>,
+  window?: { start: string; end: string },
+): ActivityItem[] {
   const out: ActivityItem[] = [];
   for (const i of log) {
     if (freshKeys.has(i.storeKey)) {
       out.push(i);
-    } else if (i.kind === "added") {
-      // never surfaced as real; drop the phantom
+      continue;
+    }
+    // Absent from `fresh`. A calendar entry whose date is OUTSIDE the current query
+    // window merely aged out of the fetch — it was NOT deleted. Preserve it as-is
+    // (do not drop an `added`, do not demote an `edited`) until normal 48h pruning.
+    // Without this, the window-aware diff's suppression is undone here (§4.4).
+    if (window && i.module === "calendar" && i.date && (i.date < window.start || i.date > window.end)) {
+      out.push(i);
+      continue;
+    }
+    if (i.kind === "added") {
+      // genuinely absent within the window → drop the phantom
     } else if (i.kind === "edited") {
       out.push({ ...i, kind: "removed" });
     } else {
@@ -710,10 +741,14 @@ function byRecency(a: ActivityItem, b: ActivityItem): number {
   return b.detectedAt - a.detectedAt || a.title.localeCompare(b.title) || a.storeKey.localeCompare(b.storeKey);
 }
 
-// One sub-row per distinct series change: identical edits to a series collapse,
-// but a different change to the SAME series stays separate (§4.2).
+// One sub-row per distinct series change. The signature includes everything the
+// sub-row actually renders — kind, title (label), member (dot), detail — so two
+// instances collapse ONLY when they would display identically; any visible change
+// (retitle, reassignment, time move) stays a separate row (§4.2).
 function seriesSignature(i: ActivityItem): string | null {
-  return i.recurringEventId ? `${i.recurringEventId}|${i.kind}|${i.detail ?? ""}` : null;
+  return i.recurringEventId
+    ? `${i.recurringEventId}|${i.kind}|${i.title}|${i.memberId ?? ""}|${i.detail ?? ""}`
+    : null;
 }
 
 function calendarSummary(items: ActivityItem[]): string {
@@ -827,6 +862,11 @@ describe("isMeaningfulOpen", () => {
     const now = day(1);
     expect(isMeaningfulOpen({ coldStart: false, now, hiddenAt: now - 5000, lastSeen: now - 6000 })).toBe(false);
   });
+  it("is false when never hidden (hiddenAt=0) on the same day", () => {
+    const now = day(1);
+    // hiddenAt=0 must NOT read as "hidden for decades" → not meaningful.
+    expect(isMeaningfulOpen({ coldStart: false, now, hiddenAt: 0, lastSeen: now - 5000 })).toBe(false);
+  });
 });
 ```
 
@@ -842,7 +882,9 @@ export function isMeaningfulOpen(o: {
   coldStart: boolean; now: number; hiddenAt: number; lastSeen: number;
 }): boolean {
   if (o.coldStart) return true;
-  if (o.now - o.hiddenAt > MEANINGFUL_GAP_MS) return true;
+  // Require hiddenAt > 0: the default 0 means "never hidden", which would
+  // otherwise read as "hidden since 1970" and make every open meaningful.
+  if (o.hiddenAt > 0 && o.now - o.hiddenAt > MEANINGFUL_GAP_MS) return true;
   return formatLocalDate(new Date(o.now)) !== formatLocalDate(new Date(o.lastSeen));
 }
 
@@ -1077,13 +1119,18 @@ This hook owns: the wide events query + lists query, the load/visibility effects
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CalendarEvent, ListSummary } from "@/lib/types";
+import type { ActivityState } from "@/lib/home-activity/types";
 import { useActivityFeed } from "./use-activity-feed";
 
 let events: CalendarEvent[] = [];
 let lists: ListSummary[] = [];
 let querySettled = true; // toggle to exercise the "not yet loaded" gate
+// Stable refetch spies (the mock factory re-runs per render, so inline vi.fn()s
+// would not be assertable across renders).
+const eventsRefetch = vi.fn(async () => ({ data: { data: events } }));
+const listsRefetch = vi.fn(async () => ({ data: { data: lists } }));
 
 vi.mock("@/api", async (orig) => {
   const actual = await orig<typeof import("@/api")>();
@@ -1092,14 +1139,19 @@ vi.mock("@/api", async (orig) => {
     useCalendarEvents: () => ({
       data: querySettled ? { data: events } : undefined,
       isSuccess: querySettled,
-      refetch: vi.fn(async () => ({ data: { data: events } })),
+      refetch: eventsRefetch,
     }),
     useLists: () => ({
       data: querySettled ? { data: lists } : undefined,
       isSuccess: querySettled,
-      refetch: vi.fn(async () => ({ data: { data: lists } })),
+      refetch: listsRefetch,
     }),
   };
+});
+
+beforeEach(() => {
+  eventsRefetch.mockClear();
+  listsRefetch.mockClear();
 });
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -1131,14 +1183,72 @@ describe("useActivityFeed", () => {
   });
 });
 
-// Additional cases the implementer should add (behavioral, same harness):
-// - a background data-change cycle (rerender with new lists) does NOT advance lastSeen;
-// - return-to-visible calls refetch() before detecting (assert the mocked refetch ran);
-// - overlapping cycles persist only the latest (generation guard) — assert final saved state.
+describe("useActivityFeed — orchestration", () => {
+  it("does NOT advance the divider on a background data-change cycle", async () => {
+    querySettled = true;
+    events = [];
+    lists = [{ id: "l1", name: "Groceries", kind: "grocery", totalItems: 0, completedItems: 0 }];
+    const io = makeMemoryIo();
+    const now = vi.fn(() => 1000);
+    const { rerender } = renderHook(() => useActivityFeed({ io, nowProvider: now }), { wrapper });
+    await waitFor(() => expect(io.saveState).toHaveBeenCalledTimes(1)); // cold-start open
+    const seenAfterOpen = io.getLastSeen(); // advanced to 1000 by the open
+    // A later data change (auto cycle) must refresh the log but not advance the marker.
+    now.mockReturnValue(5000);
+    lists = [...lists, { id: "l2", name: "Camping", kind: "todo", totalItems: 1, completedItems: 0 }];
+    rerender();
+    await waitFor(() => expect(io.saveState).toHaveBeenCalledTimes(2));
+    expect(io.getLastSeen()).toBe(seenAfterOpen); // divider baseline did not move
+  });
+
+  it("refetches BOTH sources on return-to-visible before detecting", async () => {
+    querySettled = true;
+    events = [];
+    lists = [];
+    const io = makeMemoryIo();
+    renderHook(() => useActivityFeed({ io, nowProvider: () => 1000 }), { wrapper });
+    await waitFor(() => expect(io.loadState).toHaveBeenCalled());
+    // jsdom visibilityState defaults to "visible" → the listener takes the visible branch.
+    document.dispatchEvent(new Event("visibilitychange"));
+    await waitFor(() => expect(eventsRefetch).toHaveBeenCalled());
+    expect(listsRefetch).toHaveBeenCalled();
+  });
+
+  it("serializes writes: a slow earlier save cannot overwrite a newer cycle", async () => {
+    querySettled = true;
+    events = [];
+    lists = [{ id: "l1", name: "A", kind: "todo", totalItems: 0, completedItems: 0 }];
+    let state: ActivityState | null = {
+      snapshot: {}, log: [], snapshotSavedAt: 0,
+      eventWindow: { start: "2000-01-01", end: "2100-01-01" },
+    };
+    const completed: number[] = [];
+    let call = 0;
+    const io = {
+      loadState: vi.fn(async () => state),
+      saveState: vi.fn(async (s: ActivityState) => {
+        const n = ++call;
+        if (n === 1) await new Promise((r) => setTimeout(r, 50)); // make the FIRST save slow
+        state = s;
+        completed.push(n);
+      }),
+      getLastSeen: () => 0, setLastSeen: () => {},
+      getHiddenAt: () => 0, setHiddenAt: () => {},
+    };
+    const now = vi.fn(() => 1000);
+    const { rerender } = renderHook(() => useActivityFeed({ io, nowProvider: now }), { wrapper });
+    // Queue a second cycle with newer data while the first save is still pending.
+    now.mockReturnValue(2000);
+    lists = [{ id: "l1", name: "A", kind: "todo", totalItems: 5, completedItems: 0 }];
+    rerender();
+    await waitFor(() => expect(completed).toEqual([1, 2])); // mutex preserved order despite the slow save
+    expect(state?.snapshot["lists:l1"]?.totalItems).toBe(5); // newest state is final, not overwritten
+  });
+});
 
 // minimal in-memory IO double for the hook's injected dependencies
 function makeMemoryIo() {
-  let state: import("@/lib/home-activity/types").ActivityState | null = {
+  let state: ActivityState | null = {
     snapshot: {}, log: [], snapshotSavedAt: 0,
     eventWindow: { start: "2000-01-01", end: "2100-01-01" },
   };
@@ -1146,7 +1256,7 @@ function makeMemoryIo() {
   let hiddenAt = 0;
   return {
     loadState: vi.fn(async () => state),
-    saveState: vi.fn(async (s: typeof state) => { state = s; }),
+    saveState: vi.fn(async (s: ActivityState) => { state = s; }),
     getLastSeen: () => lastSeen,
     setLastSeen: (v: number) => { lastSeen = v; },
     getHiddenAt: () => hiddenAt,
@@ -1232,25 +1342,36 @@ export function useActivityFeed({
   const [feed, setFeed] = useState<Feed>(EMPTY_FEED);
   const [meaningfulOpenId, setMeaningfulOpenId] = useState(0); // bump → reset ephemeral expansion
   const coldStartRef = useRef(true);
-  const genRef = useRef(0); // generation guard: only the latest cycle persists/render-wins
+  // Mutex: every cycle (cold start, data change, return-to-visible) is chained
+  // through this promise so a cycle's load→diff→save runs to completion before the
+  // next begins. The newest-queued cycle therefore writes LAST and wins — a slow
+  // earlier save can never land after a newer one (the generation guard alone did
+  // not prevent this: two saves already in flight could resolve out of order).
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
+  // The divider baseline is frozen at the `lastSeen` of the most recent meaningful
+  // OPEN and reused by every cycle in between. A background data-change cycle or a
+  // quick peek must NOT move the divider, so renders never reread the advanced
+  // marker — they read this ref.
+  const displayBaselineRef = useRef<number | null>(null);
 
   const render = useCallback(
-    (log: ActivityState["log"], baseline: number) =>
-      setFeed(buildFeed(log, baseline, FEED_ENTRY_CAP, CALENDAR_SUBROW_CAP)),
+    (log: ActivityState["log"]) =>
+      setFeed(buildFeed(log, displayBaselineRef.current ?? 0, FEED_ENTRY_CAP, CALENDAR_SUBROW_CAP)),
     [],
   );
 
-  const detect = useCallback(
+  // One cycle's critical section. Serialized by `queueRef`, so no other cycle's
+  // load/save can interleave with this one.
+  const runCycle = useCallback(
     async (trigger: "auto" | "visible") => {
-      const myGen = ++genRef.current;
-      const isStale = () => myGen !== genRef.current;
-
       const prior = await io.loadState();
-      if (isStale()) return;
 
       // Gate: never diff partial data. Render whatever is persisted and wait.
       if (!settled) {
-        if (prior) render(prior.log, io.getLastSeen());
+        if (prior) {
+          if (displayBaselineRef.current === null) displayBaselineRef.current = io.getLastSeen();
+          render(prior.log);
+        }
         return;
       }
 
@@ -1259,27 +1380,25 @@ export function useActivityFeed({
 
       // First run / long absence → reseed silently (no "added" dump).
       if (!prior || ts - prior.snapshotSavedAt > STALE_RESEED_MS) {
-        if (isStale()) return;
         await io.saveState({ snapshot: fresh, log: [], snapshotSavedAt: ts, eventWindow: range });
         io.setLastSeen(ts);
+        displayBaselineRef.current = ts; // nothing is "new" yet
         coldStartRef.current = false;
-        if (!isStale()) setFeed(EMPTY_FEED);
+        setFeed(EMPTY_FEED);
         return;
       }
 
-      // Window-bounds-aware diff: ignore sliding-edge churn (§4.4).
+      // Window-bounds-aware diff AND reconcile: an event that merely aged out of the
+      // sliding window must be neither reported (diff) nor dropped/demoted (reconcile)
+      // — it is preserved until normal 48h pruning (§4.4).
       const overlap = overlapOf(prior.eventWindow, range);
       const deltas = diffSnapshots(fresh, prior.snapshot, ts, overlap);
-      // Merge BEFORE reconcile so an add+remove pair net-cancels.
-      let log = mergeLog(prior.log, deltas);
-      log = reconcileLog(log, new Set(Object.keys(fresh)));
+      let log = mergeLog(prior.log, deltas); // merge BEFORE reconcile so add+remove net-cancels
+      log = reconcileLog(log, new Set(Object.keys(fresh)), range); // preserve out-of-window entries
       log = pruneLog(log, ts, ACTIVITY_WINDOW_MS);
-      if (isStale()) return; // a newer cycle superseded us — do not persist stale state
       await io.saveState({ snapshot: fresh, log, snapshotSavedAt: ts, eventWindow: range });
-      if (isStale()) return;
 
-      // Classify the OPEN, not the data change. Only cold start / return-to-visible
-      // can advance the divider; a background data-change cycle never does.
+      // Classify the OPEN, not the data change. Only a real open advances the divider.
       const isOpenEvent = trigger === "visible" || coldStartRef.current;
       const meaningful =
         isOpenEvent &&
@@ -1287,10 +1406,14 @@ export function useActivityFeed({
           coldStart: coldStartRef.current, now: ts,
           hiddenAt: io.getHiddenAt(), lastSeen: io.getLastSeen(),
         });
-      const displayBaseline = io.getLastSeen(); // freeze the divider position for THIS render
-      render(log, displayBaseline);
+      // Freeze the baseline at THIS open's pre-advance lastSeen; later non-open
+      // cycles reuse it, so the divider holds until the next real open.
+      if (meaningful || displayBaselineRef.current === null) {
+        displayBaselineRef.current = io.getLastSeen();
+      }
+      render(log);
       if (meaningful) {
-        io.setLastSeen(ts); // persist advance AFTER render; displayBaseline is unchanged
+        io.setLastSeen(ts); // advance the persisted marker AFTER capturing the baseline
         setMeaningfulOpenId((n) => n + 1); // reset ephemeral expansion on a real open
       }
       coldStartRef.current = false;
@@ -1298,8 +1421,19 @@ export function useActivityFeed({
     [io, now, settled, events, lists, range, render],
   );
 
-  // Keep a stable handle to the latest detect + refetch for the visibility listener
-  // so the listener itself never re-registers on data changes.
+  // Enqueue a cycle behind the mutex. We deliberately run every queued cycle (no
+  // gen-skip): cycles are cheap in-memory diffs, and a meaningful-open cycle must
+  // never be skipped because a data-change cycle queued right after it.
+  const detect = useCallback(
+    (trigger: "auto" | "visible") => {
+      const run = queueRef.current.then(() => runCycle(trigger));
+      queueRef.current = run.catch(() => {}); // keep the chain alive across errors
+      return run;
+    },
+    [runCycle],
+  );
+
+  // Stable handles for the visibility listener so it never re-registers on data change.
   const detectRef = useRef(detect);
   detectRef.current = detect;
   const refetchRef = useRef<() => Promise<void>>(async () => {});
@@ -1332,7 +1466,7 @@ export function useActivityFeed({
 }
 ```
 
-> Why this shape (closing Codex blocking #2–#5): **(2)** detection is gated on `settled` and uses stable `EMPTY_*` constants, so a not-yet-loaded query is never read as an empty snapshot (no "added" dump) nor as a removed module, and the effect does not re-fire on `?? []` identity churn. **(3)** a meaningful open is `trigger === "visible" || coldStartRef.current` — a background data-change cycle is `"auto"` after cold start, so it refreshes the log without advancing `lastSeen`; the rendered divider uses a frozen `displayBaseline`, so a later harmless cycle cannot re-flag rows as "earlier." **(4)** return-to-visible explicitly `refetch()`es before detecting because `refetchOnWindowFocus` is off. **(5)** a `genRef` generation guard makes only the latest cycle persist/win, so overlapping cycles cannot save out of order. The visibility listener is registered once (refs hold the latest `detect`/`refetch`), and `nowProvider` is stabilized — no per-render teardown. `meaningfulOpenId` is returned so the feed can reset ephemeral expansion on a real open.
+> Why this shape (closing Codex blocking #2–#5): **(2)** detection is gated on `settled` and uses stable `EMPTY_*` constants, so a not-yet-loaded query is never read as an empty snapshot (no "added" dump) nor as a removed module, and the effect does not re-fire on `?? []` identity churn. **(3)** a meaningful open is `trigger === "visible" || coldStartRef.current` — a background data-change cycle is `"auto"` after cold start, so it refreshes the log without advancing `lastSeen`; the rendered divider uses a frozen `displayBaseline`, so a later harmless cycle cannot re-flag rows as "earlier." **(4)** return-to-visible explicitly `refetch()`es before detecting because `refetchOnWindowFocus` is off. **(5)** a `queueRef` promise-queue **mutex** serializes cycles so each `load→diff→save` completes before the next begins — the newest-queued cycle writes last and wins, which a generation guard alone could not guarantee (two saves already in flight can resolve out of order). The visibility listener is registered once (refs hold the latest `detect`/`refetch`), and `nowProvider` is stabilized — no per-render teardown. `meaningfulOpenId` is returned so the feed can reset ephemeral expansion on a real open.
 
 - [ ] **Step 4: Run it, expect PASS** (the seeded list surfaces as a group).
 
@@ -1648,13 +1782,23 @@ function ActivityGroup({
           ▸
         </span>
       </button>
-      {/* grid-rows 0fr→1fr animates height both ways; reduced-motion = instant. Sub-rows
-          stay mounted (so collapse can animate) but are inert + untabbable when closed. */}
+      {/* grid-rows 0fr→1fr animates height under motion-safe; under reduced motion the
+          height snaps and only the opacity fades (spec §6 "opacity-only"). When closed
+          the sub-list is `inert` + aria-hidden, so it is fully non-interactive and out
+          of the a11y tree — not merely untabbable. */}
       <div
-        className={cn("grid transition-[grid-template-rows] duration-[250ms] motion-reduce:transition-none", EASE)}
+        className={cn("grid motion-safe:transition-[grid-template-rows] motion-safe:duration-[250ms]", `motion-safe:${EASE}`)}
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
-        <ul className="overflow-hidden pl-3">
+        <ul
+          inert={!open}
+          aria-hidden={!open}
+          className={cn(
+            "overflow-hidden pl-3 transition-opacity duration-[250ms]",
+            EASE,
+            open ? "opacity-100" : "opacity-0",
+          )}
+        >
           {group.rows.map((row) => (
             <SubRow key={row.storeKey} row={row} onSelectRow={onSelectRow} memberColorOf={memberColorOf} tabbable={open} />
           ))}
@@ -1743,7 +1887,14 @@ export type FeedSelection =
 
 export function resolveFeedSelection(row: FeedRow, inWindowEvents: CalendarEvent[]): FeedSelection {
   if (row.module === "lists") {
-    return row.entityId ? { type: "open-list", listId: row.entityId } : { type: "switch-module", module: "lists" };
+    // A removed list has no detail to open → land on the Lists module rather than
+    // request a deleted id (which would 404).
+    if (row.kind === "removed" || !row.entityId) return { type: "switch-module", module: "lists" };
+    return { type: "open-list", listId: row.entityId };
+  }
+  // A removed calendar event's sheet is gone → focus its day (or the module).
+  if (row.kind === "removed") {
+    return row.date ? { type: "focus-calendar", date: row.date } : { type: "switch-module", module: "calendar" };
   }
   const key = row.storeKey.replace("calendar:", "");
   const match = inWindowEvents.find((e) => getEventKey(e) === key);
@@ -1767,6 +1918,14 @@ it("opens the event sheet for an in-window calendar row", () => {
 it("focuses the calendar date for an out-of-window calendar row", () => {
   expect(resolveFeedSelection({ storeKey: "calendar:e9", module: "calendar", kind: "added", label: "Camp", date: "2026-07-15" }, []))
     .toEqual({ type: "focus-calendar", date: "2026-07-15" });
+});
+it("does NOT open a deleted list — a removed list row lands on the Lists module", () => {
+  expect(resolveFeedSelection({ storeKey: "lists:l1", module: "lists", kind: "removed", label: "Old", entityId: "l1" }, []))
+    .toEqual({ type: "switch-module", module: "lists" });
+});
+it("a removed calendar row focuses its day, not a deleted event sheet", () => {
+  expect(resolveFeedSelection({ storeKey: "calendar:e1", module: "calendar", kind: "removed", label: "Gone", date: "2026-06-23" }, [{ id: "e1" } as CalendarEvent]))
+    .toEqual({ type: "focus-calendar", date: "2026-06-23" });
 });
 ```
 
@@ -1824,7 +1983,7 @@ import { StateLine } from "./components/state-line";
 import { ActivityFeed } from "./components/activity-feed";
 import { resolveFeedSelection } from "@/lib/home-activity/navigation";
 import { useAppStore } from "@/stores";
-import type { CalendarEvent } from "@/lib/types";
+import { colorMap, type CalendarEvent } from "@/lib/types";
 import type { FeedRow } from "@/lib/home-activity/types";
 
 function StateLineSection({ now }: { now: Date }) {
@@ -1845,11 +2004,17 @@ function ActivityFeedSection({
     else if (sel.type === "focus-calendar") store.focusCalendarDate(sel.date);
     else store.setActiveModule(sel.module);
   };
+  // member.color is a FamilyColor identifier ("coral", "teal", …); resolve it to a
+  // hex through colorMap (family.ts), the same path the rest of the UI uses.
+  const memberColorOf = (id: string | undefined) => {
+    const member = id ? memberMap.get(id) : undefined;
+    return member ? colorMap[member.color]?.hex : undefined;
+  };
   return (
     <ActivityFeed
       feed={feed}
       onSelectRow={handleSelect}
-      memberColorOf={(id) => (id ? memberMap.get(id)?.color : undefined)}
+      memberColorOf={memberColorOf}
       meaningfulOpenId={meaningfulOpenId}
     />
   );
@@ -1874,16 +2039,21 @@ const isMobile = useIsMobile();
 - [ ] **Step 5: Tests** (`home-dashboard.test.tsx`, extend existing)
 
 ```tsx
-// Mobile: the feed region mounts.
+// Use the EXISTING `setViewportWidth(width)` helper already defined in
+// home-dashboard.test.tsx (it sets window.innerWidth + mocks matchMedia, which is
+// what useIsMobile reads). The existing suite does NOT mock useIsMobile, so do not
+// introduce vi.mocked(useIsMobile).
+
+// Mobile (≤768): the feed region mounts.
 it("renders the activity feed region on mobile", async () => {
-  vi.mocked(useIsMobile).mockReturnValue(true); // or the project's mobile-mock helper
+  setViewportWidth(768);
   render(<HomeDashboard nowOverride={new Date(2026, 5, 21, 12)} />);
   expect(await screen.findByText(/Since you last opened/i)).toBeInTheDocument();
 });
 
-// Desktop: the organizer never mounts (synchronous gate, not the redirect).
+// Desktop (≥769): the organizer never mounts (synchronous gate, not the redirect).
 it("does NOT mount the feed/state-line on desktop", () => {
-  vi.mocked(useIsMobile).mockReturnValue(false);
+  setViewportWidth(1024);
   render(<HomeDashboard nowOverride={new Date(2026, 5, 21, 12)} />);
   expect(screen.queryByText(/Since you last opened/i)).not.toBeInTheDocument();
 });
@@ -1916,26 +2086,34 @@ git commit -m "feat(home): entity deep-links + mobile-gated state line & activit
 
 - [ ] **Step 1: Write the failing tests** (both paths clear activity)
 
+Mirror each suite's **existing** clearOfflineReadCache test exactly (same `createWrapper()`, `originalLocation`, mocked `reload`, and `invocationCallOrder` assertion) — §9 requires the clear to be **awaited before the reload**, not merely called.
+
 ```tsx
-// In use-auth.test.tsx:
+// In use-auth.test.tsx (the useLogout describe already has `originalLocation` + createWrapper):
 import * as activityStore from "@/lib/home-activity/store";
-it("clears persisted home activity on logout", async () => {
-  const spy = vi.spyOn(activityStore, "clearHomeActivity").mockResolvedValue();
-  const { result } = renderHook(() => useLogout(), { wrapper });
+it("clears persisted home activity (store + markers) before the logout reload", async () => {
+  const activitySpy = vi.spyOn(activityStore, "clearHomeActivity").mockResolvedValue();
+  const reload = vi.fn();
+  Object.defineProperty(window, "location", { configurable: true, value: { ...originalLocation, reload } });
+  const { result } = renderHook(() => useLogout(), { wrapper: createWrapper() });
   await result.current();
-  expect(spy).toHaveBeenCalled();
+  expect(activitySpy).toHaveBeenCalled();
+  expect(activitySpy.mock.invocationCallOrder[0]).toBeLessThan(reload.mock.invocationCallOrder[0]);
 });
 ```
 
 ```ts
-// In http-client.test.ts (mirror its existing clearOfflineReadCache assertion):
+// In http-client.test.ts (the handleUnauthorized describe already has `originalLocation`
+// and imports AUTH_TOKEN_STORAGE_KEY):
 import * as activityStore from "@/lib/home-activity/store";
-it("clears persisted home activity on 401", async () => {
-  const spy = vi.spyOn(activityStore, "clearHomeActivity").mockResolvedValue();
-  // seed a token so handleUnauthorized treats this as a real session expiry, then
-  // drive the existing 401 path this suite already exercises.
+it("clears persisted home activity (store + markers) before the 401 reload", async () => {
+  const activitySpy = vi.spyOn(activityStore, "clearHomeActivity").mockResolvedValue();
+  const reload = vi.fn();
+  Object.defineProperty(window, "location", { configurable: true, value: { ...originalLocation, reload } });
+  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, "token-123"); // token present → real session expiry → reloads
   await handleUnauthorized();
-  expect(spy).toHaveBeenCalled();
+  expect(activitySpy).toHaveBeenCalled();
+  expect(activitySpy.mock.invocationCallOrder[0]).toBeLessThan(reload.mock.invocationCallOrder[0]);
 });
 ```
 
@@ -2008,7 +2186,7 @@ Run the app (`npm run dev`), open the mobile home surface, and verify: the state
 - **Reuse, don't reinvent:** `getEventKey` (composite calendar key), `formatLocalDate`/`getWeekStartSunday` (device-local dates), `usePressable` (press + haptics), `useFamilyMemberMap` (member→color), the app-store `start*Draft`/`consume*Draft` navigation-intent pattern (deep-links), and the `createOfflineReadCache` DI shape (mirrored by `createHomeActivityStore`) all already exist. Do not add new date libraries, a second persister abstraction, or `fake-indexeddb`.
 - **Separate IndexedDB database.** The activity store uses `family-hub-home-activity`, NOT the offline cache's `family-hub-offline` — `idb-keyval.createStore` can't add a second object store to an existing DB (no version bump). This is the #1 trap; do not "consolidate" the databases.
 - **Don't diff partial or sliding-window data.** Gate detection on both queries settled, and pass the previous/current window overlap to `diffSnapshots` so the daily-sliding calendar window doesn't fabricate adds/removes at the edges.
-- **Divider advances on an OPEN, never on a data-change cycle.** Classify meaningful opens only on cold start / return-to-visible; render against a frozen `displayBaseline`; serialize cycles with the generation guard.
+- **Divider advances on an OPEN, never on a data-change cycle.** Classify meaningful opens only on cold start / return-to-visible; render against a `displayBaselineRef` re-frozen only at a real open; serialize cycles through the promise-queue mutex.
 - **No backend.** Everything is derived on-device. If you find yourself wanting an `/api/activity` endpoint, stop — that is the deferred AI-phase work (spec §12).
 - **Device-local only.** Do not introduce family-timezone math; the FE has no helper for it (spec §10.4).
 - **Feed = calendar + lists.** Chores and meals belong to the state line, never the feed (spec anchor 7).
