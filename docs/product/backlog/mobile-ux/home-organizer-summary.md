@@ -6,9 +6,11 @@ status: planned
 priority: P2
 created: 2026-06-20
 updated: 2026-06-21
-issues: []
+issues:
+  - FE #239
 prs: []
 spec: ../../../superpowers/specs/2026-06-20-home-organizer-summary-design.md
+plan: ../../../superpowers/plans/2026-06-21-home-organizer-summary.md
 ---
 
 ## Context
