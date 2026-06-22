@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-21
+Last updated: 2026-06-22
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -70,6 +70,10 @@ Recommended order:
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
+
+### Module foundations follow-on
+
+- [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) — family-owned category catalogs shared by list kind; editable Grocery/To-do starters; General remains flat by default but can use family-created categories; atomic delete-to-Uncategorized; explicit batched reorder. BE-first and safe to execute in parallel with current FE-only work; FE waits for the published BE contract. [Spec](../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md).
 
 ### Mobile UX polish backlog
 
