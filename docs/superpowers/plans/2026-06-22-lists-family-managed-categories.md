@@ -61,6 +61,7 @@
 ### Backend — modify
 
 - `src/main/java/com/familyhub/demo/model/ListCategory.java` — remove application mapping for `seeded`.
+- Delete `src/main/java/com/familyhub/demo/dto/ListCategoryResponse.java` — replace the obsolete seeded response with `ListCategoryOption`.
 - `src/main/java/com/familyhub/demo/repository/ListCategoryRepository.java` — normalized lookup, ordered catalog, count/order operations.
 - `src/main/java/com/familyhub/demo/repository/SharedListRepository.java` — grouped-list count and atomic flatten update.
 - `src/main/java/com/familyhub/demo/service/ListSeedService.java` — create three catalog scopes and only Grocery/To-do starters during registration.
@@ -73,6 +74,7 @@
 - `src/test/java/com/familyhub/demo/controller/ListControllerTest.java`
 - `src/test/java/com/familyhub/demo/integration/ListIntegrationTest.java`
 - `scripts/deploy.sh` — fail closed when no published release resolves.
+- `.github/workflows/ci.yml` — execute the BE release-parser regression test.
 
 ### Frontend — create
 
@@ -92,8 +94,9 @@
 - `src/api/hooks/index.ts` and `src/api/index.ts`
 - `src/test/mocks/handlers.ts` and `src/test/mocks/server.ts` — shared family + kind mock catalogs; static routes before `:id`.
 - `src/lib/offline/validators.ts`, `src/lib/offline/validators.test.ts`, and `src/lib/offline/dehydrate.test.ts`.
-- `src/components/ui/mobile-sheet.tsx` and `src/components/ui/mobile-sheet.test.tsx` — explicit focus-return target, optional restore suppression, animation completion.
-- `src/components/ui/responsive-form-dialog.tsx` and its tests — forward mobile focus-return behavior.
+- Existing category fixtures in `src/components/lists/list-detail-view.test.tsx`, `src/components/lists/build-list-sections.test.ts`, and `src/components/lists-view.test.tsx` — remove obsolete `seeded` while preserving their later behavior assertions.
+- `src/components/ui/mobile-sheet.tsx` and `src/components/ui/mobile-sheet.test.tsx` — explicit title focus, focus-return target, optional restore suppression, animation completion.
+- `src/components/ui/responsive-form-dialog.tsx` and its tests — equivalent title/return focus behavior for mobile and desktop.
 - `src/components/lists/list-create-sheet.tsx`
 - `src/components/lists/list-options-controls.tsx`
 - `src/components/lists/list-item-sheet.tsx`
@@ -231,7 +234,6 @@ git commit -m "feat(lists): add category catalog scope migration"
 **Files:**
 - Create the eight backend DTO/exception files listed above.
 - Create: `backend/family-hub-api/src/main/java/com/familyhub/demo/repository/SharedListItemRepository.java`
-- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/ListCategory.java`
 - Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/repository/ListCategoryRepository.java`
 - Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/repository/SharedListRepository.java`
 - Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/exception/GlobalExceptionHandler.java`
@@ -264,7 +266,7 @@ public record ListCategoryCatalogResponse(
 public record CategoryDeleteResult(long uncategorizedItemCount, long flattenedListCount) {}
 ```
 
-Remove `seeded` from `ListCategory`; leave the physical column untouched.
+Keep the existing `ListCategory.seeded` mapping temporarily so the repository compiles after this contract-only commit. Task 4 removes the entity field, obsolete response DTO, mapper usage, seed calls, and test fixtures atomically; the physical database column remains untouched.
 
 - [ ] **Step 2: Add repository operations without overcounting joins**
 
@@ -313,7 +315,6 @@ Expected: BUILD SUCCESS. Repository behavior is exercised through the service un
 
 ```bash
 git add src/main/java/com/familyhub/demo/dto src/main/java/com/familyhub/demo/exception \
-  src/main/java/com/familyhub/demo/model/ListCategory.java \
   src/main/java/com/familyhub/demo/repository
 git commit -m "feat(lists): define managed category contracts"
 ```
@@ -392,7 +393,13 @@ git commit -m "feat(lists): manage serialized category catalogs"
 ## Task 4: Integrate catalog rules into registration, lists, and items
 
 **Files:**
-- Modify: backend model/DTO/mapper/seed/list service files listed in File structure.
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/model/ListCategory.java`
+- Delete: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/ListCategoryResponse.java`
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/dto/ListDetailResponse.java`
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/mapper/ListMapper.java`
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/ListSeedService.java`
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/service/ListService.java`
+- Modify: `backend/family-hub-api/src/main/java/com/familyhub/demo/repository/SharedListRepository.java`
 - Modify tests: `TestDataFactory`, `ListServiceTest`, `ListIntegrationTest`.
 
 - [ ] **Step 1: Replace the obsolete service tests with the new invariants**
@@ -405,21 +412,27 @@ Add failing tests for:
 - grouped PATCH works for General with at least one category and returns `ConflictException` for every empty kind;
 - first category creation and later recreation do not change existing list modes;
 - General item create/update accepts a matching category; family/kind mismatch retains `404`/`400` semantics;
-- list detail embeds ordered `ListCategoryOption` values for all kinds and never returns `seeded`.
+- list detail embeds ordered `ListCategoryOption` values for all kinds and never returns `seeded`;
+- lock ordering uses immutable kind routing before scope lock and authoritative aggregate refetch before any mutation/flush;
+- final-category delete racing grouped PATCH leaves the list flat with the PATCH returning `409`;
+- final-category delete racing non-null item assignment leaves the item unchanged with assignment returning `404`.
 
 Run: `./mvnw -Dtest=ListServiceTest,ListIntegrationTest test`
 
 Expected: FAIL on the shipped General restrictions and category DTO.
 
-- [ ] **Step 2: Make registration one-time and create catalog scopes**
+- [ ] **Step 2: Make registration one-time, remove seeded application fields, and create catalog scopes**
 
 `ListSeedService.seedDefaultsForFamily` creates and flushes one scope for each `ListKind`, then inserts the fixed Grocery/To-do names with dense order. It creates no General categories and never runs from login, reads, or background reconciliation. Remove all `setSeeded` calls.
 
+Delete `ListCategoryResponse.java`, remove `seeded` from the entity, change `ListDetailResponse`/`ListMapper` to `ListCategoryOption`, and update `TestDataFactory` in the same step so main and test compilation never pass through a broken intermediate state. Add `! rg -n 'seeded' src/main/java/com/familyhub/demo/dto src/main/java/com/familyhub/demo/model/ListCategory.java` to the verification evidence.
+
 - [ ] **Step 3: Reuse the catalog lock in `ListService`**
 
-- Create list: lock `(family, request.kind)`; Grocery/To-do choose grouped iff category count is positive; General chooses flat.
-- Update list: family-scope lookup determines immutable kind, lock that scope, then reject grouped if category count is zero; otherwise apply the request.
-- Item create/update with non-null `categoryId`: determine immutable list kind, lock that scope, then refetch the category through family and validate exact kind.
+- Create list: lock `(family, request.kind)` before constructing/persisting the aggregate; Grocery/To-do choose grouped iff category count is positive; General chooses flat.
+- Update list: `SharedListRepository.findKindByFamilyAndId` reads only the immutable kind projection; lock that scope; refetch the aggregate; then reject grouped if category count is zero or apply the request. Never load/dirtify the managed aggregate before the scope lock.
+- Item create/update with non-null `categoryId`: use the same immutable list-kind projection; lock that scope; refetch the aggregate/item; validate the category through family and exact kind; only then mutate item fields. This avoids Hibernate auto-flush acquiring item/list locks before the scope lock.
+- Item writes with null category and list updates that request flat mode do not depend on catalog state; they retain the ordinary aggregate path.
 - Detail mapping: query categories for every kind and map `ListCategoryOption`; remove the `GENERAL ? List.of()` branch.
 
 Simple list reads need no scope lock. Flat display continues retaining category assignments.
@@ -430,6 +443,8 @@ Run: `./mvnw -Dtest=ListServiceTest,ListIntegrationTest,AuthIntegrationTest test
 
 Expected: PASS, including registration starters and General behavior.
 
+For deterministic races, use `TransactionTemplate` in thread A to acquire the scope row and coordinate with latches. Start the real service call in thread B, assert it is blocked, let thread A perform/commit the final delete, then assert thread B refetches post-lock state and returns the documented `409`/`404`. Unit tests use Mockito `InOrder` to prove projection -> scope lock -> aggregate refetch -> mutation/save.
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -437,6 +452,7 @@ git add src/main/java/com/familyhub/demo/model src/main/java/com/familyhub/demo/
   src/main/java/com/familyhub/demo/mapper/ListMapper.java \
   src/main/java/com/familyhub/demo/service/ListSeedService.java \
   src/main/java/com/familyhub/demo/service/ListService.java \
+  src/main/java/com/familyhub/demo/repository/SharedListRepository.java \
   src/test/java/com/familyhub/demo/TestDataFactory.java \
   src/test/java/com/familyhub/demo/service/ListServiceTest.java \
   src/test/java/com/familyhub/demo/integration/ListIntegrationTest.java
@@ -463,6 +479,8 @@ PUT    /api/lists/categories/order               -> 200 ListCategoryCatalogRespo
 ```
 
 Also prove `/api/lists/categories` is not captured by `/api/lists/{id}`, validation failures are `400`, unauthenticated requests are `401`, family-scoped missing IDs are `404`, and explicit conflicts are `409` in the existing `ErrorResponse` shape.
+
+For GET query binding, the controller accepts the raw required `String kind`, parses it with `ListKind.fromValue`, and converts `IllegalArgumentException` to `BadRequestException("Invalid list kind.")`. Do not rely on Spring's default enum converter, which does not use Jackson `@JsonCreator`. Test `grocery`, `to-do`, `general`, missing, and invalid query values.
 
 Run: `./mvnw -Dtest=ListCategoryControllerTest,ListControllerTest test`
 
@@ -510,10 +528,11 @@ git commit -m "feat(lists): expose family category catalog API"
 - Create: `backend/family-hub-api/scripts/resolve-release-version.sh`
 - Create: `backend/family-hub-api/scripts/resolve-release-version.test.sh`
 - Modify: `backend/family-hub-api/scripts/deploy.sh`
+- Modify: `backend/family-hub-api/.github/workflows/ci.yml`
 
 - [ ] **Step 1: Write the failing release-parser test**
 
-The test sources `resolve-release-version.sh`, asserts `resolve_release_version '{"tag_name":"v1.2.3"}'` prints `1.2.3`, and asserts missing, null, blank, or malformed JSON return non-zero. It never invokes SSH.
+The test sources `resolve-release-version.sh`, asserts `resolve_release_version '{"tag_name":"v1.2.3"}'` and the unprefixed equivalent print `1.2.3`, and asserts missing, null, blank, prerelease, non-semver, or malformed JSON return non-zero. Accepted release tags are exactly `v?MAJOR.MINOR.PATCH` with numeric components. It never invokes SSH.
 
 Run: `bash scripts/resolve-release-version.test.sh`
 
@@ -521,7 +540,7 @@ Expected: FAIL because the resolver does not exist.
 
 - [ ] **Step 2: Extract a sourceable fail-closed resolver**
 
-The resolver defines `resolve_release_version()` with `jq -er '.tag_name | select(type == "string" and length > 0)'`, strips one leading `v`, and has an executable main path that fetches `/releases/latest`. `deploy.sh` captures its output and refuses to continue when empty:
+The resolver defines `resolve_release_version()`, reads the tag with `jq -er`, requires `^v?[0-9]+\.[0-9]+\.[0-9]+$`, strips one leading `v`, and has a main path that fetches `/releases/latest`. `deploy.sh` defines `SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"`, invokes the resolver with `bash "$SCRIPT_DIR/resolve-release-version.sh"`, captures its output, and refuses to continue when empty:
 
 ```bash
 if [ -z "$BE_VERSION" ]; then
@@ -532,14 +551,16 @@ fi
 
 There is no assignment to `latest`.
 
+Add `bash scripts/resolve-release-version.test.sh` to the BE `build-and-test` job before Maven verification. Invoking through `bash` makes executable mode irrelevant and keeps the sourceable test contract explicit.
+
 - [ ] **Step 3: Run parser tests, verify shell syntax, and commit**
 
-Run: `bash scripts/resolve-release-version.test.sh && bash -n scripts/deploy.sh scripts/resolve-release-version.sh`
+Run: `bash scripts/resolve-release-version.test.sh && bash -n scripts/deploy.sh scripts/resolve-release-version.sh && ! grep -RE 'BE_VERSION="latest"|:-latest' scripts/deploy.sh scripts/resolve-release-version.sh`
 
 Expected: all parser cases pass and shell syntax exits 0.
 
 ```bash
-git add scripts/deploy.sh scripts/resolve-release-version.sh scripts/resolve-release-version.test.sh
+git add .github/workflows/ci.yml scripts/deploy.sh scripts/resolve-release-version.sh scripts/resolve-release-version.test.sh
 git commit -m "fix(release): fail closed when backend release is unavailable"
 ```
 
@@ -592,7 +613,7 @@ export interface ReorderListCategoriesRequest {
 }
 ```
 
-`ListDetail.categories` becomes `ListCategoryOption[]`. Delete `CategoryAwareListKind`, `ListCategory`, and every `seeded` fixture/reference. Add `categoryNameSchema` using trim, required, max 100.
+`ListDetail.categories` becomes `ListCategoryOption[]`. Delete `CategoryAwareListKind` and `ListCategory`. In the same task update every current seeded fixture/reference in `use-lists.test.tsx`, `handlers.ts`, `list-detail-view.test.tsx`, `build-list-sections.test.ts`, and `lists-view.test.tsx` so the repository remains type-checkable between commits. Add `categoryNameSchema` using trim, required, max 100.
 
 - [ ] **Step 3: Add service methods and query hooks**
 
@@ -608,9 +629,11 @@ Mutation cache rules:
 
 - create: append returned option to every cached same-kind list detail and append management entry to catalog;
 - rename: replace matching entries in catalog and same-kind details;
-- delete: remove category, null matching item assignments, and set list mode flat if no options remain; decrement grouped count by authoritative `flattenedListCount`;
+- delete: remove category, null matching item assignments, set list mode flat if no options remain, and rewrite remaining management/detail `sortOrder` values to their array indices; decrement grouped count by authoritative `flattenedListCount`;
 - reorder: replace catalog from response and reorder same-kind detail options from its canonical IDs;
-- after each immediate update, invalidate active same-kind list-detail queries as correctness backstop; never invalidate unrelated kinds or Lists hub for category-only changes.
+- after each immediate update, invalidate same-kind list-detail queries as correctness backstop; after DELETE also invalidate/refetch the active management catalog because its response does not carry the compacted catalog; never invalidate unrelated kinds or Lists hub for category-only changes.
+
+Hook tests include deleting a middle category across two cached details, verifying dense local orders, then creating and reordering without a stale/gapped baseline.
 
 All write hooks call `assertOnlineForWrite()` before cache mutation.
 
@@ -624,7 +647,7 @@ Replace `z.array(z.unknown())` with a structural category-option schema that req
 
 - [ ] **Step 6: Run and commit**
 
-Run: `npm test -- --run src/api/hooks/use-lists.test.tsx src/lib/validations/lists.test.ts src/lib/offline/validators.test.ts src/lib/offline/dehydrate.test.ts`
+Run: `npm test -- --run src/api/hooks/use-lists.test.tsx src/lib/validations/lists.test.ts src/lib/offline/validators.test.ts src/lib/offline/dehydrate.test.ts && npm run build`
 
 Expected: PASS.
 
@@ -632,7 +655,9 @@ Expected: PASS.
 git add src/lib/types/lists.ts src/lib/validations/lists.ts src/lib/validations/lists.test.ts \
   src/api/services/lists.service.ts src/api/hooks/use-lists.ts src/api/hooks/use-lists.test.tsx \
   src/api/hooks/index.ts src/api/index.ts src/test/mocks/handlers.ts src/test/mocks/server.ts \
-  src/lib/offline/validators.ts src/lib/offline/validators.test.ts src/lib/offline/dehydrate.test.ts
+  src/lib/offline/validators.ts src/lib/offline/validators.test.ts src/lib/offline/dehydrate.test.ts \
+  src/components/lists/list-detail-view.test.tsx src/components/lists/build-list-sections.test.ts \
+  src/components/lists-view.test.tsx
 git commit -m "feat(lists): consume managed category catalog contract"
 ```
 
@@ -690,11 +715,11 @@ Expected: FAIL because manager components do not exist.
 
 - [ ] **Step 2: Implement one responsive manager**
 
-`CategoryManager` takes `open`, `onOpenChange`, `kind`, and optional `returnFocusRef`. It calls `useOnlineStatus`; offline renders explanatory content and does not enable `useListCategories`. Desktop and mobile share identical content through `ResponsiveFormDialog`, not duplicate manager trees.
+`CategoryManager` takes `open`, `onOpenChange`, and `kind`. It calls `useOnlineStatus`; offline renders explanatory content and does not enable `useListCategories`. Desktop and mobile share identical content through `ResponsiveFormDialog`, not duplicate manager trees. Task 11 adds the cross-viewport focus props once the shared primitive supports them.
 
 `CategoryManagerList` renders ordered rows with name and `itemCount`, inline rename, delete, and Reorder entry. Add uses `categoryNameSchema`; successful create clears only the category-name input. Error text is adjacent to the active form.
 
-`ListOptionsControls` adds `onManageCategories` and `categoriesOnline` props, renders the shared-scope copy based on kind, and disables the manager entry while offline. `ListDetailView` passes `useOnlineStatus()` and opens the desktop manager directly.
+`ListOptionsControls` adds `onManageCategories` and `categoriesOnline`, renders the shared-scope copy based on kind, and disables the manager entry while offline. `ListDetailView` passes `useOnlineStatus()` and opens the desktop manager directly.
 
 - [ ] **Step 3: Implement honest delete confirmation**
 
@@ -747,13 +772,13 @@ git commit -m "feat(lists): add accessible batched category reorder"
 ## Task 11: Implement mobile Options-to-manager handoff and focus ownership
 
 **Files:**
-- Modify: `mobile-sheet.tsx`, `responsive-form-dialog.tsx`, `list-detail-view.tsx`, and tests.
+- Modify: `mobile-sheet.tsx`, `responsive-form-dialog.tsx`, `category-manager.tsx`, `list-options-controls.tsx`, `list-detail-view.tsx`, and tests.
 
 - [ ] **Step 1: Write failing primitive and integration tests**
 
-Primitive tests prove optional close-focus suppression, explicit `returnFocusRef`, and `onAnimationEnd(false)`. List-detail tests prove Manage Categories first closes Options; manager opens only after close animation; at no point are two dialogs/back handlers active; manager receives focus; manager close returns focus to the visible List Options trigger; desktop opens centered manager without the mobile handoff.
+Primitive tests prove optional close-focus suppression, title focus on open, explicit `returnFocusRef`, and `onAnimationEnd(false)`. List-detail tests prove Manage Categories first closes Options; manager opens only after close animation; at no point are two dialogs/back handlers active; the manager title is `document.activeElement`; mobile manager close returns focus to the visible List Options trigger; desktop opens centered manager directly and returns focus to its Manage Categories button.
 
-Run: `npm test -- --run src/components/ui/mobile-sheet.test.tsx src/components/ui/responsive-form-dialog.test.tsx src/components/lists/list-detail-view.test.tsx`
+Run: `npm test -- --run src/components/ui/mobile-sheet.test.tsx src/components/ui/responsive-form-dialog.test.tsx src/components/lists/category-manager.test.tsx src/components/lists/list-detail-view.test.tsx`
 
 Expected: FAIL on missing handoff props/state.
 
@@ -762,16 +787,21 @@ Expected: FAIL on missing handoff props/state.
 Add optional MobileSheet props:
 
 ```ts
+focusTitleOnOpen?: boolean; // default false; existing callers retain content focus
 restoreFocusOnClose?: boolean; // default true
 returnFocusRef?: RefObject<HTMLElement | null>;
 onAnimationEnd?: (open: boolean) => void;
 ```
 
-Forward `onAnimationEnd` to `Drawer.Root`. In `onCloseAutoFocus`, always prevent Radix default, then focus `returnFocusRef.current ?? openerRef.current` only when restoration is enabled. Forward `returnFocusRef` through `ResponsiveFormDialog` on mobile; existing callers retain current behavior.
+Forward `onAnimationEnd` to `Drawer.Root`. Keep an internal `Drawer.Title` ref with `tabIndex={-1}` and focus it in `onOpenAutoFocus` only when `focusTitleOnOpen`; otherwise preserve current content focus. In `onCloseAutoFocus`, always prevent Radix default, then focus `returnFocusRef.current ?? openerRef.current` only when restoration is enabled.
+
+`ResponsiveFormDialog` accepts `focusTitleOnOpen` and `returnFocusRef`. It forwards both to MobileSheet. On desktop it attaches a ref/tabIndex to `DialogTitle`, handles `DialogContent` open auto-focus by focusing that title when requested, and handles close auto-focus by returning to `returnFocusRef`. Defaults preserve all existing callers.
+
+Extend `CategoryManager` with `returnFocusRef`, pass `focusTitleOnOpen` and that ref to `ResponsiveFormDialog`, and extend `ListOptionsControls` with optional `manageCategoriesButtonRef` applied to its manager button.
 
 - [ ] **Step 3: Sequence the handoff in `ListDetailView`**
 
-Keep an `optionsButtonRef`, `managerOpen`, and `managerHandoffPending`. Manage click sets pending then closes Options. Options passes `restoreFocusOnClose={!managerHandoffPending}` and in `onAnimationEnd(false)` opens manager and clears pending. Manager receives `returnFocusRef={optionsButtonRef}`. The Options and manager open booleans are never true together.
+Keep `optionsButtonRef`, `desktopManageButtonRef`, `managerOpen`, and `managerHandoffPending`. Mobile Manage click sets pending then closes Options. Options passes `restoreFocusOnClose={!managerHandoffPending}` and in `onAnimationEnd(false)` opens manager and clears pending. Manager receives `focusTitleOnOpen` plus `returnFocusRef={isMobile ? optionsButtonRef : desktopManageButtonRef}`. The Options and manager open booleans are never true together; desktop opens directly from its ref-bearing Manage Categories button.
 
 - [ ] **Step 4: Run and commit**
 
@@ -780,6 +810,8 @@ Run the Step 1 command; expect PASS.
 ```bash
 git add src/components/ui/mobile-sheet.tsx src/components/ui/mobile-sheet.test.tsx \
   src/components/ui/responsive-form-dialog.tsx src/components/ui/responsive-form-dialog.test.tsx \
+  src/components/lists/category-manager.tsx src/components/lists/category-manager.test.tsx \
+  src/components/lists/list-options-controls.tsx \
   src/components/lists/list-detail-view.tsx src/components/lists/list-detail-view.test.tsx
 git commit -m "fix(lists): hand off mobile category manager without stacking"
 ```
@@ -829,7 +861,7 @@ git commit -m "feat(lists): create categories inline without losing item drafts"
 
 - [ ] **Step 1: Write a failing sourceable resolver test**
 
-Mirror the BE parser contract: valid `v1.2.3` prints `1.2.3`; absent/null/blank/malformed tags return non-zero. The script's executable path uses `GITHUB_TOKEN` to call the latest-release API and prints only the version on stdout.
+Mirror the BE parser contract: only `v?MAJOR.MINOR.PATCH` is valid and prints the unprefixed semver; absent/null/blank/prerelease/non-semver/malformed tags return non-zero. The script's main path uses `GITHUB_TOKEN` to call the latest-release API and prints only the version on stdout.
 
 Run: `bash .github/scripts/resolve-backend-version.test.sh`
 
@@ -854,9 +886,9 @@ Change Compose to:
 image: ghcr.io/joe-bor/family-hub-api:${BE_IMAGE_TAG:?BE_IMAGE_TAG must be a published release}
 ```
 
-The workflow obtains `BE_VERSION=$(./.github/scripts/resolve-backend-version.sh)`; shell failure stops the step. After the parser test, run `! rg -n 'BE_VERSION:-latest|BE_IMAGE_TAG:-latest' .github/workflows/ci.yml docker-compose.e2e.yml` to prove no fallback remains.
+The workflow first runs `bash .github/scripts/resolve-backend-version.test.sh`, then obtains `BE_VERSION=$(bash .github/scripts/resolve-backend-version.sh)`; either shell failure stops the job. The resolution step exports `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` in its `env` block. Add a non-self-matching CI assertion that fails when `grep -RE 'BE_(VERSION|IMAGE_TAG):-latest' .github/workflows/ci.yml docker-compose.e2e.yml` finds a fallback. Invoking through `bash` makes executable mode irrelevant.
 
-Run: `bash .github/scripts/resolve-backend-version.test.sh`
+Run: `bash .github/scripts/resolve-backend-version.test.sh && ! grep -RE 'BE_(VERSION|IMAGE_TAG):-latest' .github/workflows/ci.yml docker-compose.e2e.yml`
 
 Expected: PASS.
 
