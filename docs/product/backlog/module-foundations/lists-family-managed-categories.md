@@ -25,11 +25,12 @@ Design: [Lists family-managed categories](../../../superpowers/specs/2026-06-22-
 - Category create, rename, delete, and explicit saved reorder
 - Editable Grocery and To-do starter categories
 - Empty-by-default General category catalog
-- General grouped/flat support, remaining flat by default
+- General grouped/flat support, remaining flat by default; no kind may group an empty catalog
 - Inline create-and-select from Add/Edit Item
 - Atomic delete-to-`Uncategorized` across matching lists, with final-category flattening
-- Additive Flyway V17 migration and dedicated category API
-- BE-first delivery against a published backend release
+- Family + kind catalog serialization for create/delete/reorder, list mode, and item assignment concurrency
+- Flyway V17 expand/compatibility migration and dedicated category API; the unused `seeded` database column remains as a rollback tombstone while application contracts remove it
+- BE-first delivery against the dynamically resolved latest published backend release, with no fallback to unreleased `latest`
 
 ## Out of Scope
 
@@ -48,18 +49,23 @@ Design: [Lists family-managed categories](../../../superpowers/specs/2026-06-22-
 - [ ] A category is available to every family list of its kind and never crosses family or kind boundaries.
 - [ ] Grocery and To-do receive editable starter categories; General receives none.
 - [ ] General lists remain flat by default and may explicitly enable grouped view.
+- [ ] Grouped mode is rejected while a catalog is empty; Grocery/To-do list creation falls back to flat in that state.
 - [ ] Items keep zero-or-one optional category semantics.
 - [ ] Category names are case-insensitively unique per family + kind.
 - [ ] Inline creation selects the new category without losing the item draft.
 - [ ] Deleting a category atomically moves affected items to `Uncategorized` and reports the count.
 - [ ] Deleting the final category atomically switches every matching grouped list to flat.
-- [ ] Reorder changes stay local until Save, which sends one concurrency-guarded request.
+- [ ] Recreating a category after final deletion does not regroup existing lists.
+- [ ] Catalog-dependent writes serialize by family + kind, including empty-catalog creates, and duplicate-name races return `409` rather than `500`.
+- [ ] Reorder changes stay local until Save, which sends one concurrency-guarded request with defined invalid, pending, retry, and conflict behavior.
 - [ ] Empty categories do not render empty checklist sections.
-- [ ] Existing Lists behavior and data survive the V17 upgrade.
-- [ ] FE integration and E2E consume a published BE release.
+- [ ] Mobile sheet handoff, focus, keyboard ordering, announcements, and touch targets meet the design contract.
+- [ ] Loading, error, stale-form, pending, and offline states preserve drafts and cached read-only Lists access.
+- [ ] Existing Lists behavior and data survive both a clean migration and V16-to-V17 upgrade; the released BE remains rollback-compatible.
+- [ ] FE integration and E2E resolve the latest published BE release image and fail closed if it is unavailable, never substituting mutable `latest`.
 
 ## Delivery Notes
 
 - Create the BE and FE execution Issues only after the root implementation plan exists.
-- BE implementation can run in parallel with current FE-only work; FE category implementation waits for the released BE contract.
+- BE implementation can run in parallel with current FE-only work; FE category implementation waits for the released BE contract. Normal FE CI then discovers that latest published release automatically.
 - Record Issue and PR links in this frontmatter when they exist.

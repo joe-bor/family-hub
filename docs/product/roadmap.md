@@ -73,7 +73,7 @@ Recommended order:
 
 ### Module foundations follow-on
 
-- [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) — family-owned category catalogs shared by list kind; editable Grocery/To-do starters; General remains flat by default but can use family-created categories; atomic delete-to-Uncategorized; explicit batched reorder. BE-first and safe to execute in parallel with current FE-only work; FE waits for the published BE contract. [Spec](../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md).
+- [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) — serialized family-owned category catalogs shared by list kind; editable Grocery/To-do starters; General remains flat by default but can use family-created categories; empty catalogs cannot group; atomic delete-to-Uncategorized; explicit batched reorder; rollback-compatible V17. BE-first and safe to execute in parallel with current FE-only work; FE waits for and automatically resolves the latest published BE contract without falling back to unreleased `latest`. [Spec](../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md).
 
 ### Mobile UX polish backlog
 
