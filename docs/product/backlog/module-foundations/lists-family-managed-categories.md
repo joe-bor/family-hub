@@ -9,6 +9,7 @@ updated: 2026-06-22
 issues: []
 prs: []
 spec: ../../../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md
+plan: ../../../superpowers/plans/2026-06-22-lists-family-managed-categories.md
 ---
 
 ## Context
