@@ -2,13 +2,14 @@
 id: mobile-home-organizer-summary
 title: Home organizer summary (state line + "since you last opened" feed)
 epic: mobile-ux
-status: planned
+status: done
 priority: P2
 created: 2026-06-20
-updated: 2026-06-21
+updated: 2026-06-24
 issues:
   - FE #239
-prs: []
+prs:
+  - FE #252
 spec: ../../../superpowers/specs/2026-06-20-home-organizer-summary-design.md
 plan: ../../../superpowers/plans/2026-06-21-home-organizer-summary.md
 ---

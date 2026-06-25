@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-22
+Last updated: 2026-06-25
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -34,6 +34,8 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Native-feel interaction polish (transitions + press feedback)](backlog/mobile-ux/native-feel-interaction-polish.md) · FE #229, PR #230 · `0.3.17`
 - [Native hardware back-button handling](backlog/mobile-ux/native-back-button.md) · FE #231, PR #234 · `0.3.18`
 - [Optional haptic feedback (Vibration API)](backlog/mobile-ux/optional-haptics.md) · FE #235, PR #236 · `0.3.18` (bottom-sheet-snap + destructive-confirm pulses deferred post-v1)
+- [Home organizer summary (state line + "since you last opened" feed)](backlog/mobile-ux/home-organizer-summary.md) · FE #239, PR #252 · `0.3.19`
+- Shared floating "+" add button standardized across module create flows (FAB stays viewport-anchored through module-switch fades) · FE #256, #258 · `0.3.19`
 
 ### Module foundations
 
@@ -57,7 +59,7 @@ Active execution:
 - FE release PR #186 for `family-hub` `v0.3.11` merged 2026-06-09
 
 Next recommended product focus:
-- Continue from the Mobile UX queue below. The module surfaces are now functional enough that the next work should either add reminders or shape the Home organizer summary, rather than start a new module.
+- Continue from the Mobile UX queue below. The Home organizer summary shipped in `0.3.19`, so the next work should either add reminders (Notifications) or pick up the planned Lists family-managed categories (BE-first, spec + plan ready), rather than start a new module.
 
 Exit criterion for this phase:
 - Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
@@ -66,7 +68,7 @@ Recommended order:
 1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; shipped in FE `0.3.11`
 2. `Meals` — simple week-ahead planning; shipped in FE `0.3.11`
 3. Mobile-first polish of current organizer workflows — shipped through FE `0.3.14`
-4. Remaining Mobile UX stories — native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18`; remaining picks are Notifications (reminder value), calendar gestures (creation/view ergonomics), or shaping the Home organizer summary into a story
+4. Remaining Mobile UX stories — native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18` and the Home organizer summary shipped in `0.3.19`; remaining picks are Notifications (reminder value) or calendar gestures (drag-to-create / pinch-to-zoom)
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
@@ -84,8 +86,8 @@ Next captured stories — calendar gestures + reminders:
 - [Drag-to-create event on time grid](backlog/mobile-ux/drag-to-create.md) — let touch/mouse users create a calendar event by dragging an empty time range, without breaking event tap/edit.
 - [Pinch-to-zoom calendar views](backlog/mobile-ux/pinch-to-zoom.md) — let users adjust calendar time granularity with pinch gestures and persist the chosen zoom level.
 
-Next captured story — home organizer:
-- [Home organizer summary](backlog/mobile-ux/home-organizer-summary.md) — keep "The Now" hero, add a quiet state line (chores left + tonight's dinner) and a "since you last opened" activity feed for calendar + lists (client-side diff behind an `ActivityItem` seam; meals/chores live in the state line; BE activity log + AI day-summary are future siblings). [Spec](../superpowers/specs/2026-06-20-home-organizer-summary-design.md) reviewed 2026-06-21.
+Shipped — home organizer (kept here for the future-sibling pointers):
+- [Home organizer summary](backlog/mobile-ux/home-organizer-summary.md) shipped in `0.3.19` (FE #252) — see the "Mobile shell + home" shipped list above. The **backend activity log** and the **AI day-summary / overload-warnings** remain explicit future siblings that consume the same client-side `ActivityItem` seam.
 
 Native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18` — see the Shipped list above.
 
