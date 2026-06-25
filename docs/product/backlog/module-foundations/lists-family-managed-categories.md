@@ -5,8 +5,9 @@ epic: module-foundations
 status: planned
 priority: P2
 created: 2026-06-22
-updated: 2026-06-22
-issues: []
+updated: 2026-06-25
+issues:
+  - BE #60
 prs: []
 spec: ../../../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md
 plan: ../../../superpowers/plans/2026-06-22-lists-family-managed-categories.md
