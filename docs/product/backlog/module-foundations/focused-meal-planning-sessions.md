@@ -6,7 +6,9 @@ status: planned
 priority: P2
 created: 2026-06-28
 updated: 2026-06-28
-issues: []
+issues:
+  - https://github.com/joe-bor/family-hub-api/issues/64
+  - https://github.com/joe-bor/FamilyHub/issues/262
 prs: []
 spec: ../../../superpowers/specs/2026-06-28-focused-meal-planning-sessions.md
 plan: ../../../superpowers/plans/2026-06-28-focused-meal-planning-sessions.md
