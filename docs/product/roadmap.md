@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-25
+Last updated: 2026-06-28
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -76,6 +76,7 @@ Recommended order:
 ### Module foundations follow-on
 
 - [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) — serialized family-owned category catalogs shared by list kind; editable Grocery/To-do starters; General remains flat by default but can use family-created categories; empty catalogs cannot group; atomic delete-to-Uncategorized; explicit batched reorder; rollback-compatible V17. BE-first and safe to execute in parallel with current FE-only work; FE waits for and automatically resolves the latest published BE contract without falling back to unreleased `latest`. [Spec](../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md) · [Plan](../superpowers/plans/2026-06-22-lists-family-managed-categories.md).
+- [Focused meal planning sessions](backlog/module-foundations/focused-meal-planning-sessions.md) — focused `Meals` planning flow for the visible editable week: choose empty-slot scope, draft multiple quick or recipe-backed meals locally, review, and save through an atomic backend batch contract without overwriting existing meals. [Spec](../superpowers/specs/2026-06-28-focused-meal-planning-sessions.md) · [Plan](../superpowers/plans/2026-06-28-focused-meal-planning-sessions.md).
 
 ### Mobile UX polish backlog
 
