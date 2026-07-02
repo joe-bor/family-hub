@@ -48,6 +48,15 @@ What it does:
 
 If no GitHub Release exists yet, it falls back to `latest`.
 
+## Security hardening (applied 2026-07-02)
+
+Follow-up from the 2026-07-01 security review. These live only on the droplet — keep them in mind on any rebuild:
+
+- **API bound to loopback only.** `/opt/familyhub/docker-compose.prod.yml` maps the API as `"127.0.0.1:8080:8080"`, not `"8080:8080"`. The bare form makes docker-proxy listen on `0.0.0.0`, exposing the API over plain HTTP on the public interface (`http://<droplet-ip>:8080`), bypassing nginx/TLS. UFW does **not** protect against this — Docker inserts iptables rules ahead of it. nginx proxies to `127.0.0.1:8080`, so the loopback binding is transparent to users.
+- **Security headers** on the `familyhub.joe-bor.me` nginx server block: `Strict-Transport-Security` (HSTS, 1 year + includeSubDomains), `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`.
+
+Verify after any redeploy: `curl http://<droplet-ip>:8080/api/health` should refuse/timeout; `curl -sI https://familyhub.joe-bor.me/ | grep -i strict-transport` should show the HSTS header.
+
 ## Server prerequisites
 
 The droplet should already have:
