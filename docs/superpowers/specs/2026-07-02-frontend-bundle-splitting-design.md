@@ -7,9 +7,9 @@
 
 ## Summary
 
-Shrink the JavaScript that Family Hub loads on every cold start / PWA launch by fixing the failed vendor chunking in `vite.config.ts`, and add a lightweight CI budget check so the main chunk cannot silently re-bloat. The change only moves modules between output files — no runtime behavior changes.
+Fix the failed vendor chunking in `vite.config.ts` so Family Hub's dependencies land in long-cached vendor chunks instead of the application entry chunk, and add a lightweight CI budget check so the entry chunk cannot silently re-bloat. The change only moves modules between output files — no runtime behavior changes.
 
-This matters because Family Hub is an installed mobile PWA used daily; the entry chunk is paid on every cold launch and is precached in full by the service worker.
+**What this does and does not buy us (measured 2026-07-02):** total first-visit JS is roughly unchanged (~250 kB gzip either way — the bytes are reorganized, not removed). The wins are: (1) the entry chunk drops from **195 kB → 77 kB gzip (~60%)**, so every app deploy re-downloads far less — ~174 kB of React + other vendor code now sits in chunks that only change when dependencies change, not on every FE release; (2) it repairs a genuine misconfiguration where the intended `react-vendor` optimization was silently dead (a 0 kB chunk); (3) cold start downloads three parallelizable chunks instead of one monolith. This matters because Family Hub is an installed mobile PWA that updates fairly often; the caching win is felt on every post-update launch.
 
 ## Problem
 
@@ -24,7 +24,7 @@ dist/assets/radix-vendor-*.js    78.47 kB   (only 6 of 27 @radix packages)
 Root causes:
 
 1. **Object-form `manualChunks` failed for React.** `"react-vendor": ["react", "react-dom"]` produced a 0 kB chunk; React and React-DOM (~130 kB raw) were bundled into the main `index` chunk instead of a long-cached vendor chunk.
-2. **Incomplete Radix grouping.** Only 6 of 27 `@radix-ui/*` packages are listed in `radix-vendor`; the other 21 scatter into the entry and feature chunks.
+2. **Incomplete Radix grouping.** Only 6 of 27 `@radix-ui/*` packages are listed in `radix-vendor`; the other 21 scatter into the entry and feature chunks. (The fix folds all of Radix into the single `vendor` chunk, so the count no longer matters.)
 3. **No regression guard.** Nothing in CI would catch the entry chunk growing again (this is exactly how the React leak went unnoticed).
 
 Not problems (confirmed during exploration, out of scope): lucide-react and date-fns are already imported as tree-shakeable named imports; the React Compiler (`babel-plugin-react-compiler`) already handles runtime memoization; route-level `lazy()` code splitting already exists for non-primary modules.
@@ -37,27 +37,28 @@ Two independent, behavior-preserving changes in `frontend/`, each verifiable by 
 
 **File:** `frontend/vite.config.ts` (the `build.rollupOptions.output.manualChunks` block)
 
-Replace the object form with a function that inspects each module id and routes `node_modules` packages into stable vendor chunks:
+Replace the object form with a two-way function split:
 
-- `node_modules/react`, `react-dom`, `scheduler`, and React's jsx-runtime → `react-vendor`
-- any `node_modules/@radix-ui/*` → `radix-vendor` (all 27, not just 6)
-- `@tanstack/react-query` → `query-vendor`
-- `date-fns` and `react-day-picker` → `date-vendor`
-- any other `node_modules` module → a general `vendor` chunk, so future dependencies land in a cacheable chunk rather than the entry
+- `node_modules/react`, `react-dom`, `scheduler` → `react-vendor`
+- every other `node_modules` module → a single `vendor` chunk
+- application source → `undefined` (leaves Vite/Rollup's entry chunk + existing `lazy()` feature chunks untouched)
 
-Matching must be robust to path separators and nested `node_modules` (match on `/node_modules/<pkg>/` segments, not a bare `includes`, so e.g. a package merely depending on react is not miscategorized). The function returns `undefined` for application source, leaving Vite/Rollup's existing behavior (entry chunk + `lazy()` feature chunks) untouched.
+**Why two chunks and not per-library groups (react/radix/query/date + catch-all):** the per-library approach was tested during the spec-to-plan review and produces **circular chunk warnings** (`vendor -> query-vendor -> vendor`, `vendor -> radix-vendor -> vendor`) because a general `vendor` module and a specific vendor group import each other. React is the only dependency safe to isolate — it is a pure leaf that imports nothing, so `react-vendor` never forms a cycle. Lumping all other `node_modules` (Radix, TanStack Query, date-fns, zod, react-hook-form, etc.) into one `vendor` chunk avoids cycles entirely and still pulls everything out of the entry. Measured result: no warnings, entry 77 kB gzip, `react-vendor` 59 kB gzip, `vendor` 115 kB gzip.
 
-**Success criteria:**
+Matching must be robust to path separators and nested `node_modules` (match on `/node_modules/<pkg>/` segments via regex, not a bare `includes`, so a package merely depending on react is not miscategorized).
 
-- After rebuild, `react-vendor` is non-zero (~130 kB raw) and contains react + react-dom.
-- The main `index` chunk drops materially from its current 640 kB raw / 195 kB gzip (target: entry gzip at or below ~140 kB; exact post-fix number is measured and pinned in the plan).
+**Success criteria (measured 2026-07-02):**
+
+- After rebuild, `react-vendor` is non-zero (~193 kB raw / ~59 kB gzip) and contains react + react-dom.
+- The entry `index` chunk drops from 640 kB raw / 195 kB gzip to ~265 kB raw / ~77 kB gzip.
+- Build emits **no circular chunk warnings**.
 - No new behavior: the app renders and all existing lint/unit/E2E/Lighthouse CI steps pass unchanged.
 
 Application-level lazy-loading is explicitly *not* expanded in this change. If, after the vendor split, the entry chunk is still heavier than the budget, that is handled by follow-up work — this spec's scope is the vendor split plus the guard.
 
 ### Component 2 — CI bundle-size budget
 
-**Files:** `frontend/scripts/check-bundle-size.mjs` (new), a `check:bundle` script in `frontend/package.json`, one new step in `frontend/.github/workflows/ci.yml`, and a colocated unit test.
+**Files:** `frontend/scripts/check-bundle-size.js` (new — plain ESM, since `package.json` has `"type": "module"` and Biome lints `.js`), a `check:bundle` script in `frontend/package.json`, one new step in `frontend/.github/workflows/ci.yml`, and a colocated unit test under `src/` (Vitest's `include` is `src/**/*.{test,spec}.{ts,tsx}`, so the test importing the script's pure helpers lives at `src/test/check-bundle-size.test.ts`).
 
 The script:
 
@@ -65,7 +66,9 @@ The script:
 2. Reads that file from `dist/`, gzips it, and compares the gzipped byte size to a budget constant (`MAX_ENTRY_GZIP_BYTES`).
 3. Prints the measured size vs. budget and exits 0 (under) or 1 (over).
 
-**Budget value:** set from the measured post-fix entry gzip size plus ~15% headroom, pinned as a named constant with a comment recording the baseline and date. Chosen so the current (fixed) build passes comfortably while a regression on the scale of the React leak fails the build.
+**Budget value:** `MAX_ENTRY_GZIP_BYTES = 92160` (90 kB), set from the measured post-fix entry gzip of ~77 kB (77,158 bytes on 2026-07-02) plus ~15% headroom, pinned as a named constant with a comment recording the baseline and date.
+
+**Why gate the entry chunk specifically (not total initial JS):** the historical regression was React leaking *into the entry* — which would spike the entry from 77 kB back toward ~135 kB while leaving total initial JS unchanged (React just moves between chunks). An entry-chunk budget catches exactly that class of regression, plus application-code bloat. A total-initial-JS budget would miss the React leak, so entry-chunk gating is the right guard for the problem we actually hit.
 
 **CI wiring:** a new step in the existing `check` job of `ci.yml`, placed immediately after the existing `- run: npm run build`, invoking `npm run check:bundle`. It runs on every push and PR to `main`, alongside the existing Lighthouse assertions. This is complementary to Lighthouse CI (which gates runtime page metrics, not the specific entry-chunk gzip size), not a replacement.
 
@@ -75,7 +78,7 @@ The script:
 
 - Expanding application-level `lazy()` code splitting (possible follow-up if the entry chunk stays above budget after the vendor split).
 - Swapping or removing dependencies, or changing how lucide/date-fns are imported (already tree-shakeable).
-- Per-package "one chunk per npm package" granularity (more HTTP requests, over-engineered for this user base).
+- Per-package or per-library-group chunk granularity (causes circular chunk warnings, as measured; more HTTP requests; over-engineered for this user base).
 - Any runtime behavior, styling, or feature change.
 - Adding the `size-limit` package or other new tooling — the zero-dependency script covers the need.
 
@@ -85,8 +88,8 @@ Standard FE flow: feature branch `perf/bundle-splitting` in `joe-bor/FamilyHub`,
 
 ## Verification checklist (for the PR)
 
-- [ ] Rebuild shows `react-vendor` non-zero and entry `index` chunk materially smaller (before/after numbers in the PR body).
+- [ ] Rebuild shows `react-vendor` non-zero (~59 kB gzip), entry `index` chunk ~77 kB gzip, and **no circular chunk warnings** (before/after numbers in the PR body).
 - [ ] `npm run check:bundle` passes locally against the fixed build.
-- [ ] The bundle-check unit test covers under-budget, over-budget, and missing-entry cases.
+- [ ] The bundle-check unit test covers under-budget, over-budget, and the zero/multiple-module-tag fail-closed cases.
 - [ ] `npm run lint`, `npm run test:coverage`, E2E, and Lighthouse CI all still pass.
 - [ ] No application source behavior change — only `vite.config.ts`, the new script/test, `package.json`, and `ci.yml`.
