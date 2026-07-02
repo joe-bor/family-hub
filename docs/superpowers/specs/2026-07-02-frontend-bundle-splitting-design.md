@@ -61,7 +61,7 @@ Application-level lazy-loading is explicitly *not* expanded in this change. If, 
 
 The script:
 
-1. Reads `dist/index.html` and extracts the entry chunk path from the `<script type="module" ... src="/assets/index-*.js">` tag. This avoids enabling Vite's build manifest and is robust to content-hashed filenames. If no such tag is found, exit non-zero with a clear message (fail closed).
+1. Reads `dist/index.html` and extracts the entry chunk path from the single `<script type="module" ... src>` tag — whatever the `src` points to is the entry, regardless of its filename (do not hard-code the `index-` prefix, which is incidental and could change). Attribute order is not assumed (`crossorigin` appears between `type` and `src` in the current output). This avoids enabling Vite's build manifest and is robust to content-hashed filenames. If zero or more than one module-script tag is found, exit non-zero with a clear message (fail closed).
 2. Reads that file from `dist/`, gzips it, and compares the gzipped byte size to a budget constant (`MAX_ENTRY_GZIP_BYTES`).
 3. Prints the measured size vs. budget and exits 0 (under) or 1 (over).
 
@@ -69,7 +69,7 @@ The script:
 
 **CI wiring:** a new step in the existing `check` job of `ci.yml`, placed immediately after the existing `- run: npm run build`, invoking `npm run check:bundle`. It runs on every push and PR to `main`, alongside the existing Lighthouse assertions. This is complementary to Lighthouse CI (which gates runtime page metrics, not the specific entry-chunk gzip size), not a replacement.
 
-**Testing:** a colocated Vitest unit test drives the size-checking logic against fixtures — one payload under budget (expect pass/exit 0) and one over budget (expect fail/exit 1) — plus the missing-entry-tag case (expect fail closed). The script is structured so its core (given an entry file path + budget, return pass/fail) is unit-testable without invoking a real build.
+**Testing:** a colocated Vitest unit test drives the size-checking logic against fixtures — one payload under budget (expect pass/exit 0) and one over budget (expect fail/exit 1) — plus the fail-closed cases where `index.html` has zero or multiple module-script tags (expect non-zero exit). The script is structured so its core (given an entry file path + budget, return pass/fail; and given HTML, resolve the single entry src) is unit-testable without invoking a real build.
 
 ## Non-goals
 
