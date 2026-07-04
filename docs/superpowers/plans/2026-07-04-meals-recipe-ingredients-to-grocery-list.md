@@ -104,7 +104,9 @@ Execution contract:
 - `RecipeDetail { ...RecipeSummary, ingredients: string[], instructions, note, sourceUrl }`; ingredients live only on detail (`src/lib/types/recipes.ts`).
 - Lists: `ListSummary { id, name, kind: "grocery" | "to-do" | "general", totalItems, completedItems }`, `ListItem { id, text, completed, completedAt, categoryId, createdAt, updatedAt }`, `CreateListRequest { name, kind }`, `CreateListItemRequest { text, categoryId? }` (`src/lib/types/lists.ts`).
 - Services: `recipesService.getRecipe(id)` → `GET /recipes/${id}`; `listsService.getLists()` → `GET /lists`; `listsService.createList(req)` → `POST /lists`; item create → `POST /lists/${listId}/items` (`src/api/services/*.service.ts`).
-- Hooks: `useRecipe(id)` (`use-recipes.ts`); `useLists()`, `useList(id)`, `useCreateList()`, `useCreateListItem(listId)` (`use-lists.ts`) — the last already updates the list-detail + summaries cache for a single created item; the bulk hook mirrors it for an array.
+- Hooks: `useRecipe(id)` (`use-recipes.ts`); `useLists()`, `useList(id)`, `useCreateList()`, `useCreateListItem(listId)` (`use-lists.ts`).
+- Query keys (exact names): `listsKeys.hub()` (summaries) and `listsKeys.detail(id)` (`use-lists.ts`); `recipesKeys.detail(id)` (`use-recipes.ts`). `useCreateListItem` calls `assertOnlineForWrite()` (from `@/lib/offline/read-only-guard`) at the start of `onMutate`, mutates `listsKeys.detail(listId)` via the `updateDetailItems` helper, and invalidates `listsKeys.hub()`. `useBulkCreateListItems` reuses all of these.
+- Offline: Lists write hooks call `assertOnlineForWrite()` (throws when offline). `ApiException` (`@/api/client`) exposes `.status` for HTTP-code checks (used to map recipe-detail 404 → "missing"). For a variable-length set of recipe fetches, use `useQueries` (never `useRecipe` in a loop — Rules of Hooks).
 - `MealsView` (`src/components/meals-view.tsx`) owns the visible week; `readOnly = isPastWeek(visibleWeekStartDate)` (line ~163) is the editable gate; the `Fill empty slots` action button lives near line ~482. Reuse both.
 - Week starts Sunday (cross-stack contract): `dayIndex` 0 = Sunday … 6 = Saturday.
 
@@ -124,9 +126,11 @@ Execution contract:
 
 ### Frontend — create
 
-- `frontend/src/components/meals/meal-ingredient-extraction.ts` — pure helpers: collect planned entries, distinct recipe ids, build review groups, convert selected rows to a bulk request.
+- `frontend/src/components/meals/meal-ingredient-extraction.ts` — pure helpers: collect planned entries, distinct recipe ids, `RecipeResolution` model, build review groups (recipe / no-ingredient / error), convert selected rows to a bulk request.
 - `frontend/src/components/meals/meal-ingredient-extraction.test.ts` — pure behavior tests.
-- `frontend/src/components/meals/add-ingredients-sheet.tsx` — review sheet: groups, edit/remove/select, no-ingredient section, list picker/create, append + success/View list, offline handling.
+- `frontend/src/components/meals/use-recipe-details.ts` — `useRecipeDetails(recipeIds)` via `useQueries`, mapping each recipe id to a `RecipeResolution` (loaded / missing (404) / error).
+- `frontend/src/components/meals/use-recipe-details.test.ts` — hook resolution-mapping tests.
+- `frontend/src/components/meals/add-ingredients-sheet.tsx` — review sheet: groups, edit/remove/select, no-ingredient section, retryable error rows, list picker/create, append + success/View list, offline handling.
 - `frontend/src/components/meals/add-ingredients-sheet.test.tsx` — component-level tests.
 
 ### Frontend — modify
@@ -151,15 +155,16 @@ Execution contract:
 
 - [ ] **Step 1: Write failing service tests**
 
-Append to `ListServiceTest` (mirror the existing list-service test setup/helpers for `family`, a seeded `SharedList`, and repositories):
+Append to `ListServiceTest`, reusing its existing fixtures and stubs (`LIST_ID`, the `groceryList` fixture with a mutable `getItems()`, `family`, `produceCategory` (GROCERY), `groceryScope`, and the `sharedListRepository.findDetailByFamilyAndId` / `findKindByFamilyAndId` / `scopeRepository.lockByFamilyAndKind` / `listCategoryRepository.findByFamilyAndId` mocks used by the existing `createItem_*` tests):
 
 ```java
 @Test
 void createItemsBulk_appendsAllItemsInRequestOrder() {
-    UUID listId = groceryList.getId(); // existing test grocery list owned by `family`
+    when(sharedListRepository.findDetailByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(groceryList));
+    when(sharedListRepository.saveAndFlush(any(SharedList.class))).thenReturn(groceryList);
 
     List<ListItemResponse> created = listService.createItemsBulk(
-            listId,
+            LIST_ID,
             new BulkCreateListItemsRequest(List.of(
                     new CreateListItemRequest("2 chicken breasts", null),
                     new CreateListItemRequest("1 tbsp olive oil", null),
@@ -173,40 +178,106 @@ void createItemsBulk_appendsAllItemsInRequestOrder() {
 }
 
 @Test
-void createItemsBulk_rejectsListFromAnotherFamily() {
-    UUID foreignListId = otherFamilyList.getId();
+void createItemsBulk_acceptsMaxItems() {
+    when(sharedListRepository.findDetailByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(groceryList));
+    when(sharedListRepository.saveAndFlush(any(SharedList.class))).thenReturn(groceryList);
+    List<CreateListItemRequest> items = IntStream.range(0, 100)
+            .mapToObj(i -> new CreateListItemRequest("item " + i, null))
+            .toList();
+
+    List<ListItemResponse> created = listService.createItemsBulk(
+            LIST_ID, new BulkCreateListItemsRequest(items), family);
+
+    assertThat(created).hasSize(100);
+    assertThat(created.get(0).text()).isEqualTo("item 0");
+    assertThat(created.get(99).text()).isEqualTo("item 99");
+}
+
+@Test
+void createItemsBulk_listNotFound_throws404() {
+    when(sharedListRepository.findDetailByFamilyAndId(family, LIST_ID)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> listService.createItemsBulk(
-            foreignListId,
+            LIST_ID,
             new BulkCreateListItemsRequest(List.of(new CreateListItemRequest("milk", null))),
             family
     )).isInstanceOf(ResourceNotFoundException.class);
 }
 
 @Test
-void createItemsBulk_rejectsWrongKindCategoryAndWritesNothing() {
-    UUID listId = groceryList.getId();
+void createItemsBulk_assignsValidSameKindCategory() {
+    when(sharedListRepository.findKindByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(ListKind.GROCERY));
+    when(scopeRepository.lockByFamilyAndKind(family, ListKind.GROCERY)).thenReturn(Optional.of(groceryScope));
+    when(sharedListRepository.findDetailByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(groceryList));
+    when(listCategoryRepository.findByFamilyAndId(family, produceCategory.getId()))
+            .thenReturn(Optional.of(produceCategory));
+    when(sharedListRepository.saveAndFlush(any(SharedList.class))).thenReturn(groceryList);
+
+    List<ListItemResponse> created = listService.createItemsBulk(
+            LIST_ID,
+            new BulkCreateListItemsRequest(List.of(
+                    new CreateListItemRequest("2 chicken breasts", produceCategory.getId())
+            )),
+            family
+    );
+
+    assertThat(created).hasSize(1);
+    assertThat(created.get(0).categoryId()).isEqualTo(produceCategory.getId());
+}
+
+@Test
+void createItemsBulk_missingCategory_throws404AndAppendsNothing() {
+    UUID missingCategoryId = UUID.randomUUID();
     int before = groceryList.getItems().size();
+    when(sharedListRepository.findKindByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(ListKind.GROCERY));
+    when(scopeRepository.lockByFamilyAndKind(family, ListKind.GROCERY)).thenReturn(Optional.of(groceryScope));
+    when(sharedListRepository.findDetailByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(groceryList));
+    when(listCategoryRepository.findByFamilyAndId(family, missingCategoryId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> listService.createItemsBulk(
-            listId,
+            LIST_ID,
+            new BulkCreateListItemsRequest(List.of(new CreateListItemRequest("mystery", missingCategoryId))),
+            family
+    )).isInstanceOf(ResourceNotFoundException.class);
+
+    assertThat(groceryList.getItems()).hasSize(before);
+}
+
+// Proves prevalidation: the wrong-kind second item is rejected DURING category
+// resolution, before any row is appended and before saveAndFlush is called.
+@Test
+void createItemsBulk_wrongKindCategory_throwsAndAppendsNothing() {
+    ListCategory todoCategory = createListCategory(family, ListKind.TODO, "Urgent", 0);
+    int before = groceryList.getItems().size();
+    when(sharedListRepository.findKindByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(ListKind.GROCERY));
+    when(scopeRepository.lockByFamilyAndKind(family, ListKind.GROCERY)).thenReturn(Optional.of(groceryScope));
+    when(sharedListRepository.findDetailByFamilyAndId(family, LIST_ID)).thenReturn(Optional.of(groceryList));
+    when(listCategoryRepository.findByFamilyAndId(family, produceCategory.getId()))
+            .thenReturn(Optional.of(produceCategory));
+    when(listCategoryRepository.findByFamilyAndId(family, todoCategory.getId()))
+            .thenReturn(Optional.of(todoCategory));
+
+    assertThatThrownBy(() -> listService.createItemsBulk(
+            LIST_ID,
             new BulkCreateListItemsRequest(List.of(
-                    new CreateListItemRequest("ok row", null),
-                    new CreateListItemRequest("bad row", todoCategory.getId()) // category of a different kind
+                    new CreateListItemRequest("ok row", produceCategory.getId()),
+                    new CreateListItemRequest("bad row", todoCategory.getId()) // wrong-kind category
             )),
             family
     )).isInstanceOf(BadRequestException.class);
 
     assertThat(groceryList.getItems()).hasSize(before);
+    verify(sharedListRepository, org.mockito.Mockito.never()).saveAndFlush(any(SharedList.class));
 }
 ```
 
-Add imports:
+Add imports (some may already be present from existing tests):
 
 ```java
 import com.familyhub.demo.dto.BulkCreateListItemsRequest;
 import com.familyhub.demo.exception.BadRequestException;
 import com.familyhub.demo.exception.ResourceNotFoundException;
+import java.util.stream.IntStream;
 ```
 
 - [ ] **Step 2: Run the focused service test and verify it fails**
@@ -258,14 +329,23 @@ public List<ListItemResponse> createItemsBulk(UUID listId, BulkCreateListItemsRe
 
     SharedList list = getListOrThrow(listId, family);
 
+    // Prevalidation contract: resolve and validate EVERY category BEFORE mutating the aggregate,
+    // so a single bad item never appends a partial row. resolveCategory runs queries, so appending
+    // items first could let Hibernate autoflush persist a partial batch before a later item throws.
+    // `.toList()` forces resolution eagerly in request order; the first invalid item throws here,
+    // before any item is added to the collection and before saveAndFlush runs.
+    List<ListCategory> resolvedCategories = request.items().stream()
+            .map(item -> resolveCategory(list, item.categoryId()))
+            .toList();
+
     List<SharedListItem> created = new ArrayList<>(request.items().size());
-    for (CreateListItemRequest itemRequest : request.items()) {
+    for (int i = 0; i < request.items().size(); i++) {
         SharedListItem item = new SharedListItem();
         item.setList(list);
-        item.setText(itemRequest.text().trim());
+        item.setText(request.items().get(i).text().trim());
         item.setCompleted(false);
         item.setCompletedAt(null);
-        item.setCategory(resolveCategory(list, itemRequest.categoryId())); // validates family + kind
+        item.setCategory(resolvedCategories.get(i));
         list.getItems().add(item);
         created.add(item);
     }
@@ -279,6 +359,7 @@ Add imports if missing:
 
 ```java
 import com.familyhub.demo.dto.BulkCreateListItemsRequest;
+import com.familyhub.demo.model.ListCategory;
 import java.util.ArrayList;
 ```
 
@@ -289,7 +370,7 @@ cd backend/family-hub-api
 ./mvnw -Dtest=ListServiceTest test
 ```
 
-Expected: PASS for existing list-service tests plus the three `createItemsBulk_*` tests.
+Expected: PASS for existing list-service tests plus the six `createItemsBulk_*` tests.
 
 - [ ] **Step 6: Commit**
 
@@ -342,7 +423,37 @@ void createItemsBulk_rejectsEmptyItems() throws Exception {
                             """))
             .andExpect(status().isBadRequest());
 }
+
+@Test
+@WithMockFamily
+void createItemsBulk_rejectsOverMaxItems() throws Exception {
+    String items = IntStream.range(0, 101)
+            .mapToObj(i -> "{ \"text\": \"item " + i + "\" }")
+            .collect(Collectors.joining(","));
+
+    mockMvc.perform(post("/api/lists/{id}/items/bulk", LIST_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{ \"items\": [" + items + "] }"))
+            .andExpect(status().isBadRequest());
+}
+
+@Test
+@WithMockFamily
+void createItemsBulk_rejectsBlankOrOverlongItemText() throws Exception {
+    mockMvc.perform(post("/api/lists/{id}/items/bulk", LIST_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{ \"items\": [ { \"text\": \"   \" } ] }"))
+            .andExpect(status().isBadRequest());
+
+    String overlong = "x".repeat(101);
+    mockMvc.perform(post("/api/lists/{id}/items/bulk", LIST_ID)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{ \"items\": [ { \"text\": \"" + overlong + "\" } ] }"))
+            .andExpect(status().isBadRequest());
+}
 ```
+
+(Add `import java.util.stream.IntStream;` and `import java.util.stream.Collectors;` to `ListControllerTest` if not already present, and reuse its existing `LIST_ID` constant and `sampleItem(...)` helper.)
 
 Add to `ListIntegrationTest`, after the existing token/list setup, a full-stack sequence proving ordering, generic (non-grocery) support, and rollback:
 
@@ -482,7 +593,9 @@ describe("listsService.createItemsBulk", () => {
 });
 ```
 
-In `use-lists.test.tsx`, add a test that seeds `listKeys.detail("list-1")` with a `ListDetail` (2 items) and the `listKeys.lists()` summaries, calls `useBulkCreateListItems("list-1")` with two rows, and asserts the detail cache now has 4 items (originals + 2 appended in order) and the matching summary `totalItems` increased by 2. (Use a dedicated `QueryClient` with `gcTime: Infinity`.)
+In `use-lists.test.tsx`, add two tests (use a dedicated `QueryClient` with `gcTime: Infinity`, mirroring the existing `useCreateListItem` tests):
+- Seeds `listsKeys.detail("list-1")` with a `ListDetail` (2 items), calls `useBulkCreateListItems("list-1")` with two rows, and asserts the detail cache holds the original items **followed by** the two created items in order, and that `listsKeys.hub()` is invalidated (summaries refetch).
+- Offline (force the read-only guard to throw, e.g. `navigator.onLine = false`): the mutation rejects and the detail cache is unchanged — mirroring the existing `useCreateListItem` offline-guard behavior.
 
 - [ ] **Step 2: Run focused contract tests and verify they fail**
 
@@ -540,43 +653,36 @@ createItemsBulk(
 
 Import `BulkCreateListItemsRequest` and `ListItemsApiResponse` from `@/lib/types`.
 
-- [ ] **Step 6: Add the hook (mirror `useCreateListItem`'s cache convergence for an array)**
+- [ ] **Step 6: Add the hook (mirror `useCreateListItem`'s offline guard, keys, and cache convergence)**
 
-Add to `use-lists.ts`:
+Add to `use-lists.ts`. Reuse what `useCreateListItem` already uses in this file: `assertOnlineForWrite` (imported from `@/lib/offline/read-only-guard`), the `updateDetailItems` helper, and the `listsKeys.detail(id)` / `listsKeys.hub()` keys:
 
 ```ts
 export function useBulkCreateListItems(listId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: BulkCreateListItemsRequest) =>
-      listsService.createItemsBulk(listId, request),
+    mutationFn: (request: BulkCreateListItemsRequest) => {
+      // Read-only offline: reject before any write, matching the other Lists write hooks.
+      assertOnlineForWrite();
+      return listsService.createItemsBulk(listId, request);
+    },
     onSuccess: (response) => {
-      const created = response.data;
-      // Append created items to the cached list detail, preserving order.
-      queryClient.setQueryData<ListDetailApiResponse>(listKeys.detail(listId), (prev) =>
-        prev ? { ...prev, data: { ...prev.data, items: [...prev.data.items, ...created] } } : prev,
+      // Append the created items to the cached list detail in request order, via the same
+      // `updateDetailItems` helper `useCreateListItem` uses.
+      queryClient.setQueryData<ListDetailApiResponse>(
+        listsKeys.detail(listId),
+        (current) => updateDetailItems(current, (items) => [...items, ...response.data]),
       );
-      // Update the matching summary's totalItems.
-      queryClient.setQueryData<ListSummariesApiResponse>(listKeys.lists(), (prev) =>
-        prev
-          ? {
-              ...prev,
-              data: prev.data.map((summary) =>
-                summary.id === listId
-                  ? { ...summary, totalItems: summary.totalItems + created.length }
-                  : summary,
-              ),
-            }
-          : prev,
-      );
-      queryClient.invalidateQueries({ queryKey: listKeys.detail(listId) });
+      // Summaries (totalItems) changed; reconcile detail + summaries with the server.
+      queryClient.invalidateQueries({ queryKey: listsKeys.hub() });
+      queryClient.invalidateQueries({ queryKey: listsKeys.detail(listId) });
     },
   });
 }
 ```
 
-Match the exact `listKeys` names and import style already used by `useCreateListItem` in this file. Export `useBulkCreateListItems` from `src/api/hooks/index.ts` and `src/api/index.ts`.
+Note: unlike single-item create there is no optimistic `onMutate` here — the append is a single confirmed action, so we update the cache from the authoritative response and invalidate. Import `BulkCreateListItemsRequest` from `@/lib/types`. Export `useBulkCreateListItems` from `src/api/hooks/index.ts` and `src/api/index.ts`.
 
 - [ ] **Step 7: Add the MSW handler**
 
@@ -669,7 +775,7 @@ describe("distinctRecipeIds", () => {
 
 describe("buildReviewModel", () => {
   it("makes one verbatim row per ingredient, grouped by meal, and routes quick meals to the no-ingredient section", () => {
-    const model = buildReviewModel(board(), { r1: recipeR1 });
+    const model = buildReviewModel(board(), { r1: { status: "loaded", detail: recipeR1 } });
 
     expect(model.recipeGroups).toHaveLength(2); // Wed + Thu, both from r1
     expect(model.recipeGroups[0].label).toBe("Wednesday · Dinner — Sheet Pan Chicken");
@@ -677,25 +783,40 @@ describe("buildReviewModel", () => {
     expect(model.recipeGroups[0].rows.every((r) => r.selected)).toBe(true);
 
     expect(model.noIngredientGroups.map((g) => g.label)).toEqual(["Friday · Dinner — Taco night"]);
+    expect(model.errorGroups).toHaveLength(0);
   });
 
-  it("routes a recipe with empty ingredients and a missing (deleted) recipe to the no-ingredient section", () => {
+  it("routes an empty-ingredient recipe and a 404 (deleted) recipe to the no-ingredient section", () => {
     const b = board();
     b.days[4].slots[2].primary = { id: "e2", role: "primary", sourceType: "recipe", recipeId: "r2", title: "Grandma's stew", imageUrl: null, note: null };
     const model = buildReviewModel(b, {
-      r1: { ...recipeR1, ingredients: [] }, // no ingredients
-      // r2 intentionally absent → treated as deleted/unavailable
+      r1: { status: "loaded", detail: { ...recipeR1, ingredients: [] } }, // no ingredients
+      r2: { status: "missing" }, // 404 → deleted/unavailable
     });
     const labels = model.noIngredientGroups.map((g) => g.label);
     expect(labels).toContain("Wednesday · Dinner — Sheet Pan Chicken");
     expect(labels).toContain("Thursday · Dinner — Grandma's stew");
     expect(model.recipeGroups).toHaveLength(0);
+    expect(model.errorGroups).toHaveLength(0);
+  });
+
+  it("routes a non-404 fetch error to a retryable error group, not the no-ingredient section", () => {
+    const model = buildReviewModel(board(), { r1: { status: "error" } });
+
+    expect(model.errorGroups.map((g) => g.label)).toEqual([
+      "Wednesday · Dinner — Sheet Pan Chicken",
+      "Thursday · Dinner — Sheet Pan Chicken",
+    ]);
+    expect(model.errorGroups.every((g) => g.recipeId === "r1")).toBe(true);
+    expect(model.recipeGroups).toHaveLength(0);
+    // The quick meal still lands in the no-ingredient section; the errored recipe does not.
+    expect(model.noIngredientGroups.map((g) => g.label)).toEqual(["Friday · Dinner — Taco night"]);
   });
 });
 
 describe("toBulkItemsRequest", () => {
   it("sends only selected rows, verbatim, uncategorized, in order", () => {
-    const model = buildReviewModel(board(), { r1: recipeR1 });
+    const model = buildReviewModel(board(), { r1: { status: "loaded", detail: recipeR1 } });
     model.recipeGroups[0].rows[1].selected = false; // deselect "1 tbsp olive oil" on Wed
     const request = toBulkItemsRequest(model);
     expect(request).toEqual({
@@ -757,9 +878,27 @@ export interface NoIngredientGroup {
   manualRows: ReviewRow[]; // starts empty; the UI appends manual rows
 }
 
+// A recipe-backed meal whose detail fetch failed for a non-404 reason. Rendered as a
+// retryable per-meal error row; it contributes no ingredient rows and no manual rows.
+export interface ErrorGroup {
+  key: string;
+  label: string;
+  recipeId: string;
+}
+
+// Per-recipe fetch outcome the UI passes in (built by useRecipeDetails in Task 5):
+//   loaded  → detail available
+//   missing → 404 (deleted recipe) → honest "no recipe ingredients"
+//   error   → non-404 failure → retryable per-meal error row
+export type RecipeResolution =
+  | { status: "loaded"; detail: RecipeDetail }
+  | { status: "missing" }
+  | { status: "error" };
+
 export interface ReviewModel {
   recipeGroups: RecipeGroup[];
   noIngredientGroups: NoIngredientGroup[];
+  errorGroups: ErrorGroup[];
 }
 
 function isRecipeBacked(entry: MealSlotEntry): boolean {
@@ -801,29 +940,50 @@ function groupKey(ref: PlannedEntryRef): string {
 
 export function buildReviewModel(
   board: MealBoard,
-  recipeDetailsById: Record<string, RecipeDetail | undefined>,
+  resolutionsById: Record<string, RecipeResolution | undefined>,
 ): ReviewModel {
   const recipeGroups: RecipeGroup[] = [];
   const noIngredientGroups: NoIngredientGroup[] = [];
+  const errorGroups: ErrorGroup[] = [];
 
   for (const ref of collectPlannedEntries(board)) {
     const key = groupKey(ref);
-    const detail = isRecipeBacked(ref.entry) && ref.entry.recipeId ? recipeDetailsById[ref.entry.recipeId] : undefined;
-    const ingredients = detail?.ingredients ?? [];
 
-    if (isRecipeBacked(ref.entry) && ingredients.length > 0) {
+    // Quick meals (and any entry without a recipe id) never have recipe ingredients.
+    if (!isRecipeBacked(ref.entry) || !ref.entry.recipeId) {
+      noIngredientGroups.push({ key, label: label(ref), manualRows: [] });
+      continue;
+    }
+
+    const resolution = resolutionsById[ref.entry.recipeId];
+
+    // Non-404 failure (or an unresolved id) → retryable error row; never silently dropped
+    // and never treated as "no recipe ingredients".
+    if (resolution === undefined || resolution.status === "error") {
+      errorGroups.push({ key, label: label(ref), recipeId: ref.entry.recipeId });
+      continue;
+    }
+
+    // 404 (deleted recipe) → honest "no recipe ingredients".
+    if (resolution.status === "missing") {
+      noIngredientGroups.push({ key, label: label(ref), manualRows: [] });
+      continue;
+    }
+
+    // Loaded: one verbatim row per ingredient, or the no-ingredient section when empty.
+    const ingredients = resolution.detail.ingredients;
+    if (ingredients.length > 0) {
       recipeGroups.push({
         key,
         label: label(ref),
         rows: ingredients.map((text, index) => ({ id: `${key}#${index}`, text, selected: true })),
       });
     } else {
-      // Quick meals, recipes with no ingredients, and deleted/unavailable recipes.
       noIngredientGroups.push({ key, label: label(ref), manualRows: [] });
     }
   }
 
-  return { recipeGroups, noIngredientGroups };
+  return { recipeGroups, noIngredientGroups, errorGroups };
 }
 
 export function toBulkItemsRequest(model: ReviewModel): BulkCreateListItemsRequest {
@@ -859,12 +1019,14 @@ git commit -m "feat(meals): add recipe-ingredient extraction helpers"
 ## Task 5: Add ingredients review sheet component
 
 **Files:**
+- Create: `frontend/src/components/meals/use-recipe-details.ts` — `useRecipeDetails(recipeIds)` via `useQueries`, returning `{ resolutionsById: Record<string, RecipeResolution>; isLoading: boolean }`.
+- Create: `frontend/src/components/meals/use-recipe-details.test.ts`
 - Create: `frontend/src/components/meals/add-ingredients-sheet.tsx`
 - Create: `frontend/src/components/meals/add-ingredients-sheet.test.tsx`
 
-The sheet takes the visible `MealBoard`, fetches `RecipeDetail` for `distinctRecipeIds(board)` (via `useRecipe` per id, or a small parallel-fetch wrapper), builds the review model, and renders:
+The sheet takes the visible `MealBoard`, resolves `RecipeDetail` for `distinctRecipeIds(board)` through `useRecipeDetails` (which uses TanStack Query's `useQueries` — one hook call for a variable number of recipes, so the Rules of Hooks are never violated; do **not** call `useRecipe` in a loop), builds the review model from the resolutions, and renders:
 
-- A **loading** state while recipe details resolve; a retryable per-recipe error row for a non-404 fetch failure; a 404 recipe treated as "no recipe ingredients".
+- A **loading** state while recipe details resolve; a **retryable per-meal error row** for each `errorGroup` (non-404 fetch failure) whose Retry refetches that recipe; a 404 recipe treated as "no recipe ingredients".
 - Recipe groups with a header label and per-row checkbox (default checked), inline-editable text, and a remove control.
 - A **No recipe ingredients** section listing each quick / empty-ingredient / deleted-recipe meal with an **+ Add item** control that appends an editable, selected manual row scoped to that meal.
 - The grocery-list picker/create (delegated to Task 6's wiring; the sheet exposes `onConfirm(model, targetListId)` and a `create-list` affordance).
@@ -872,7 +1034,9 @@ The sheet takes the visible `MealBoard`, fetches `RecipeDetail` for `distinctRec
 
 - [ ] **Step 1: Write failing component tests**
 
-Create `add-ingredients-sheet.test.tsx` covering (mirror existing meals component-test setup with MSW + seeded recipes):
+First add `use-recipe-details.test.ts`: with MSW, assert `useRecipeDetails(["r1", "r2", "r3"])` maps a loaded recipe to `{ status: "loaded", detail }`, a `GET /recipes/:id` 404 to `{ status: "missing" }`, and a 500 to `{ status: "error" }`.
+
+Then create `add-ingredients-sheet.test.tsx` covering (mirror existing meals component-test setup with MSW + seeded recipes):
 
 ```ts
 it("groups verbatim ingredient rows by meal and lists quick meals under 'No recipe ingredients'", async () => { /* render with a board that has a recipe dinner + a quick dinner; assert group label + verbatim rows; assert the quick meal appears under the no-ingredient heading with an Add item control */ });
@@ -882,6 +1046,8 @@ it("edits and removes rows before append", async () => { /* type into a row, rem
 it("deselects a row so it is excluded from the append", async () => { /* uncheck one row; assert it is not in the submitted items */ });
 
 it("does not auto-generate rows for quick meals", async () => { /* assert the quick meal contributes zero rows until the user clicks Add item */ });
+
+it("shows a retryable error row for a non-404 recipe fetch failure and excludes it from append", async () => { /* make one recipe's GET /recipes/:id return 500; assert a per-meal error row with a Retry control; assert its ingredients are not in the submitted payload; a separate 404 recipe instead appears under 'No recipe ingredients' */ });
 
 it("disables Add to list while offline with honest copy", async () => { /* set offline; assert the confirm button is disabled and the copy is shown */ });
 ```
@@ -895,9 +1061,50 @@ npm test -- --run src/components/meals/add-ingredients-sheet.test.tsx
 
 Expected: FAIL — component does not exist.
 
-- [ ] **Step 3: Implement `add-ingredients-sheet.tsx`**
+- [ ] **Step 3: Implement `useRecipeDetails` and `add-ingredients-sheet.tsx`**
 
-Build the sheet using the existing MobileSheet/Radix dialog primitives used by other meals sheets, the `meal-ingredient-extraction` helpers, and `useRecipe`. Hold the `ReviewModel` in local component state so edit/remove/select/manual-add are local until confirm. Keep the file focused on presentation + local review state; delegate list selection and the append mutation to props from Task 6.
+First create `use-recipe-details.ts` — one `useQueries` call maps each recipe id to a `RecipeResolution` (404 → `missing`, any other error → `error`):
+
+```ts
+import { useQueries } from "@tanstack/react-query";
+import { ApiException } from "@/api/client";
+import { recipesService } from "@/api/services";
+import { recipesKeys } from "@/api/hooks/use-recipes";
+import type { RecipeResolution } from "./meal-ingredient-extraction";
+
+export function useRecipeDetails(recipeIds: string[]): {
+  resolutionsById: Record<string, RecipeResolution>;
+  isLoading: boolean;
+} {
+  const results = useQueries({
+    queries: recipeIds.map((id) => ({
+      queryKey: recipesKeys.detail(id),
+      queryFn: () => recipesService.getRecipe(id),
+    })),
+  });
+
+  const resolutionsById: Record<string, RecipeResolution> = {};
+  let isLoading = false;
+  results.forEach((result, index) => {
+    const id = recipeIds[index];
+    if (result.isPending) {
+      isLoading = true;
+    } else if (result.isSuccess) {
+      resolutionsById[id] = { status: "loaded", detail: result.data.data };
+    } else if (result.error instanceof ApiException && result.error.status === 404) {
+      resolutionsById[id] = { status: "missing" };
+    } else {
+      resolutionsById[id] = { status: "error" };
+    }
+  });
+
+  return { resolutionsById, isLoading };
+}
+```
+
+(`recipesKeys` and `recipesService.getRecipe` already exist; `ApiException` from `@/api/client` exposes `.status`; `result.data` is the `RecipeDetailApiResponse`, so `result.data.data` is the `RecipeDetail`.)
+
+Then build `add-ingredients-sheet.tsx` using the existing MobileSheet/Radix dialog primitives used by other meals sheets, `useRecipeDetails(distinctRecipeIds(board))`, and the `meal-ingredient-extraction` helpers. While `isLoading`, show the loading state; otherwise compute `buildReviewModel(board, resolutionsById)` and hold the resulting `ReviewModel` in local component state so edit/remove/select/manual-add stay local until confirm. Render `errorGroups` as retryable per-meal rows (Retry refetches those recipe queries). Keep the file focused on presentation + local review state; delegate list selection and the append mutation to props from Task 6.
 
 - [ ] **Step 4: Run and verify pass**
 
@@ -912,7 +1119,8 @@ Expected: PASS.
 
 ```bash
 cd frontend
-git add src/components/meals/add-ingredients-sheet.tsx src/components/meals/add-ingredients-sheet.test.tsx
+git add src/components/meals/use-recipe-details.ts src/components/meals/use-recipe-details.test.ts \
+  src/components/meals/add-ingredients-sheet.tsx src/components/meals/add-ingredients-sheet.test.tsx
 git commit -m "feat(meals): add ingredients review sheet"
 ```
 
@@ -1015,6 +1223,8 @@ git commit -m "test(meals): e2e for ingredients-to-grocery-list append"
 
 ## Self-review
 
-- **Spec coverage:** action visibility (Task 6 Step 3), visible-week derivation + verbatim rows + grouping + dedupe fetch (Task 4), quick/empty/deleted → no-ingredient section (Task 4/5), edit/remove/select (Task 5), grocery picker/default-single/create (Task 6), one transactional append + View list (Task 6 + Tasks 1–2), generic bounded family-scoped endpoint with ordered response + rollback (Tasks 1–2), offline honest copy (Task 5), failure-not-success + create-then-fail retry (Task 6), released-contract sequencing (Delivery boundaries + Task 7). All spec sections map to a task.
+- **Spec coverage:** action visibility (Task 6 Step 3), visible-week derivation + verbatim rows + grouping + dedupe fetch (Task 4), quick/empty/deleted → no-ingredient section and non-404 → retryable error group (Task 4/5), edit/remove/select (Task 5), grocery picker/default-single/create (Task 6), one transactional append + View list (Task 6 + Tasks 1–2), generic bounded family-scoped endpoint with ordered response + all-or-nothing prevalidation/rollback (Tasks 1–2), offline honest copy (Task 5), failure-not-success + create-then-fail retry (Task 6), released-contract sequencing (Delivery boundaries + Task 7). All spec sections map to a task.
+- **Prevalidation (spec D5):** `createItemsBulk` resolves/validates every category before mutating the aggregate, and `createItemsBulk_wrongKindCategory_throwsAndAppendsNothing` + the integration rollback assert nothing is written on failure.
+- **BE test coverage vs. acceptance:** success+ordering, exactly-100 (service) and over-100 (controller), blank/overlong text (controller), list-not-in-family 404, valid same-kind / missing / wrong-kind category, and generic to-do append are all present across Tasks 1–2.
 - **Placeholder scan:** no TBD/TODO; `MAX_BULK_ITEMS = 100` is concrete; category status behavior is inherited from the named `resolveCategory` path.
-- **Type consistency:** `BulkCreateListItemsRequest`/`ListItemsApiResponse`/`createItemsBulk`/`useBulkCreateListItems`/`buildReviewModel`/`toBulkItemsRequest`/`hasRecipeBackedEntry`/`distinctRecipeIds` are used with identical names across tasks; BE `createItemsBulk` request/response types match the controller and tests.
+- **Type consistency:** `BulkCreateListItemsRequest`/`ListItemsApiResponse`/`createItemsBulk`/`useBulkCreateListItems`/`buildReviewModel`/`toBulkItemsRequest`/`hasRecipeBackedEntry`/`distinctRecipeIds`/`RecipeResolution`/`ErrorGroup`/`useRecipeDetails` are used with identical names across tasks; the FE hook uses the real `listsKeys.hub()`/`listsKeys.detail()` keys and `assertOnlineForWrite`; BE `createItemsBulk` request/response types match the controller and tests.
