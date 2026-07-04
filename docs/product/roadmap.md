@@ -79,7 +79,7 @@ Recommended order:
 `Photos` remains deferred; use the production dogfood pass to decide whether the next slice should be more module depth or mobile workflow polish.
 
 Captured follow-on story (spec + plan ready, not yet started):
-- [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) — add reviewed recipe ingredients from the visible Meals week to a chosen grocery list, via a new generic BE bulk list-item append endpoint. [spec](../superpowers/specs/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · [plan](../superpowers/plans/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · BE #68, FE #277 (FE queued on the BE release).
+- [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) — add reviewed recipe ingredients from the visible Meals week to a chosen grocery list, via a new generic BE bulk list-item append endpoint. [spec](../superpowers/specs/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · [plan](../superpowers/plans/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · BE #68 → PR #69 open, FE #277 (queued on the BE release).
 
 ### Mobile UX polish backlog
 
