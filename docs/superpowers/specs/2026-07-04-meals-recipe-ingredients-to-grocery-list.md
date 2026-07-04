@@ -167,7 +167,7 @@ Request body:
 }
 ```
 
-- `items`: required, non-empty, at most `MAX_BULK_ITEMS` (**100**, a named tunable constant chosen to cover a full week of recipe-backed dinners with extras while bounding payload).
+- `items`: required, non-empty, at most `MAX_BULK_ITEMS` (**100**, a named tunable constant chosen to cover a full week of recipe-backed dinners with extras while bounding payload). Enforced by `@Size` on the request DTO and re-checked by a service-level guard (defense in depth).
 - Each item mirrors the existing `CreateListItemRequest`: `text` reuses the existing single-item text validation (trimmed, non-blank, existing max length); `categoryId` is optional and nullable.
 - The endpoint is generic and carries **no** meal, recipe, or grocery-specific logic (D6). It works for any list kind.
 
@@ -177,6 +177,7 @@ Behavior:
 - **Category validation:** each non-null `categoryId` must belong to the same family and match the target list's kind, reusing the existing single-item category-assignment validation and its status codes (wrong-kind → `400`; not found in family → `404`). Before validating any non-null category assignment, acquire the `(familyId, listKind)` catalog lock, consistent with the serialization rule in the Lists family-managed-categories design. When no item carries a category (the ingredient flow's default), no catalog lock is required.
 - **Transaction:** validate the whole request first, then insert all items in **request order**, appended after the list's existing items. Any validation or persistence failure rolls back the entire batch — nothing is written (D5).
 - **Response:** `201 Created` with the existing `ApiResponse<T>` envelope wrapping `ListItem[]` — the created items only, in the same order as the request `items`. No `Location` header (multiple resources created).
+- **Read-back order:** the bulk **response** is the authoritative request-ordered result. Persisted list items order by `createdAt` with an `id` tie-break (`@OrderBy("createdAt ASC, id ASC")`), so a later `GET /api/lists/{id}` is deterministic and stable — but items created in the same bulk request can tie on `createdAt` and are **not** guaranteed to read back in request order. The FE renders the appended rows from the bulk response and must not assume the reloaded list preserves request order.
 
 Status summary:
 
@@ -254,7 +255,7 @@ Against the published backend release, verify a family can:
 2. Open **Add ingredients**, see rows grouped by meal with verbatim ingredient text, and see the quick meal under "no recipe ingredients."
 3. Edit one row and remove one row.
 4. Select a grocery list (or create one when none exists).
-5. **Add to list** once, see success and **View list**, and find exactly the selected rows appended to that grocery list in order.
+5. **Add to list** once, see success and **View list**, and find the selected rows present in that grocery list. (The bulk response preserves request order; assert the reloaded list *contains* the selected rows — not a strict order, since same-batch items can tie on `createdAt`.)
 
 ## Delivery Strategy
 

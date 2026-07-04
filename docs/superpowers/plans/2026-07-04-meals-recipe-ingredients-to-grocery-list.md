@@ -45,7 +45,7 @@ The bulk endpoint must not replace the existing single-item `POST /api/lists/{li
 - The target is a grocery list only: default to the single grocery list when exactly one exists, choose among several, or create one via `POST /api/lists` `{ name, kind: "grocery" }`. Non-grocery lists are never offered.
 - Appending is one confirmed action → `POST /api/lists/{listId}/items/bulk` with the selected rows (uncategorized in v1). Success updates cache and offers **View list**.
 - Offline disables **Add to list** and **Create grocery list** with honest copy; reads still work from cache. A failed or partial append is never shown as success; a created-then-failed-append reports failure and offers retry.
-- Backend endpoint is generic, family-scoped, bounded (`MAX_BULK_ITEMS = 100`), validates optional categories against family + list kind by reusing existing item-create validation, returns created items in request order, and rolls back entirely on any failure. No Flyway migration.
+- Backend endpoint is generic, family-scoped, bounded (`MAX_BULK_ITEMS = 100`, a named constant enforced at the request DTO and re-checked by a service-level guard), validates optional categories against family + list kind by reusing existing item-create validation, returns created items **in the bulk response** in request order, and rolls back entirely on any failure. Persisted read-back order is deterministic (`@OrderBy("createdAt ASC, id ASC")`) but not guaranteed to equal request order for same-instant items. No Flyway migration.
 - Backend JSON stays in the existing `ApiResponse<T>` envelope; wire values already lowercase.
 
 ## Execution issue mapping
@@ -472,8 +472,12 @@ mockMvc.perform(post("/api/lists/{id}/items/bulk", groceryListId)
 mockMvc.perform(get("/api/lists/{id}", groceryListId)
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.items[0].text").value("2 chicken breasts"))
-        .andExpect(jsonPath("$.data.items[1].text").value("1 tbsp olive oil"));
+        // Read-back order is deterministic (@OrderBy "createdAt ASC, id ASC") but not
+        // guaranteed to equal request order — same-batch items can tie on createdAt.
+        // Assert membership, not position. (Request order is asserted on the POST response.)
+        .andExpect(jsonPath("$.data.items.length()").value(2))
+        .andExpect(jsonPath("$.data.items[*].text",
+                containsInAnyOrder("2 chicken breasts", "1 tbsp olive oil")));
 
 // Generic proof: the same endpoint appends to a to-do list (no grocery coupling).
 mockMvc.perform(post("/api/lists/{id}/items/bulk", todoListId)
@@ -1198,7 +1202,7 @@ Against the published backend release (resolved by CI), seed a family via `regis
 2. Open **Add ingredients**; assert rows grouped by meal with verbatim ingredient text and the quick meal under **No recipe ingredients**.
 3. Edit one row and remove one row.
 4. Ensure a grocery list exists (create one in-flow if none); confirm **Add to list** once.
-5. Assert success + **View list**, then open the grocery list and assert exactly the selected rows appended in order.
+5. Assert success + **View list**, then open the grocery list and assert the selected rows are present (the bulk response preserves request order; do **not** assert strict read-back order — same-batch items can tie on `createdAt`).
 
 - [ ] **Step 2: Run E2E locally against the released backend**
 
