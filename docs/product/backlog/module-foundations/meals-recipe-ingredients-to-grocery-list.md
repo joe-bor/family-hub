@@ -6,7 +6,9 @@ status: planned
 priority: P2
 created: 2026-07-04
 updated: 2026-07-04
-issues: []
+issues:
+  - https://github.com/joe-bor/family-hub-api/issues/68
+  - https://github.com/joe-bor/FamilyHub/issues/277
 prs: []
 spec: ../../../superpowers/specs/2026-07-04-meals-recipe-ingredients-to-grocery-list.md
 plan: ../../../superpowers/plans/2026-07-04-meals-recipe-ingredients-to-grocery-list.md
@@ -63,4 +65,4 @@ Plan: [Meals Recipe Ingredients To Grocery List Implementation Plan](../../../su
 - Create the backend and frontend execution Issues only after this root implementation plan passes spec-to-plan review.
 - Backend delivery adds the generic bulk append endpoint and must publish it in a `family-hub-api` release before frontend released-contract E2E depends on it. The endpoint is additive — no Flyway migration.
 - Frontend unit/component work (extraction, review UI) can proceed against MSW before the backend release; the released ingredient flow and its E2E consume the published backend semver.
-- Record Issue and PR links in this frontmatter as they are created.
+- Execution Issues: BE [family-hub-api#68](https://github.com/joe-bor/family-hub-api/issues/68) (bulk append endpoint) and FE [FamilyHub#277](https://github.com/joe-bor/FamilyHub/issues/277) (Meals action + review sheet, queued on the BE release). Record PR links here as they land.
