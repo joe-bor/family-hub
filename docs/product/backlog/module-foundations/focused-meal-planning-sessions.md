@@ -2,17 +2,23 @@
 id: focused-meal-planning-sessions
 title: Focused meal planning sessions
 epic: module-foundations
-status: planned
+status: done
 priority: P2
 created: 2026-06-28
-updated: 2026-06-28
+updated: 2026-07-04
 issues:
   - https://github.com/joe-bor/family-hub-api/issues/64
   - https://github.com/joe-bor/FamilyHub/issues/262
-prs: []
+prs:
+  - BE PR #65
+  - BE release v1.8.0
+  - FE PR #273
+  - FE release v0.3.21
 spec: ../../../superpowers/specs/2026-06-28-focused-meal-planning-sessions.md
 plan: ../../../superpowers/plans/2026-06-28-focused-meal-planning-sessions.md
 ---
+
+**Shipped** in backend `v1.8.0` and frontend `0.3.21` — BE PR #65, FE PR #273, FE release PR #274.
 
 ## Context
 
@@ -53,26 +59,26 @@ Plan: [Focused Meal Planning Sessions Implementation Plan](../../../superpowers/
 
 ## Acceptance Criteria
 
-- [ ] A user can start a focused planning session from the visible editable Meals week.
-- [ ] A user can choose to fill empty dinners, all empty slots, or all empty slots on selected days.
-- [ ] A user can use the same flow on current and future weeks, including a blank future week.
-- [ ] Past weeks do not allow planning sessions.
-- [ ] The app shows a clear queue of empty slots to fill.
-- [ ] The meal tray remains available across multiple slot choices.
-- [ ] A user can fill at least three slots before saving without opening three separate slot composers.
-- [ ] Draft choices do not change the real board until saved.
-- [ ] A user can skip a slot, remove a draft choice, change a draft choice, and cancel the whole session.
-- [ ] Canceling the session leaves the board unchanged.
-- [ ] Saving commits the drafted meals to the existing Meals board.
-- [ ] Existing planned meals are not overwritten by the default flow.
-- [ ] Save-time conflicts are detected and never silently overwrite filled slots.
-- [ ] On save conflict, the user can skip conflicted drafts and save the rest, keep editing, or cancel the save attempt without discarding the planning session.
-- [ ] Quick meals and recipe-backed meals both work in the session.
-- [ ] The session is meaningfully faster than manually opening each empty slot one at a time.
+- [x] A user can start a focused planning session from the visible editable Meals week.
+- [x] A user can choose to fill empty dinners, all empty slots, or all empty slots on selected days.
+- [x] A user can use the same flow on current and future weeks, including a blank future week.
+- [x] Past weeks do not allow planning sessions.
+- [x] The app shows a clear queue of empty slots to fill.
+- [x] The meal tray remains available across multiple slot choices.
+- [x] A user can fill at least three slots before saving without opening three separate slot composers.
+- [x] Draft choices do not change the real board until saved.
+- [x] A user can skip a slot, remove a draft choice, change a draft choice, and cancel the whole session.
+- [x] Canceling the session leaves the board unchanged.
+- [x] Saving commits the drafted meals to the existing Meals board.
+- [x] Existing planned meals are not overwritten by the default flow.
+- [x] Save-time conflicts are detected and never silently overwrite filled slots.
+- [x] On save conflict, the user can skip conflicted drafts and save the rest, keep editing, or cancel the save attempt without discarding the planning session.
+- [x] Quick meals and recipe-backed meals both work in the session.
+- [x] The session is meaningfully faster than manually opening each empty slot one at a time.
 
 ## Delivery Notes
 
 - Create the backend and frontend execution Issues only after this root implementation plan passes spec-to-plan review.
-- Backend delivery adds the batch-save contract first and must publish a backend release before frontend released-contract E2E depends on it.
-- Frontend mock-backed unit/component work may start before that release, but live E2E must record the tested backend semver.
+- Backend delivery added the batch-save contract in BE PR #65 and published it in `family-hub-api` `v1.8.0` on 2026-07-01 before frontend released-contract E2E depends on it.
+- Frontend delivery shipped in FE PR #273 and was published in `family-hub` `0.3.21` via FE release PR #274 on 2026-07-04.
 - Record Issue and PR links in this frontmatter when they exist.

@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-06-28
+Last updated: 2026-07-04
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -36,12 +36,15 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Optional haptic feedback (Vibration API)](backlog/mobile-ux/optional-haptics.md) · FE #235, PR #236 · `0.3.18` (bottom-sheet-snap + destructive-confirm pulses deferred post-v1)
 - [Home organizer summary (state line + "since you last opened" feed)](backlog/mobile-ux/home-organizer-summary.md) · FE #239, PR #252 · `0.3.19`
 - Shared floating "+" add button standardized across module create flows (FAB stays viewport-anchored through module-switch fades) · FE #256, #258 · `0.3.19`
+- Quick-capture friction fixes — Lists multi-add keep-open sheet, 5-minute calendar time picker with duration preservation, and event Location input · FE PR #276 · `0.3.21`
 
 ### Module foundations
 
 - [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) · FE #173, PR #175, BE #47, PR #48; current shipped chores contract
 - [Chores core loop](backlog/module-foundations/chores-core-loop.md) · FE #158, PR #159, BE #41, historical shipped one-off release
 - [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) · FE #163, PR #164, BE #44, PR #45
+- [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) · BE #60, PR #63, `v1.7.0`; FE #261, PR #268, `0.3.20`
+- [Focused meal planning sessions](backlog/module-foundations/focused-meal-planning-sessions.md) · BE #64, PR #65, `v1.8.0`; FE #262, PR #273, `0.3.21`
 
 ## Active epics
 
@@ -51,15 +54,13 @@ Current story:
 - [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — Recipes/Meals implementation merged and released in FE `0.3.11`; Photos deferred
 
 Most recent shipped story:
-- [Chores recurring routines](backlog/module-foundations/chores-recurring-routines.md) — replaces the initial one-off chores release with recurring day / week / month routines
+- [Focused meal planning sessions](backlog/module-foundations/focused-meal-planning-sessions.md) — visible-week meal-planning sessions with draft/review/save flow, quick and recipe-backed meals, and save-conflict handling
 
 Active execution:
-- `Recipes` frontend foundation — FE #183 closed by PR #185; consolidated fixes in PR #191
-- `Meals` frontend foundation — FE #184 closed by PR #187; consolidated fixes in PR #191
-- FE release PR #186 for `family-hub` `v0.3.11` merged 2026-06-09
+- FE release PR #274 published `family-hub` `0.3.21` on 2026-07-04, including focused meal planning, quick-capture friction fixes, and frontend bundle splitting.
 
 Next recommended product focus:
-- Continue from the Mobile UX queue below. The Home organizer summary shipped in `0.3.19`, so the next work should either add reminders (Notifications) or pick up the planned Lists family-managed categories (BE-first, spec + plan ready), rather than start a new module.
+- Run a phone-first production dogfood pass across the newly shipped Meals planning, Lists multi-add, calendar time/location capture, and existing create/edit/complete flows. After that, pick the next Mobile UX story: Notifications for reminder value, or calendar gestures (drag-to-create / pinch-to-zoom).
 
 Exit criterion for this phase:
 - Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
@@ -68,15 +69,14 @@ Recommended order:
 1. `Recipes` — reusable household recipe library and `Add to Meals` handoff; shipped in FE `0.3.11`
 2. `Meals` — simple week-ahead planning; shipped in FE `0.3.11`
 3. Mobile-first polish of current organizer workflows — shipped through FE `0.3.14`
-4. Remaining Mobile UX stories — native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18` and the Home organizer summary shipped in `0.3.19`; remaining picks are Notifications (reminder value) or calendar gestures (drag-to-create / pinch-to-zoom)
+4. Remaining Mobile UX stories — native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18`, Home organizer summary shipped in `0.3.19`, and quick-capture friction fixes shipped in `0.3.21`; remaining picks are Notifications (reminder value) or calendar gestures (drag-to-create / pinch-to-zoom)
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
 
 ### Module foundations follow-on
 
-- [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) — serialized family-owned category catalogs shared by list kind; editable Grocery/To-do starters; General remains flat by default but can use family-created categories; empty catalogs cannot group; atomic delete-to-Uncategorized; explicit batched reorder; rollback-compatible V17. BE-first and safe to execute in parallel with current FE-only work; FE waits for and automatically resolves the latest published BE contract without falling back to unreleased `latest`. [Spec](../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md) · [Plan](../superpowers/plans/2026-06-22-lists-family-managed-categories.md).
-- [Focused meal planning sessions](backlog/module-foundations/focused-meal-planning-sessions.md) — focused `Meals` planning flow for the visible editable week: choose empty-slot scope, draft multiple quick or recipe-backed meals locally, review, and save through an atomic backend batch contract without overwriting existing meals. [Spec](../superpowers/specs/2026-06-28-focused-meal-planning-sessions.md) · [Plan](../superpowers/plans/2026-06-28-focused-meal-planning-sessions.md).
+No active module-foundations follow-on is selected after focused meal planning shipped in `0.3.21`. `Photos` remains deferred; use the production dogfood pass to decide whether the next slice should be more module depth or mobile workflow polish.
 
 ### Mobile UX polish backlog
 
@@ -91,6 +91,8 @@ Shipped — home organizer (kept here for the future-sibling pointers):
 - [Home organizer summary](backlog/mobile-ux/home-organizer-summary.md) shipped in `0.3.19` (FE #252) — see the "Mobile shell + home" shipped list above. The **backend activity log** and the **AI day-summary / overload-warnings** remain explicit future siblings that consume the same client-side `ActivityItem` seam.
 
 Native-feel polish (transitions/press feedback, back-button, haptics) shipped in `0.3.17`–`0.3.18` — see the Shipped list above.
+
+Quick-capture friction fixes shipped in `0.3.21` — Lists multi-add, calendar time-picker duration preservation, and event Location input are no longer open in the mobile polish queue.
 
 Recommended additions to shape before implementation:
 - Device-member association is the likely successor to Preferences if member-focused defaults become important; seed captured in [Sidebar structure + family preferences surface](backlog/mobile-ux/sidebar-settings-story.md#new-ideas-surfaced-backlog-seeds-not-in-scope).

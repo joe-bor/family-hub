@@ -1,7 +1,7 @@
 # Quick-Capture Friction Fixes
 
 **Date:** 2026-07-01
-**Status:** Approved design
+**Status:** Shipped in `family-hub` `0.3.21` (FE PR #276)
 **Owner:** Family Hub product / planning
 **Origin:** Mobile UX clunkiness review (2026-07-01), theme selected by Joe: quick-capture friction
 
@@ -17,7 +17,7 @@ Frontend-only. No backend changes, no new endpoints, no schema changes.
 
 ## Explicitly out of scope
 
-- **Meals plan-sheet redesign** (form-first layout, Image URL field, recipe search) — adjacent to the in-flight [Focused meal planning sessions](../../product/backlog/module-foundations/focused-meal-planning-sessions.md) story (FE #262, BE contract released in `family-hub-api` `v1.8.0`). Revisit after #262 ships.
+- **Meals plan-sheet redesign** (form-first layout, Image URL field, recipe search) — adjacent to the shipped [Focused meal planning sessions](../../product/backlog/module-foundations/focused-meal-planning-sessions.md) story (FE #262, BE `v1.8.0`, FE `0.3.21`). Still a separate follow-up, not part of this quick-capture release.
 - **Tap-empty-slot / drag-to-create event creation** — covered by the planned [drag-to-create](../../product/backlog/mobile-ux/drag-to-create.md) story.
 - Inline always-visible list composer (AnyList-style) — rejected in favor of the smaller keep-open-sheet change.
 - Native `input[type=time]` and time-slot-list pickers — rejected; keep the app's wheel component.
@@ -63,7 +63,7 @@ Failure handling: if the create mutation fails, the sheet stays open with the ty
 
 **Components:** `src/components/calendar/components/event-form.tsx`, `event-form-modal.tsx` (+ tests).
 
-- The `Add description` progressive-disclosure expander is renamed **`Add details`** and reveals two fields: **Location** (single-line text input, max 200 chars, placeholder "Where?") above **Description** (unchanged).
+- The `Add description` progressive-disclosure expander is renamed **`Add details`** and reveals two fields: **Location** (single-line text input, max 255 chars — matching the existing Zod schema and BE `@Size(max=255)`, placeholder "Where?") above **Description** (unchanged).
 - `location` wires into the existing create/update payloads — `CreateEventRequest.location` / `UpdateEventRequest.location` already exist in the types and Zod schema; this adds only the missing input and form plumbing.
 - When **editing** an event that already has a location or description, the details section starts **expanded** so existing data is never hidden behind the expander.
 - Detail views already render location; no change there.

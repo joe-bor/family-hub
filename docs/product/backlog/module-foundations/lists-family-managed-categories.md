@@ -2,16 +2,17 @@
 id: lists-family-managed-categories
 title: Lists family-managed categories
 epic: module-foundations
-status: in-progress
+status: done
 priority: P2
 created: 2026-06-22
-updated: 2026-06-27
+updated: 2026-07-01
 issues:
   - BE #60
   - FE #261
 prs:
   - BE PR #63
   - BE release PR #62
+  - FE PR #268
 spec: ../../../superpowers/specs/2026-06-22-lists-family-managed-categories-design.md
 plan: ../../../superpowers/plans/2026-06-22-lists-family-managed-categories.md
 ---
@@ -72,6 +73,6 @@ Design: [Lists family-managed categories](../../../superpowers/specs/2026-06-22-
 ## Delivery Notes
 
 - Create the BE and FE execution Issues only after the root implementation plan exists.
-- BE implementation shipped in BE PR #63 and was published as `family-hub-api` `v1.7.0` via BE release PR #62 on 2026-06-27. FE #261 consumes that released contract.
+- BE implementation shipped in BE PR #63 and was published as `family-hub-api` `v1.7.0` via BE release PR #62 on 2026-06-27. FE #261 consumed that released contract and shipped in FE PR #268 as `family-hub` `0.3.20` on 2026-07-01.
 - Normal FE CI discovers the latest published backend release automatically and must fail closed if it is unavailable.
 - Record Issue and PR links in this frontmatter when they exist.

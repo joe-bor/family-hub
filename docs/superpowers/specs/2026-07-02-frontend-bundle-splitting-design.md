@@ -1,7 +1,7 @@
 # Frontend Bundle Splitting & Cold-Load Reduction
 
 **Date:** 2026-07-02
-**Status:** Approved design, ready for implementation plan
+**Status:** Shipped in `family-hub` `0.3.21` (FE PR #275)
 **Owner:** Family Hub frontend
 **Origin:** 2026-07-01 whole-product review follow-up. A production build revealed the main entry chunk is 640 kB (195 kB gzip) and the `react-vendor` split silently produces a 0 kB chunk — React/React-DOM leaked into the entry.
 
@@ -84,7 +84,7 @@ The script:
 
 ## Rollout
 
-Standard FE flow: feature branch `perf/bundle-splitting` in `joe-bor/FamilyHub`, PR to `main`, regular merge commit. `perf:` commits → patch release via release-please. No env vars, no migrations, no droplet changes. Users see only a faster cold load; the service worker precache manifest updates automatically on the next deploy.
+Shipped through FE PR #275 and published in `family-hub` `0.3.21`. No env vars, no migrations, no droplet changes. Users see only a faster cold load; the service worker precache manifest updates automatically on deploy.
 
 ## Verification checklist (for the PR)
 
