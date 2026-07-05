@@ -678,9 +678,10 @@ export function useBulkCreateListItems(listId: string) {
         listsKeys.detail(listId),
         (current) => updateDetailItems(current, (items) => [...items, ...response.data]),
       );
-      // Summaries (totalItems) changed; reconcile detail + summaries with the server.
+      // Summaries (totalItems) changed; invalidate the hub only — matches the sibling item
+      // hooks and keeps the appended rows rendered from the authoritative response (no forced
+      // detail refetch, which would reorder them into server read-back order).
       queryClient.invalidateQueries({ queryKey: listsKeys.hub() });
-      queryClient.invalidateQueries({ queryKey: listsKeys.detail(listId) });
     },
   });
 }
