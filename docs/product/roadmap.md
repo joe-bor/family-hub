@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -73,6 +73,11 @@ Recommended order:
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
+
+### Large-screen / tablet UX
+
+Captured story:
+- [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — design-heavy A1 ambient Home direction for horizontal tablet and 20-inch-plus displays. [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md)
 
 ### Module foundations follow-on
 
