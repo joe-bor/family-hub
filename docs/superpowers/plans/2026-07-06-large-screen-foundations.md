@@ -4,7 +4,7 @@
 
 **Goal:** Slim the desktop app header (removing the fake weather chip) and merge Calendar's two chrome rows into one toolbar, so large screens spend at most ~160px on chrome above module content.
 
-**Architecture:** Two focused changes inside the existing FE component tree. (1) `AppHeader`'s desktop branch collapses from a two-line block plus weather into one compact row. (2) The per-view `CalendarNavigation` row moves out of `DailyCalendar` / `WeeklyCalendar` / `MonthlyCalendar` and into `CalendarModule`'s existing desktop toolbar row, using the shared `getContextLabel()` for the range label. Mobile branches are untouched. The other modules (Lists, Chores, Meals, Recipes) already render a single heading row, so they satisfy the one-toolbar-row rule without changes; their content-width work belongs to their own stories.
+**Architecture:** Two focused changes inside the existing FE component tree. (1) `AppHeader`'s desktop branch collapses from a two-line block plus weather into one compact row. (2) The per-view `CalendarNavigation` row moves out of `DailyCalendar` / `WeeklyCalendar` / `MonthlyCalendar` and into `CalendarModule`'s existing desktop toolbar row, using the shared `getContextLabel()` for the range label. Mobile branches are untouched. Lists, Chores, and Recipes already render a single heading row and need no changes. **Meals does not** — it stacks a second chrome row ("Fill empty slots", `meals-view.tsx:464-485`) below its `WeekHeader`; that merge is owned by the Meals module story (its spec already specifies "week title, range navigation, and Fill empty slots in one toolbar row"), not this plan.
 
 **Tech Stack:** React 19, Tailwind CSS v4, Zustand, Vitest + Testing Library. Repo: `frontend/` (FE repo), branch `feat/large-screen-module-polish`.
 
@@ -12,6 +12,12 @@
 **Story:** `docs/product/backlog/large-screen-ux/large-screen-foundations.md`
 
 **Scope note:** The spec's content-width table (§3.3) is normative guidance enacted by the per-module stories; this plan implements the shared chrome (§3.1, §3.2) and breakpoint semantics (§3.4, no code needed — `useIsMobile()` at 768px already exists and nothing new activates below 1024px except the chrome itself, which applies to all non-mobile widths as today).
+
+**Spec ACs deliberately deferred by this plan** (state these in the PR body so contract review doesn't stall):
+
+- *"No module index screen renders as a narrow centered column"* — Recipes (`max-w-3xl`), Lists (`max-w-2xl`), and Meals (`max-w-5xl`) stay centered columns until their module stories land. This AC is checked off at epic level, not by this PR.
+- *"One toolbar row per module on `lg+`"* — satisfied for Calendar, Lists, Chores, Recipes; **Meals keeps its second "Fill empty slots" row** until the Meals story merges it into the WeekHeader row.
+- Spec §3.2's "collapse behind an overflow control rather than wrapping" for 769-1023px is deviated from: this plan uses `flex-wrap` in the tablet range as an accepted tradeoff (an overflow menu is not worth building for a 255px-wide window). The `lg+` AC is unaffected; Task 4 must confirm nothing wraps at 1024px+.
 
 ---
 
@@ -277,18 +283,25 @@ with:
 
 (`flex-wrap` lets the pills drop to a second line in the 769-1023px range; at `lg+` all three fit one row, which is what the AC measures.)
 
-Then delete the now-redundant `navigationProps` spread from the desktop view rendering: `DailyCalendar`, `WeeklyCalendar`, and `MonthlyCalendar` no longer receive `{...navigationProps}` (keep `onDateSelect={selectDateAndSwitchToDaily}` on `MonthlyCalendar`). Delete the `navigationProps` object itself and use `goToPrevious` / `goToNext` / `goToToday` / `isViewingToday` directly in the toolbar.
+Then delete the now-redundant `navigationProps` spread from **all four** desktop render sites — `DailyCalendar`, `WeeklyCalendar`, `MonthlyCalendar`, **and the `default:` case** (`calendar-module.tsx:482`, which also spreads onto `WeeklyCalendar`) — keeping `onDateSelect={selectDateAndSwitchToDaily}` on `MonthlyCalendar`. Delete the `navigationProps` object itself and use `goToPrevious` / `goToNext` / `goToToday` / `isViewingToday` directly in the toolbar.
 
 - [ ] **Step 5: Remove the per-view navigation headers**
 
 In each of `daily-calendar.tsx`, `weekly-calendar.tsx`, `monthly-calendar.tsx`:
 
-1. Delete the `CalendarNavigation` import and the `{/* Navigation header */}` JSX block that renders it.
+1. Delete the `CalendarNavigation` import and the JSX that renders it. In
+   `daily-calendar.tsx` and `weekly-calendar.tsx` that is the
+   `{/* Navigation header */}` block with its bordered wrapper div; in
+   `monthly-calendar.tsx` the `<CalendarNavigation ... />` is rendered bare
+   (lines ~149-155) with no wrapper or comment — delete just the element.
 2. Remove `onPrevious`, `onNext`, `onToday`, `isViewingToday` from the component's props interface and destructuring.
-3. Delete any label-formatting helper that is now unused (e.g. `formatWeekLabel` in `weekly-calendar.tsx`) — confirm with a grep before deleting:
+3. Delete the label-formatting helpers that become unused: `formatWeekLabel`
+   (`weekly-calendar.tsx`), `formatDateLabel` (`daily-calendar.tsx:138-145`),
+   and `formatMonthLabel` (`monthly-calendar.tsx:140-145`) — confirm with a
+   grep before deleting:
 
 ```bash
-grep -rn "formatWeekLabel\|CalendarNavigation" src/components/calendar/views/
+grep -rn "formatWeekLabel\|formatDateLabel\|formatMonthLabel\|CalendarNavigation" src/components/calendar/views/
 ```
 
 In `calendar-navigation.tsx`, change the wrapper class from
@@ -369,16 +382,14 @@ git add -A src/ && git commit -m "fix(calendar): clean up after toolbar merge"
 
 **Files:** none (screenshots recorded for the PR)
 
-The spec requires screenshot review, not just green tests. The app needs the real backend locally. **Gotcha (project memory):** the compose `latest` default is stale — pin `BE_IMAGE_TAG` to the latest published BE release.
+The spec requires screenshot review, not just green tests. The app needs the real backend locally. The only compose file is `docker-compose.e2e.yml`, and it hard-fails without `BE_IMAGE_TAG` (`image: ...:${BE_IMAGE_TAG:?...}`) — pin it to the latest published BE release.
 
 - [ ] **Step 1: Start backend + dev server**
 
 ```bash
-BE_IMAGE_TAG=$(gh release list --repo joe-bor/family-hub-api --limit 1 --json tagName -q '.[0].tagName') docker compose up -d
+BE_IMAGE_TAG=$(gh release list --repo joe-bor/family-hub-api --limit 1 --json tagName -q '.[0].tagName') docker compose -f docker-compose.e2e.yml up -d
 npm run dev
 ```
-
-(Use the repo's documented compose file/flow if it differs; the point is a released BE tag, not `latest`.)
 
 - [ ] **Step 2: Measure and screenshot at 1440x900**
 
@@ -386,7 +397,9 @@ With the browser/preview tooling at 1440x900, log in to the seeded test family a
 
 - Header row height ≤ 64px (inspect the `<header>` bounding box).
 - Header + calendar toolbar combined ≤ ~160px above the time grid.
-- Toolbar is one row: switcher, ‹ Today · range label ›, member pills.
+- Toolbar is one row: switcher, ‹ Today · range label ›, member pills —
+  confirm nothing wraps to a second line at exactly 1024px width (the
+  `flex-wrap` tradeoff is allowed only below 1024px).
 - No weather chip anywhere.
 - Repeat the toolbar/header check on Day, Month, Schedule (Schedule now has Previous/Today/Next), and glance at Lists/Chores/Meals/Recipes to confirm the slim header applies and nothing overlaps.
 
@@ -418,7 +431,11 @@ Plan: https://github.com/joe-bor/family-hub/blob/main/docs/superpowers/plans/202
 
 - Desktop app header: one compact row, fake weather chip removed
 - Calendar desktop chrome: view switcher + date navigation + member filters in one toolbar row; per-view navigation headers removed; Schedule view gains navigation
+- Toolbar touch targets grown to 44px (nav buttons, view switcher, filter pills)
+- Copy change: desktop calendar range labels now use the shared short context label (e.g. "Sun, Jul 5" instead of "Sunday, July 5, 2026"), matching mobile
 - Mobile shell and mobile calendar toolbar unchanged
+
+Deferred spec ACs (owned by later stories in this epic): module content-width discipline (Lists/Meals/Recipes stay centered columns for now) and the Meals second "Fill empty slots" row (merged by the Meals story).
 
 Visual QA screenshots attached (1440x900 week/schedule, 375x812 mobile baseline).
 EOF
