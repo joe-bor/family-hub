@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -45,6 +45,7 @@ Use this document as a summary/index. Story status lives in `docs/product/backlo
 - [Lists simple shared checklists](backlog/module-foundations/lists-simple-shared-checklists.md) · FE #163, PR #164, BE #44, PR #45
 - [Lists family-managed categories](backlog/module-foundations/lists-family-managed-categories.md) · BE #60, PR #63, `v1.7.0`; FE #261, PR #268, `0.3.20`
 - [Focused meal planning sessions](backlog/module-foundations/focused-meal-planning-sessions.md) · BE #64, PR #65, `v1.8.0`; FE #262, PR #273, `0.3.21`
+- [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) · BE #68, PR #69, `v1.9.0`; FE #277, PR #279, `0.3.22`
 
 ## Active epics
 
@@ -54,13 +55,13 @@ Current story:
 - [Lists / Chores / Meals / Photos module foundations](backlog/module-foundations/module-surface-foundations.md) — Recipes/Meals implementation merged and released in FE `0.3.11`; Photos deferred
 
 Most recent shipped story:
-- [Focused meal planning sessions](backlog/module-foundations/focused-meal-planning-sessions.md) — visible-week meal-planning sessions with draft/review/save flow, quick and recipe-backed meals, and save-conflict handling
+- [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) — reviewed recipe ingredient rows from the visible Meals week append to a chosen grocery list through the released generic bulk Lists endpoint
 
-Active execution:
-- FE release PR #274 published `family-hub` `0.3.21` on 2026-07-04, including focused meal planning, quick-capture friction fixes, and frontend bundle splitting.
+Latest release:
+- FE release `family-hub-v0.3.22` published on 2026-07-06, including the Meals ingredients-to-grocery-list flow over the released BE `v1.9.0` bulk list-item append endpoint.
 
 Next recommended product focus:
-- Run a phone-first production dogfood pass across the newly shipped Meals planning, Lists multi-add, calendar time/location capture, and existing create/edit/complete flows. After that, pick the next Mobile UX story: Notifications for reminder value, or calendar gestures (drag-to-create / pinch-to-zoom).
+- Run a phone-first production dogfood pass across the newly shipped Meals planning, ingredients-to-grocery-list flow, Lists multi-add, calendar time/location capture, and existing create/edit/complete flows. After that, pick the next Mobile UX story: Notifications for reminder value, or calendar gestures (drag-to-create / pinch-to-zoom).
 
 Exit criterion for this phase:
 - Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
@@ -89,8 +90,8 @@ Captured stories:
 
 `Photos` remains deferred; use the production dogfood pass to decide whether the next slice should be more module depth or mobile workflow polish.
 
-Captured follow-on story (BE shipped `v1.9.0`; FE PR #279 open):
-- [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) — add reviewed recipe ingredients from the visible Meals week to a chosen grocery list, via a new generic BE bulk list-item append endpoint. [spec](../superpowers/specs/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · [plan](../superpowers/plans/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · BE #68 → PR #69 merged, released `v1.9.0`; FE #277 → PR #279 open (closes #277).
+Recent shipped follow-on:
+- [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) shipped in BE `v1.9.0` and FE `0.3.22`: add reviewed recipe ingredients from the visible Meals week to a chosen grocery list, via a generic BE bulk list-item append endpoint. [spec](../superpowers/specs/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · [plan](../superpowers/plans/2026-07-04-meals-recipe-ingredients-to-grocery-list.md) · BE #68 → PR #69; FE #277 → PR #279.
 
 ### Mobile UX polish backlog
 

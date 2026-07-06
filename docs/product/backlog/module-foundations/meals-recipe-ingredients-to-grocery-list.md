@@ -2,10 +2,10 @@
 id: meals-recipe-ingredients-to-grocery-list
 title: Meals recipe ingredients to grocery list
 epic: module-foundations
-status: in-progress
+status: shipped
 priority: P2
 created: 2026-07-04
-updated: 2026-07-05
+updated: 2026-07-06
 issues:
   - https://github.com/joe-bor/family-hub-api/issues/68
   - https://github.com/joe-bor/FamilyHub/issues/277
@@ -51,16 +51,16 @@ Plan: [Meals Recipe Ingredients To Grocery List Implementation Plan](../../../su
 
 ## Acceptance Criteria
 
-- [ ] The **Add ingredients** action appears on editable current/future Meals weeks when the visible board has at least one recipe-backed planned entry, and never on past weeks.
-- [ ] The review sheet groups rows by meal and preserves each recipe's ingredient wording exactly, with no parsing, splitting, or de-duplication.
-- [ ] Quick meals (and recipe meals with no stored or no longer retrievable ingredients) appear in a "no recipe ingredients" section with manual add rows, never as auto-generated guesses.
-- [ ] The parent can edit and remove candidate rows and select which rows to append before anything is written.
-- [ ] The parent chooses an existing grocery list; when exactly one grocery list exists it is defaulted; when none exists the parent can create one; non-grocery lists are never targets.
-- [ ] Selected rows append in one confirmed, transactional action via the bulk endpoint, and success offers **View list**.
-- [ ] The bulk endpoint is generic (works for any list kind), family-scoped, validates optional categories against family + list kind, is bounded, returns created items in request order, and rolls back entirely on any failure.
-- [ ] Offline disables **Add to list** and **Create grocery list** with honest copy; reads still work from cache.
-- [ ] A partial or failed append is never presented as success; a created-then-failed-append flow reports failure and offers retry.
-- [ ] Backend ships and publishes the endpoint before the frontend ingredient flow is released; FE CI resolves that published semver and fails closed rather than using `latest`.
+- [x] The **Add ingredients** action appears on editable current/future Meals weeks when the visible board has at least one recipe-backed planned entry, and never on past weeks.
+- [x] The review sheet groups rows by meal and preserves each recipe's ingredient wording exactly, with no parsing, splitting, or de-duplication.
+- [x] Quick meals (and recipe meals with no stored or no longer retrievable ingredients) appear in a "no recipe ingredients" section with manual add rows, never as auto-generated guesses.
+- [x] The parent can edit and remove candidate rows and select which rows to append before anything is written.
+- [x] The parent chooses an existing grocery list; when exactly one grocery list exists it is defaulted; when none exists the parent can create one; non-grocery lists are never targets.
+- [x] Selected rows append in one confirmed, transactional action via the bulk endpoint, and success offers **View list**.
+- [x] The bulk endpoint is generic (works for any list kind), family-scoped, validates optional categories against family + list kind, is bounded, returns created items in request order, and rolls back entirely on any failure.
+- [x] Offline disables **Add to list** and **Create grocery list** with honest copy; reads still work from cache.
+- [x] A partial or failed append is never presented as success; a created-then-failed-append flow reports failure and offers retry.
+- [x] Backend ships and publishes the endpoint before the frontend ingredient flow is released; FE CI resolves that published semver and fails closed rather than using `latest`.
 
 ## Delivery Notes
 
@@ -69,4 +69,4 @@ Plan: [Meals Recipe Ingredients To Grocery List Implementation Plan](../../../su
 - Frontend unit/component work (extraction, review UI) can proceed against MSW before the backend release; the released ingredient flow and its E2E consume the published backend semver.
 - Execution Issues: BE [family-hub-api#68](https://github.com/joe-bor/family-hub-api/issues/68) (bulk append endpoint) and FE [FamilyHub#277](https://github.com/joe-bor/FamilyHub/issues/277) (Meals action + review sheet, queued on the BE release).
 - BE shipped: PR [family-hub-api#69](https://github.com/joe-bor/family-hub-api/pull/69) merged and released as **`v1.9.0`** (2026-07-05) — reviewed and hardened (deterministic read-order tie-break, named `MAX_BULK_ITEMS` + service guard, non-empty-append test; 544 tests green). FE #277's released-contract E2E consumes `v1.9.0`.
-- FE implementation complete on branch `feat/meals-ingredients-to-grocery`: PR [FamilyHub#279](https://github.com/joe-bor/FamilyHub/pull/279) open (closes #277) — 6 commits (Plan Tasks 3–7 + a review-driven 100-item cap guard), **1430** unit/component tests + released-contract E2E green against `v1.9.0`. Each task passed an independent spec-compliance review then a technical review, plus a final whole-branch review. Awaiting FE review/merge + release.
+- FE shipped: PR [FamilyHub#279](https://github.com/joe-bor/FamilyHub/pull/279) merged on 2026-07-06 and released as **`family-hub-v0.3.22`** (2026-07-06). The release includes the Lists bulk append client contract, Meals ingredient extraction helpers, ingredients review sheet, 100-item cap guard, append flow, hardening fixes, and released-contract E2E against BE `v1.9.0`.
