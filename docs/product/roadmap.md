@@ -76,8 +76,14 @@ Recommended order:
 
 ### Large-screen / tablet UX
 
-Captured story:
+Captured stories:
 - [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — design-heavy A1 ambient Home direction for horizontal tablet and 20-inch-plus displays. [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md)
+- [Large-screen shell foundations](backlog/large-screen-ux/large-screen-foundations.md) — slim header (drop fake weather), one toolbar row per module, content-width discipline; prerequisite for the module stories below. [spec](../superpowers/specs/2026-07-06-large-screen-foundations-design.md)
+- [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md)
+- [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail so the kitchen tablet can keep a list open. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md)
+- [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-width week board, all 7 days visible, today highlighted. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md)
+- [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — board polish: Today weighted primary, bigger checkoff targets, member identity forward. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md)
+- [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid with capped images. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md)
 
 ### Module foundations follow-on
 
