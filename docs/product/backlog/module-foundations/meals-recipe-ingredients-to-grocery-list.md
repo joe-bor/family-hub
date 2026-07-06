@@ -5,12 +5,13 @@ epic: module-foundations
 status: in-progress
 priority: P2
 created: 2026-07-04
-updated: 2026-07-04
+updated: 2026-07-05
 issues:
   - https://github.com/joe-bor/family-hub-api/issues/68
   - https://github.com/joe-bor/FamilyHub/issues/277
 prs:
   - https://github.com/joe-bor/family-hub-api/pull/69
+  - https://github.com/joe-bor/FamilyHub/pull/279
 spec: ../../../superpowers/specs/2026-07-04-meals-recipe-ingredients-to-grocery-list.md
 plan: ../../../superpowers/plans/2026-07-04-meals-recipe-ingredients-to-grocery-list.md
 ---
@@ -68,4 +69,4 @@ Plan: [Meals Recipe Ingredients To Grocery List Implementation Plan](../../../su
 - Frontend unit/component work (extraction, review UI) can proceed against MSW before the backend release; the released ingredient flow and its E2E consume the published backend semver.
 - Execution Issues: BE [family-hub-api#68](https://github.com/joe-bor/family-hub-api/issues/68) (bulk append endpoint) and FE [FamilyHub#277](https://github.com/joe-bor/FamilyHub/issues/277) (Meals action + review sheet, queued on the BE release).
 - BE shipped: PR [family-hub-api#69](https://github.com/joe-bor/family-hub-api/pull/69) merged and released as **`v1.9.0`** (2026-07-05) — reviewed and hardened (deterministic read-order tie-break, named `MAX_BULK_ITEMS` + service guard, non-empty-append test; 544 tests green). FE #277's released-contract E2E consumes `v1.9.0`.
-- FE implementation in progress on branch `feat/meals-ingredients-to-grocery` via subagent-driven-development (Plan Tasks 3–7); each task is gated by a spec-compliance review then a technical review before the next. Record the FE PR here when opened.
+- FE implementation complete on branch `feat/meals-ingredients-to-grocery`: PR [FamilyHub#279](https://github.com/joe-bor/FamilyHub/pull/279) open (closes #277) — 6 commits (Plan Tasks 3–7 + a review-driven 100-item cap guard), **1430** unit/component tests + released-contract E2E green against `v1.9.0`. Each task passed an independent spec-compliance review then a technical review, plus a final whole-branch review. Awaiting FE review/merge + release.
