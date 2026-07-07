@@ -2,12 +2,13 @@
 id: large-screen-foundations
 title: Large-screen shell foundations
 epic: large-screen-ux
-status: planned
+status: in-progress
 priority: P2
 created: 2026-07-06
 updated: 2026-07-06
 issues: []
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/282
 spec: ../../../superpowers/specs/2026-07-06-large-screen-foundations-design.md
 ---
 
