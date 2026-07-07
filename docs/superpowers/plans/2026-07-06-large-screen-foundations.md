@@ -387,7 +387,10 @@ The spec requires screenshot review, not just green tests. The app needs the rea
 - [ ] **Step 1: Start backend + dev server**
 
 ```bash
-BE_IMAGE_TAG=$(gh release list --repo joe-bor/family-hub-api --limit 1 --json tagName -q '.[0].tagName') docker compose -f docker-compose.e2e.yml up -d
+# Note: the GHCR image tag has no "v" prefix (release v1.9.0 → image 1.9.0).
+# Use the repo's own resolver, same as CI:
+BE_IMAGE_TAG=$(GITHUB_TOKEN=$(gh auth token) bash .github/scripts/resolve-backend-version.sh) \
+  docker compose -f docker-compose.e2e.yml up -d --wait
 npm run dev
 ```
 
