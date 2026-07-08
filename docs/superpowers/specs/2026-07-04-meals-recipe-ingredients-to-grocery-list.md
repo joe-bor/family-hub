@@ -1,7 +1,7 @@
 # Meals Recipe Ingredients To Grocery List
 
 **Date:** 2026-07-04
-**Status:** Spec ready for plan review
+**Status:** Shipped in backend `v1.9.0` and frontend `family-hub-v0.3.22`
 **Owner:** Family Hub product / planning
 **Related backlog story:** `docs/product/backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md`
 **Related designs:** [Meals And Recipes Foundation](2026-06-01-meals-and-recipes-foundation-design.md), [Lists Family-Managed Categories](2026-06-22-lists-family-managed-categories-design.md), [Focused Meal Planning Sessions](2026-06-28-focused-meal-planning-sessions.md)

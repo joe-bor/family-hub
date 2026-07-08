@@ -12,6 +12,16 @@
 
 **Story:** `docs/product/backlog/large-screen-ux/large-screen-home.md`
 
+> **Revised 2026-07-07:** rebased on the merged large-screen shell foundations
+> (FE PR #282). Foundations already removed the fake weather chip entirely,
+> slimmed the desktop header to one compact row, and added an
+> `AppHeader (desktop)` describe (with a mutable `isMobileMock`) to
+> `app-header.test.tsx`, including a no-`72°` regression test. Task 1's former
+> weather-hiding steps were deleted, and `app-header.tsx` /
+> `app-header.desktop.test.tsx` were removed from the file structure. The
+> desktop `activeModule === null → calendar` redirect in `App.tsx` still
+> exists and remains this plan's job to remove.
+
 **Repo:** All implementation work is in `frontend/` (separate git repo). This plan lives in the root docs repo for cross-repo planning.
 
 ---
@@ -23,7 +33,7 @@
 - [ ] Confirm `frontend/` is clean and up to date: `cd frontend && git status --short && git fetch origin && git status -sb`.
 - [ ] Create the FE branch: `cd frontend && git checkout -b feat/large-screen-home`.
 - [ ] Do not add backend work. Stop only if the existing Chores, Meals, Lists, or Calendar query contracts are proven insufficient.
-- [ ] Do not redesign Calendar, Meals, Chores, Lists, Recipes, Photos, or the whole desktop shell. The only shell changes are: large screens can stay on Home, desktop navigation can reach Home, Home hides fake weather, and idle can return to Home.
+- [ ] Do not redesign Calendar, Meals, Chores, Lists, Recipes, Photos, or the whole desktop shell. The only shell changes are: large screens can stay on Home, desktop navigation can reach Home, and idle can return to Home. (Fake weather is already gone globally via the foundations story, PR #282.)
 
 ## Verified Codebase Facts
 
@@ -32,7 +42,7 @@
 - `frontend/src/components/home/home-dashboard.tsx` currently owns mobile Home and inline Calendar add/detail/edit modals. Large-screen Home must not own those module workflows.
 - Existing Home derivation pieces live under `frontend/src/components/home/hooks/` and `frontend/src/components/home/lib/`: `use-dashboard-events.ts`, `use-hero-state.ts`, `hero-state.ts`, `event-time.ts`, `relative-time.ts`, and current mobile components.
 - `frontend/src/components/shared/navigation-tabs.tsx` has no Home entry and includes desktop-only module navigation.
-- `frontend/src/components/shared/app-header.tsx` renders a hardcoded fake weather widget (`72°`) on desktop. It must not appear while Home is active.
+- `frontend/src/components/shared/app-header.tsx` no longer renders fake weather anywhere — the foundations story (PR #282) removed it and slimmed the desktop header to one compact row. `app-header.test.tsx` already has an `AppHeader (desktop)` describe with a no-`72°` regression test and a mutable `isMobileMock`. This plan does not touch the header.
 - `frontend/src/components/meals-view.tsx` can open a specific slot by setting `visibleWeekStartDate` and then `selectedSlot` or `editingSlotId`; add a small app-store intent rather than changing Meals routing globally.
 - `frontend/src/components/calendar/calendar-module.tsx` can already consume a date focus intent. Add a separate event focus intent so large Home event taps open Calendar with the tapped event obvious.
 - MSW fixture helpers already exist for Chores, Meals, and Lists in `frontend/src/test/mocks/server.ts`.
@@ -56,7 +66,6 @@ frontend/src/components/home/lib/large-home-selectors.ts
 frontend/src/components/home/lib/large-home-selectors.test.ts
 frontend/src/hooks/use-large-screen-home-idle-return.ts
 frontend/src/hooks/use-large-screen-home-idle-return.test.tsx
-frontend/src/components/shared/app-header.desktop.test.tsx
 frontend/src/App.large-home.test.tsx
 frontend/e2e/large-screen-home.spec.ts
 ```
@@ -74,7 +83,6 @@ frontend/src/components/meals-view.tsx
 frontend/src/components/meals-view.test.tsx
 frontend/src/components/shared/navigation-tabs.tsx
 frontend/src/components/shared/navigation-tabs.test.tsx
-frontend/src/components/shared/app-header.tsx
 frontend/src/stores/app-store.ts
 frontend/src/stores/app-store.test.ts
 frontend/src/test/setup.ts
@@ -91,8 +99,6 @@ Each task below ends with a commit. Use conventional commits: `feat(home):`, `te
 - Modify: `frontend/src/App.tsx`
 - Modify: `frontend/src/components/shared/navigation-tabs.tsx`
 - Modify: `frontend/src/components/shared/navigation-tabs.test.tsx`
-- Modify: `frontend/src/components/shared/app-header.tsx`
-- Create: `frontend/src/components/shared/app-header.desktop.test.tsx`
 - Create: `frontend/src/App.large-home.test.tsx`
 
 - [ ] **Step 1: Write desktop navigation tests**
@@ -316,97 +322,25 @@ Then remove the now-unused `useEffect` import and `setActiveModule` binding if t
 import { lazy, Suspense, useState } from "react";
 ```
 
-- [ ] **Step 7: Write desktop AppHeader tests for hiding fake weather on Home**
+(Former Steps 7-9 — hiding fake weather on Home — were removed in the
+2026-07-07 revision: the foundations story (PR #282) already deleted the
+weather chip globally and `app-header.test.tsx` carries the no-`72°`
+regression test. The header needs no changes in this plan.)
 
-Create `src/components/shared/app-header.desktop.test.tsx`:
-
-```tsx
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAppStore } from "@/stores";
-import { render, screen, seedFamilyStore } from "@/test/test-utils";
-import { AppHeader } from "./app-header";
-
-vi.mock("@/hooks", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/hooks")>();
-  return { ...actual, useIsMobile: () => false };
-});
-
-describe("AppHeader (desktop)", () => {
-  beforeEach(() => {
-    seedFamilyStore({
-      name: "Test Family",
-      members: [{ id: "m1", name: "Alice", color: "coral" }],
-    });
-  });
-
-  it("does not show fake weather while Home is active", () => {
-    useAppStore.setState({ activeModule: null });
-    render(<AppHeader />);
-    expect(screen.queryByText("72°")).not.toBeInTheDocument();
-  });
-
-  it("still shows member indicators on Home", () => {
-    useAppStore.setState({ activeModule: null });
-    render(<AppHeader />);
-    expect(screen.getByTitle("Alice")).toBeInTheDocument();
-  });
-});
-```
-
-- [ ] **Step 8: Run AppHeader desktop tests and verify failure**
+- [ ] **Step 7: Run Task 1 tests**
 
 Run:
 
 ```bash
-npm test -- --run src/components/shared/app-header.desktop.test.tsx
-```
-
-Expected: FAIL because the desktop header always renders `72°`.
-
-- [ ] **Step 9: Hide fake weather on Home**
-
-In `src/components/shared/app-header.tsx`, remove unused weather icons from the import if they are no longer used on Home:
-
-```tsx
-import { Cloud, Menu, Sun } from "lucide-react";
-```
-
-Add a Home guard before the desktop return:
-
-```tsx
-const showDesktopWeather = activeModule !== null;
-```
-
-Wrap the weather block:
-
-```tsx
-{showDesktopWeather && (
-  <div className="flex items-center gap-2 text-muted-foreground">
-    <div className="relative">
-      <Sun className="h-5 w-5 text-yellow-500" />
-      <Cloud className="absolute -right-1 -bottom-1 h-4 w-4 text-gray-400" />
-    </div>
-    <span className="text-sm font-medium">72°</span>
-  </div>
-)}
-```
-
-This keeps the change scoped to the Home design. A later shell cleanup can remove fake weather globally.
-
-- [ ] **Step 10: Run Task 1 tests**
-
-Run:
-
-```bash
-npm test -- --run src/components/shared/navigation-tabs.test.tsx src/App.large-home.test.tsx src/components/shared/app-header.desktop.test.tsx
+npm test -- --run src/components/shared/navigation-tabs.test.tsx src/App.large-home.test.tsx
 ```
 
 Expected: PASS.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/App.tsx src/App.large-home.test.tsx src/components/shared/navigation-tabs.tsx src/components/shared/navigation-tabs.test.tsx src/components/shared/app-header.tsx src/components/shared/app-header.desktop.test.tsx
+git add src/App.tsx src/App.large-home.test.tsx src/components/shared/navigation-tabs.tsx src/components/shared/navigation-tabs.test.tsx
 git commit -m "feat(home): make home reachable on large screens"
 ```
 
@@ -2965,7 +2899,7 @@ cd frontend
 npm test -- --run \
   src/App.large-home.test.tsx \
   src/components/shared/navigation-tabs.test.tsx \
-  src/components/shared/app-header.desktop.test.tsx \
+  src/components/shared/app-header.test.tsx \
   src/stores/app-store.test.ts \
   src/components/calendar/calendar-module.test.tsx \
   src/components/meals-view.test.tsx \
