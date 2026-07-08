@@ -77,9 +77,11 @@ Recommended order:
 
 ### Large-screen / tablet UX
 
-Captured stories:
-- [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — design-heavy A1 ambient Home direction for horizontal tablet and 20-inch-plus displays. [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md)
-- [Large-screen shell foundations](backlog/large-screen-ux/large-screen-foundations.md) — slim header (drop fake weather), one toolbar row per module, content-width discipline; prerequisite for the module stories below. [spec](../superpowers/specs/2026-07-06-large-screen-foundations-design.md)
+Shipped:
+- [Large-screen shell foundations](backlog/large-screen-ux/large-screen-foundations.md) — slim header (drop fake weather), one merged toolbar row, chrome budget; FE PR #282 merged 2026-07-06. [spec](../superpowers/specs/2026-07-06-large-screen-foundations-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-foundations.md)
+- [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — ambient A1 now-first Home (hero + Chores/Meals/Lists state strip + Today rail), cross-module routing intents, 10-min idle return; FE PR #284 merged 2026-07-07 (closes #278). [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md) · [plan](../superpowers/plans/2026-07-05-large-screen-home.md)
+
+Next up (spec written, plan not yet written):
 - [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md)
 - [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail so the kitchen tablet can keep a list open. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md)
 - [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-width week board, all 7 days visible, today highlighted. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md)

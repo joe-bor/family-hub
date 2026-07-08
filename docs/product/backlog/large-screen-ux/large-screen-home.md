@@ -2,13 +2,14 @@
 id: large-screen-home
 title: Large-screen Home hub
 epic: large-screen-ux
-status: in-progress
+status: done
 priority: P2
 created: 2026-07-05
-updated: 2026-07-05
+updated: 2026-07-07
 issues:
   - https://github.com/joe-bor/FamilyHub/issues/278
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/284
 spec: ../../../superpowers/specs/2026-07-05-large-screen-home-design.md
 ---
 
