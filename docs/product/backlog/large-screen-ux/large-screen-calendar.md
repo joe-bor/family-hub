@@ -2,12 +2,13 @@
 id: large-screen-calendar
 title: Large-screen Calendar (Week zoom-out, Day member lanes)
 epic: large-screen-ux
-status: planned
+status: in-progress
 priority: P2
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-10
 issues: []
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/285
 spec: ../../../superpowers/specs/2026-07-06-large-screen-calendar-design.md
 ---
 
