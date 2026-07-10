@@ -2,7 +2,7 @@
 id: large-screen-calendar
 title: Large-screen Calendar (Week zoom-out, Day member lanes)
 epic: large-screen-ux
-status: in-progress
+status: done
 priority: P2
 created: 2026-07-06
 updated: 2026-07-10

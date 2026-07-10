@@ -80,9 +80,7 @@ Recommended order:
 Shipped:
 - [Large-screen shell foundations](backlog/large-screen-ux/large-screen-foundations.md) — slim header (drop fake weather), one merged toolbar row, chrome budget; FE PR #282 merged 2026-07-06. [spec](../superpowers/specs/2026-07-06-large-screen-foundations-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-foundations.md)
 - [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — ambient A1 now-first Home (hero + Chores/Meals/Lists state strip + Today rail), cross-module routing intents, 10-min idle return; FE PR #284 merged 2026-07-07 (closes #278). [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md) · [plan](../superpowers/plans/2026-07-05-large-screen-home.md)
-
-In progress:
-- [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail; FE PR #285 opened 2026-07-10. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-calendar.md)
+- [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail; FE PR #285 merged 2026-07-10. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-calendar.md)
 
 Next up (spec written, plan not yet written):
 - [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail so the kitchen tablet can keep a list open. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md)
