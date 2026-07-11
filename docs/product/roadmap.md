@@ -82,8 +82,10 @@ Shipped:
 - [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — ambient A1 now-first Home (hero + Chores/Meals/Lists state strip + Today rail), cross-module routing intents, 10-min idle return; FE PR #284 merged 2026-07-07 (closes #278). [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md) · [plan](../superpowers/plans/2026-07-05-large-screen-home.md)
 - [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail; FE PR #285 merged 2026-07-10. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-calendar.md)
 
+Next up (plan written, ready to implement):
+- [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail so the kitchen tablet can keep a list open. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-lists.md)
+
 Next up (spec written, plan not yet written):
-- [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail so the kitchen tablet can keep a list open. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md)
 - [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-width week board, all 7 days visible, today highlighted. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md)
 - [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — board polish: Today weighted primary, bigger checkoff targets, member identity forward. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md)
 - [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid with capped images. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md)
