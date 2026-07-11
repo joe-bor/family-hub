@@ -31,16 +31,13 @@ Everything below is verified against the current `frontend/` tree.
 
 ### Delete-fallback AC — how it is satisfied without a delete button
 
-The spec AC "Deleting the selected list falls back to the first remaining list, or the empty state when none remain" cannot be wired to a delete button because none exists. Instead, `ListsLargeScreen` derives the **effective** selection from the live summaries every render:
+The spec AC "Deleting the selected list falls back to the first remaining list, or the empty state when none remain" cannot be wired to a delete button because none exists. Instead, `ListsLargeScreen` derives the **effective** selection from the live summaries every render (see Task 7 for the exact expression, including the in-flight-refetch guard):
 
-```ts
-const effectiveSelectedId =
-  summaries.some((s) => s.id === selectedListId)
-    ? selectedListId
-    : (summaries[0]?.id ?? null);
-```
+- nothing selected, or the selected id vanished (delete / cross-device sync) and no refetch is in flight → first remaining list (or `null` → full-area empty state);
+- a valid selected id → keep it;
+- a just-created / just-selected id not yet in `summaries` while a hub refetch is in flight → keep it (its detail cache is already primed by `useCreateList`).
 
-and a reconcile effect writes that back to state. This covers auto-select-first (initial `null` → first), the delete/sync case (a selected id that vanishes from the array → first remaining, or `null` → full-area empty state), the create case (new id present after refetch → stays selected), and the intent case (a valid id → stays). The delete-fallback test therefore simulates the summaries array losing the selected id (a refetch returning fewer lists), not a delete click.
+State is **never** overwritten by a reconcile effect — the fallback lives purely in the derivation, so a just-created id is not clobbered during the post-create hub refetch. This covers auto-select-first, delete/sync fallback, create-selects, and intent-selects in one expression. The delete-fallback test therefore simulates the summaries array losing the selected id (forcing a hub refetch that returns fewer lists), not a delete click.
 
 ## File Structure
 
@@ -110,6 +107,12 @@ In `src/components/lists/list-card.tsx`, delete the local `kindMeta` object and 
 import { kindMeta } from "./list-kind-meta";
 ```
 
+Also narrow the type import on line 3 to drop the now-unused `ListKind` (Biome `noUnusedImports` flags it otherwise):
+
+```ts
+import type { ListSummary } from "@/lib/types";
+```
+
 Leave the rest of the component unchanged (`const meta = kindMeta[list.kind];` still works).
 
 - [ ] **Step 3: Run the existing tests to prove no regression**
@@ -175,7 +178,7 @@ it("shows the back button by default", async () => {
 });
 ```
 
-> If `list-detail-view.test.tsx` does not already define a `groceryList` fixture and seed helpers, copy the minimal `ListDetail` fixture and `seedMockLists`/`setupMswServer` setup from `src/components/lists-view.test.tsx`.
+> `list-detail-view.test.tsx` already defines a `groceryList` fixture (`LIST_ID` = `00000000-0000-4000-8000-000000000101`) and `setupMswServer()` — reuse them. The file currently imports only `renderWithUser` from `@/test/test-utils`; add `render` to that import (both are exported from there) before using it in the two tests above, or switch both to `renderWithUser(...)` and drop the returned `user`.
 
 - [ ] **Step 2: Run to verify it fails**
 
@@ -545,7 +548,7 @@ export function ListsRail({
         <h2 className="text-[17px] font-semibold leading-6 text-foreground">
           My Lists
         </h2>
-        <Button type="button" size="sm" onClick={onCreate}>
+        <Button type="button" onClick={onCreate} className="min-h-[44px]">
           <Plus className="h-4 w-4" />
           New List
         </Button>
@@ -675,7 +678,7 @@ The heart of the story: rail + detail, first-list auto-select, swap-not-navigate
 `src/components/lists/lists-large-screen.tsx`:
 
 ```tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useListPreferences, useLists } from "@/api";
 import { OfflineUnavailable } from "@/components/shared";
 import { useAppStore } from "@/stores";
@@ -691,27 +694,34 @@ export function ListsLargeScreen() {
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Cross-module handoff (e.g. "open this grocery list" from Meals) selects
-  // the list in the pane instead of pushing a screen.
+  const summaries = lists.data?.data ?? [];
+
+  // Cross-module handoff (e.g. "open this grocery list" from Meals): consume the
+  // intent once list data is available and select it in the pane. Guarded on
+  // `lists.data` so a pending intent is preserved (not consumed) until data loads.
   const consumeListDetailIntent = useAppStore((s) => s.consumeListDetailIntent);
   useEffect(() => {
+    const data = lists.data?.data;
+    if (!data) return;
     const id = consumeListDetailIntent();
-    if (id) setSelectedListId(id);
-  }, [consumeListDetailIntent]);
+    if (id && data.some((s) => s.id === id)) setSelectedListId(id);
+  }, [lists.data, consumeListDetailIntent]);
 
-  const summaries = lists.data?.data ?? [];
-  // First list auto-selected; a selection that disappears (delete/cross-device
-  // sync) falls back to the first remaining list, or null when none remain.
+  // Effective selection, derived every render so it is ALWAYS valid, without ever
+  // overwriting the user's / create's / intent's chosen id in state:
+  //   - nothing selected, or the selected id vanished (delete / cross-device sync)
+  //     and no refetch is in flight -> first remaining list (auto-select-first +
+  //     delete fallback), or null when none remain.
+  //   - a valid selected id -> keep it.
+  //   - a just-created / just-selected id not yet in `summaries` while a hub
+  //     refetch is in flight -> keep it. `useCreateList` primes the detail cache
+  //     (`setQueryData(detail(newId))`) then invalidates the hub, so the pane
+  //     renders the new list immediately and it lands in `summaries` post-refetch.
   const effectiveSelectedId =
-    summaries.some((s) => s.id === selectedListId)
+    selectedListId &&
+    (summaries.some((s) => s.id === selectedListId) || lists.isFetching)
       ? selectedListId
       : (summaries[0]?.id ?? null);
-  useEffect(() => {
-    if (!lists.data) return; // wait for data so a pending intent isn't clobbered
-    if (effectiveSelectedId !== selectedListId) {
-      setSelectedListId(effectiveSelectedId);
-    }
-  }, [lists.data, effectiveSelectedId, selectedListId]);
 
   const preferencesStatus = preferences.isLoading
     ? "loading"
@@ -721,7 +731,7 @@ export function ListsLargeScreen() {
         ? "ready"
         : "unavailable";
 
-  const fullArea = (children: React.ReactNode) => (
+  const fullArea = (children: ReactNode) => (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-2xl">{children}</div>
     </div>
@@ -756,7 +766,7 @@ export function ListsLargeScreen() {
 
   return (
     <>
-      <div className="flex h-full min-h-0">
+      <div className="flex min-h-0 flex-1">
         <ListsRail
           summaries={summaries}
           selectedListId={effectiveSelectedId}
@@ -787,6 +797,9 @@ export function ListsLargeScreen() {
 ```
 
 Notes for the implementer:
+- **Selection is derived, never reconciled via `setState`.** State holds only what the user / create / intent explicitly chose; `effectiveSelectedId` computes the *valid* selection for rendering. This is deliberate: writing a fallback back into state would clobber a just-created id during the post-create hub refetch (the new id is not in `summaries` until the refetch lands, and `useLists().data` still holds the old summaries meanwhile). Do **not** "simplify" this into a reconcile effect.
+- The `lists.isFetching` clause is what protects the just-created / just-selected id across the refetch window. `useCreateList` primes `detail(newId)` then invalidates `hub()` (`api/hooks/use-lists.ts:106-109`), so `ListDetailView` renders the new list from primed cache and it appears in the rail once the hub refetch resolves.
+- Because there is no competing reconcile effect, the intent effect is also safe when the lists hub is already cached at mount (the common Meals→Lists path): it consumes the intent on the first commit with data and nothing overwrites it.
 - The `key={effectiveSelectedId}` on `ListDetailView` forces a clean remount per list, so per-list local state (open sheets, options) never leaks between lists when the pane swaps.
 - No `useBackHandler` here — the back handler must not intercept when both panes are visible (spec §5).
 - `onBack` is a no-op because `showBackButton={false}` means it is never invoked.
@@ -910,13 +923,15 @@ describe("ListsView large screen (two-pane)", () => {
     const { user } = renderWithUser(<ListsView />);
     await user.click(screen.getByRole("button", { name: /Weekend Reset,/i }));
     await screen.findByRole("heading", { name: "Weekend Reset" });
-    // Simulate the selected list being removed (delete elsewhere / sync).
+    // Simulate the selected list being removed elsewhere (delete / cross-device
+    // sync): drop it from the MSW store, then force the hub query to re-resolve.
+    // getTestQueryClient() is the same client the render helpers wrap the tree in.
     act(() => {
       seedMockLists([groceryList]);
     });
-    await user.click(
-      screen.getByRole("button", { name: /new list/i }),
-    ); // any refetch trigger; or call lists refetch
+    await act(async () => {
+      await getTestQueryClient().refetchQueries({ queryKey: listsKeys.hub() });
+    });
     expect(
       await screen.findByRole("heading", { name: "Trader Joe's Run" }),
     ).toBeInTheDocument();
@@ -931,7 +946,7 @@ describe("ListsView large screen (two-pane)", () => {
 });
 ```
 
-> Import `useAppStore` from `@/stores` at the top of the test file (alongside `useBackStack`). If the "disappears" test's refetch trigger is awkward, drive it by invalidating the lists query via the test QueryClient, or by asserting the reconcile through a re-render with the smaller seed — keep whichever is least brittle in this suite; the assertion that matters is that the pane ends on "Trader Joe's Run".
+> Add these imports to the test file: `useAppStore` from `@/stores` (alongside the existing `useBackStack`), `listsKeys` from `@/api`, and `getTestQueryClient` from `@/test/test-utils`. `getTestQueryClient()` returns the same client `render`/`renderWithUser` wrap the tree with (see `test-utils.tsx` `AllProviders`), so `refetchQueries({ queryKey: listsKeys.hub() })` re-resolves the summaries the component reads — `seedMockLists` alone only mutates the MSW store and does not trigger a refetch, which is why the earlier draft's "click New List" trigger did not work.
 
 - [ ] **Step 4: Run to verify the new tests fail**
 
@@ -1002,6 +1017,8 @@ Capture Lists at **900px** (tablet) and **375px** (mobile) and diff against `ori
 
 If any screenshot violates the spec (rail width, selected accent, touch targets ≥44px, pane reading-width cap, or a mobile regression), fix and re-capture before proceeding. Commit any fixes with `fix(lists): ...`.
 
+> Two known behaviors to confirm as **acceptable**, not regressions: (1) the rail row shows remaining-items ("N items left") rather than the card's "X of Y done" — confirm this reads well at rail density in the screenshots, or enrich `ListRailRow` if the reviewer wants the fuller count; (2) crossing the 1024px boundary mid-session resets the selected list, because `ListsMobileView` and `ListsLargeScreen` hold separate selection state — expected on the target devices and not a spec requirement.
+
 ---
 
 ## Task 10: PR
@@ -1013,7 +1030,7 @@ Body must include, per the root execution-issue contract:
 - **Verification:** build/lint/test results + the screenshot matrix summary + the below-1024 unchanged evidence.
 - **Execution contract checklist** mapping each spec AC to code + tests:
   - Two-pane at 1024px+, no full-screen swap on select → `ListsView` router + `ListsLargeScreen`; test "renders rail and detail together", "swaps only the detail pane".
-  - First-list auto-select + create/delete fallbacks → `effectiveSelectedId` + reconcile effect; tests "auto-selects the first list", "selects a newly created list", "falls back to the first remaining list".
+  - First-list auto-select + create/delete fallbacks → `effectiveSelectedId` pure derivation; tests "auto-selects the first list", "selects a newly created list", "falls back to the first remaining list".
   - Cross-module handoff selects in pane → intent effect; test "consumes the cross-module list intent".
   - Existing item flows unchanged in the pane → reused `ListDetailView`; existing detail tests.
   - Below 1024px + mobile unchanged → `ListsMobileView` moved verbatim; full existing `lists-view.test.tsx` suite + 900/375px screenshots.
@@ -1029,13 +1046,13 @@ After merge, in the **root** repo set `docs/product/backlog/large-screen-ux/larg
 
 **1. Spec coverage:**
 - §3.1 Layout (rail ~340px, right pane, selected accent) → Tasks 4, 5, 7 (`ListsRail` `w-[340px]`, `ListRailRow` selected border/bg).
-- §3.2 Behavior — first-list auto-select, swap-only, intent-selects, create-selects, delete-fallback, empty states, below-1024 unchanged → Task 7 (`effectiveSelectedId` + reconcile effect, `ListCreateSheet` wiring, `ListsEmptyState`), Tasks 3/8 (mobile path preserved). All covered by Task 8 tests.
+- §3.2 Behavior — first-list auto-select, swap-only, intent-selects, create-selects, delete-fallback, empty states, below-1024 unchanged → Task 7 (`effectiveSelectedId` pure derivation + intent effect, `ListCreateSheet` wiring, `ListsEmptyState`), Tasks 3/8 (mobile path preserved). All covered by Task 8 tests.
 - §5 Accessibility — rail as a nav list, selected announced, activation-not-focus selection, back handler doesn't intercept, ≥44px targets → `ListsRail` `<nav aria-label="Lists">` + `<ul>`, `ListRailRow` `aria-current` + composed `aria-label` + `min-h-[44px]`, no `useBackHandler` in `ListsLargeScreen` (asserted by "stack has length 0").
 - §6 AC screenshot matrix → Task 9.
 - §7 Out of Scope (no delete/reorder/sharing, no add-item/category flow changes, no mobile changes, no BE) → respected; `ListDetailView` reused unchanged apart from the additive `showBackButton` prop.
 
-**2. Placeholder scan:** No TBD/"handle edge cases"/"similar to Task N" — every code step carries full code. The one soft spot (Task 8's "disappears" refetch trigger) is called out explicitly with two concrete alternatives and the invariant that must hold.
+**2. Placeholder scan:** No TBD/"handle edge cases"/"similar to Task N" — every code step carries full code. The former soft spot (Task 8's "disappears" refetch trigger) now has a concrete, runnable solution using `getTestQueryClient().refetchQueries({ queryKey: listsKeys.hub() })`.
 
 **3. Type consistency:** `ListSummary` fields (`id/name/kind/totalItems/completedItems`) used consistently across `ListRailRow`, `ListsRail`, `ListsLargeScreen`. `ListDetailView` prop names (`listId`, `preferences`, `preferencesStatus`, `onBack`, `showBackButton`) match Task 2's signature. `kindMeta` shape identical across Tasks 1 and 4. Router branch names (`ListsMobileView`, `ListsLargeScreen`) consistent Tasks 3/7/8.
 
-**Key risk flagged:** there is **no whole-list delete** in the FE, so the delete-fallback AC is satisfied by selection reconciliation against the live summaries (Task 7), and its test simulates the array losing the selected id rather than clicking a delete control.
+**Key risk flagged:** there is **no whole-list delete** in the FE, so the delete-fallback AC is satisfied by pure selection derivation against the live summaries (Task 7), and its test simulates the array losing the selected id (via a forced hub refetch) rather than clicking a delete control.
