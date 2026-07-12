@@ -28,9 +28,10 @@ glance. Planning stays exactly the flow it is today.
 - **Today's column highlighted** with the same today treatment Calendar uses
   (accent on the day header, subtle column tint), so the board answers
   "what's tonight?" instantly.
-- **Slot cards adapt to column width.** Filled slots keep meal name +
-  provenance line; empty slots keep the add affordance. At the narrowest
-  columns (1024px), card text truncates rather than wrapping into tall cells.
+- **Slot cards adapt to column width.** Filled slots keep the existing meal
+  name + meal-type eyebrow; empty slots keep the add affordance. At the
+  narrowest columns (1024px), card text truncates rather than wrapping into
+  tall cells.
 - **Weekday headers align with Calendar's one-line style** ("Sun 5") for
   cross-module consistency.
 - **Foundations chrome:** week title, range navigation, and Fill empty slots
