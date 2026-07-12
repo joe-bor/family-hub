@@ -2,12 +2,13 @@
 id: large-screen-lists
 title: Large-screen Lists two-pane master/detail
 epic: large-screen-ux
-status: planned
+status: done
 priority: P2
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-11
 issues: []
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/286
 spec: ../../../superpowers/specs/2026-07-06-large-screen-lists-design.md
 ---
 
