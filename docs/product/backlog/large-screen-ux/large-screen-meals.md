@@ -2,12 +2,13 @@
 id: large-screen-meals
 title: Large-screen Meals full-width week board
 epic: large-screen-ux
-status: planned
+status: in-progress
 priority: P2
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-13
 issues: []
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/287
 spec: ../../../superpowers/specs/2026-07-06-large-screen-meals-design.md
 ---
 
@@ -18,7 +19,9 @@ cut off) while a third of the screen sits empty beside it. The shape is right;
 the layout math is not. This story makes the whole week visible at once with
 today's column highlighted.
 
-Design: [Large-screen Meals](../../../superpowers/specs/2026-07-06-large-screen-meals-design.md).
+Design: [Large-screen Meals](../../../superpowers/specs/2026-07-06-large-screen-meals-design.md),
+revised by [Large-screen Meals v2 — Full-Height Board](../../../superpowers/specs/2026-07-12-large-screen-meals-v2-design.md)
+(shipped together on PR #287).
 Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Scope
