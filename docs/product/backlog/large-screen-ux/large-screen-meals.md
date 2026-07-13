@@ -2,7 +2,7 @@
 id: large-screen-meals
 title: Large-screen Meals full-width week board
 epic: large-screen-ux
-status: in-progress
+status: done
 priority: P2
 created: 2026-07-06
 updated: 2026-07-13
@@ -39,7 +39,12 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Acceptance Criteria
 
-- [ ] No horizontal scrolling of the week grid at 1024px, 1280px, 1440px.
-- [ ] Today's column visibly highlighted.
-- [ ] All existing meal flows work unchanged; mobile unchanged.
-- [ ] Screenshot review per spec matrix, iterated before done.
+- [x] No horizontal scrolling of the week grid at 1024px, 1280px, 1440px.
+- [x] Today's column visibly highlighted.
+- [x] All existing meal flows work unchanged; mobile unchanged.
+- [x] Screenshot review per spec matrix, iterated before done.
+
+Delivered on [FE PR #287](https://github.com/joe-bor/FamilyHub/pull/287) (merged
+2026-07-13): the v1 full-width board and the v2 full-height board revision shipped
+together. No FE implementation Issue was created — the Issue-first gate was
+explicitly waived for this delivery.

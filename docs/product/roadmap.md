@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-11
+Last updated: 2026-07-13
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -82,9 +82,7 @@ Shipped:
 - [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — ambient A1 now-first Home (hero + Chores/Meals/Lists state strip + Today rail), cross-module routing intents, 10-min idle return; FE PR #284 merged 2026-07-07 (closes #278). [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md) · [plan](../superpowers/plans/2026-07-05-large-screen-home.md)
 - [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail; FE PR #285 merged 2026-07-10. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-calendar.md)
 - [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail (≥1024px rail + detail) so the kitchen tablet can keep a list open; mobile/tablet drill-in unchanged. FE PR #286 merged 2026-07-11. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-lists.md)
-
-Next up (plan written, ready to implement):
-- [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-width week board (all 7 days, today highlighted, one-line headers) plus the Foundations-deferred merge of the "Fill empty slots" row into the WeekHeader toolbar. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md) · [plan](../superpowers/plans/2026-07-11-large-screen-meals.md)
+- [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-height week board at lg+ (all 7 day columns, equal rows, today highlighted, one-line Calendar-consistent headers) with the "Fill empty slots"/"Add ingredients" actions merged into the WeekHeader toolbar; the v1 full-width board and the v2 full-height revision shipped together. FE PR #287 merged 2026-07-13. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md) · [v2 spec](../superpowers/specs/2026-07-12-large-screen-meals-v2-design.md) · [plan](../superpowers/plans/2026-07-12-large-screen-meals-v2.md)
 
 Next up (spec written, plan not yet written):
 - [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — board polish: Today weighted primary, bigger checkoff targets, member identity forward. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md)
