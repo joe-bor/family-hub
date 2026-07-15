@@ -2,12 +2,13 @@
 id: large-screen-chores
 title: Large-screen Chores board polish
 epic: large-screen-ux
-status: planned
+status: done
 priority: P3
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-15
 issues: []
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/289
 spec: ../../../superpowers/specs/2026-07-06-large-screen-chores-design.md
 ---
 

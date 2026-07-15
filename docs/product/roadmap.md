@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-13 (Large-screen Chores plan written)
+Last updated: 2026-07-15 (Large-screen Chores shipped — FE PR #289)
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -83,9 +83,7 @@ Shipped:
 - [Large-screen Calendar](backlog/large-screen-ux/large-screen-calendar.md) — Week zoom-out (one-line headers, denser hours) and Day member lanes with an optional mini-month rail; FE PR #285 merged 2026-07-10. [spec](../superpowers/specs/2026-07-06-large-screen-calendar-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-calendar.md)
 - [Large-screen Lists](backlog/large-screen-ux/large-screen-lists.md) — two-pane master/detail (≥1024px rail + detail) so the kitchen tablet can keep a list open; mobile/tablet drill-in unchanged. FE PR #286 merged 2026-07-11. [spec](../superpowers/specs/2026-07-06-large-screen-lists-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-lists.md)
 - [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-height week board at lg+ (all 7 day columns, equal rows, today highlighted, one-line Calendar-consistent headers) with the "Fill empty slots"/"Add ingredients" actions merged into the WeekHeader toolbar; the v1 full-width board and the v2 full-height revision shipped together. FE PR #287 merged 2026-07-13. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md) · [v2 spec](../superpowers/specs/2026-07-12-large-screen-meals-v2-design.md) · [plan](../superpowers/plans/2026-07-12-large-screen-meals-v2.md)
-
-Next up (plan written, ready to implement):
-- [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — full-width, full-height board: Today weighted as the primary column, This Week/This Month supporting, each column scrolling its own routines; ≥44px checkoff targets. Mobile/tablet unchanged. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md) · [plan](../superpowers/plans/2026-07-13-large-screen-chores.md)
+- [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — full-width, full-height board: Today weighted as the primary column, This Week/This Month supporting, each column scrolling its own routines; ≥44px checkoff targets. Mobile/tablet unchanged. FE PR #289 merged 2026-07-15. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md) · [plan](../superpowers/plans/2026-07-13-large-screen-chores.md)
 
 Next up (spec written, plan not yet written):
 - [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid with capped images. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md)
