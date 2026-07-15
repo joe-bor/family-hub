@@ -1,6 +1,6 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-15 (Large-screen Chores shipped — FE PR #289)
+Last updated: 2026-07-15 (Large-screen Chores shipped — FE PR #289; Recipes plan written)
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -85,8 +85,8 @@ Shipped:
 - [Large-screen Meals](backlog/large-screen-ux/large-screen-meals.md) — full-height week board at lg+ (all 7 day columns, equal rows, today highlighted, one-line Calendar-consistent headers) with the "Fill empty slots"/"Add ingredients" actions merged into the WeekHeader toolbar; the v1 full-width board and the v2 full-height revision shipped together. FE PR #287 merged 2026-07-13. [spec](../superpowers/specs/2026-07-06-large-screen-meals-design.md) · [v2 spec](../superpowers/specs/2026-07-12-large-screen-meals-v2-design.md) · [plan](../superpowers/plans/2026-07-12-large-screen-meals-v2.md)
 - [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — full-width, full-height board: Today weighted as the primary column, This Week/This Month supporting, each column scrolling its own routines; ≥44px checkoff targets. Mobile/tablet unchanged. FE PR #289 merged 2026-07-15. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md) · [plan](../superpowers/plans/2026-07-13-large-screen-chores.md)
 
-Next up (spec written, plan not yet written):
-- [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid with capped images. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md)
+Next up (plan written, ready to implement):
+- [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid (2 cols @1024, 3 @1280, 4 @1440+) inside a ~1200px container; index-only, detail/mobile unchanged. Last surface in the epic. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md) · [plan](../superpowers/plans/2026-07-15-large-screen-recipes.md)
 
 ### Module foundations follow-on
 

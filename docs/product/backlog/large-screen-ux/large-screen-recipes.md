@@ -5,9 +5,10 @@ epic: large-screen-ux
 status: planned
 priority: P3
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-15
 issues: []
 prs: []
+plan: ../../../superpowers/plans/2026-07-15-large-screen-recipes.md
 spec: ../../../superpowers/specs/2026-07-06-large-screen-recipes-design.md
 ---
 
@@ -18,6 +19,7 @@ screens, with half the viewport as blank margin. This story turns the index
 into a browsable responsive card grid.
 
 Design: [Large-screen Recipes](../../../superpowers/specs/2026-07-06-large-screen-recipes-design.md).
+Plan: [Large-screen Recipes implementation plan](../../../superpowers/plans/2026-07-15-large-screen-recipes.md).
 Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Scope
