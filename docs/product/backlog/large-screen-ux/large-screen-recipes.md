@@ -27,12 +27,14 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 - 2-4 column card grid (by width) inside a ~1200px max-width container.
 - Card images capped at a fixed aspect ratio.
-- Search and favorites filters in the foundations toolbar row.
+- Title, bounded-width search, favorites/tag filters, and Add recipe in the
+  foundations single toolbar row at `lg+`.
 
 ## Out of Scope
 
 - Recipe detail composition; add/edit flows.
 - New features (collections, sorting, import).
+- Interactive favoriting from an index card; the heart stays display-only.
 - Mobile behavior; backend changes.
 
 ## Acceptance Criteria
@@ -40,4 +42,6 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 - [ ] 2-4 column grid at 1024px / 1280px / 1440px+ inside the container.
 - [ ] No card fills the viewport; images render at the capped aspect ratio.
 - [ ] Search and favorites filtering work unchanged; mobile unchanged.
+- [ ] At `lg+`, title, search, filters, and Add recipe fit in one toolbar row
+      with 44px interactive targets.
 - [ ] Screenshot review per spec matrix, iterated before done.
