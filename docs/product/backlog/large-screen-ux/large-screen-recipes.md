@@ -6,7 +6,8 @@ status: planned
 priority: P3
 created: 2026-07-06
 updated: 2026-07-15
-issues: []
+issues:
+  - https://github.com/joe-bor/FamilyHub/issues/290
 prs: []
 plan: ../../../superpowers/plans/2026-07-15-large-screen-recipes.md
 spec: ../../../superpowers/specs/2026-07-06-large-screen-recipes-design.md

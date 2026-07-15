@@ -86,7 +86,7 @@ Shipped:
 - [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — full-width, full-height board: Today weighted as the primary column, This Week/This Month supporting, each column scrolling its own routines; ≥44px checkoff targets. Mobile/tablet unchanged. FE PR #289 merged 2026-07-15. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md) · [plan](../superpowers/plans/2026-07-13-large-screen-chores.md)
 
 Next up (plan written, ready to implement):
-- [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid (2 cols @1024, 3 @1280, 4 @1440+) inside a ~1200px container; index-only, detail/mobile unchanged. Last surface in the epic. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md) · [plan](../superpowers/plans/2026-07-15-large-screen-recipes.md)
+- [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2-4 column card grid (2 cols @1024, 3 @1280, 4 @1440+) inside a ~1200px container; index-only, detail/mobile unchanged. Last surface in the epic. FE #290. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md) · [plan](../superpowers/plans/2026-07-15-large-screen-recipes.md)
 
 ### Module foundations follow-on
 
