@@ -51,28 +51,28 @@ Design: [Large-screen Home hub](../../../superpowers/specs/2026-07-05-large-scre
 
 ## Acceptance Criteria
 
-- [ ] Larger screens can land on Home instead of being redirected straight to
+- [x] Larger screens can land on Home instead of being redirected straight to
       Calendar.
-- [ ] Home is the resting state on fresh launch and after long idle, unless an
+- [x] Home is the resting state on fresh launch and after long idle, unless an
       active create/edit flow is open.
-- [ ] The Now Hero is the unmistakable focal point and answers the most
+- [x] The Now Hero is the unmistakable focal point and answers the most
       important current/next schedule question.
-- [ ] The Today rail shows rest-of-day context without becoming a mini calendar.
-- [ ] The tomorrow peek answers near-future awareness without expanding into a
+- [x] The Today rail shows rest-of-day context without becoming a mini calendar.
+- [x] The tomorrow peek answers near-future awareness without expanding into a
       full agenda.
-- [ ] The state strip includes only Chores, Meals, and Lists.
-- [ ] Tapping event surfaces opens full Calendar with date/event context
+- [x] The state strip includes only Chores, Meals, and Lists.
+- [x] Tapping event surfaces opens full Calendar with date/event context
       preserved.
-- [ ] Tapping Chores, Meals, or Lists summaries opens the owning module.
-- [ ] Home does not render inline event detail/edit panels or module workspaces;
+- [x] Tapping Chores, Meals, or Lists summaries opens the owning module.
+- [x] Home does not render inline event detail/edit panels or module workspaces;
       deeper work opens Calendar, Meals, Chores, or Lists.
-- [ ] No fake weather, Recipes tile, Photos placeholder, or generic activity
+- [x] No fake weather, Recipes tile, Photos placeholder, or generic activity
       feed appears by default.
-- [ ] Mobile Home remains visually and behaviorally unchanged.
-- [ ] Required screenshots are produced, critiqued, and iterated until the
+- [x] Mobile Home remains visually and behaviorally unchanged.
+- [x] Required screenshots are produced, critiqued, and iterated until the
       large-screen experience reads as an ambient household display rather than
       a stretched phone screen or generic dashboard.
-- [ ] The screenshot review includes an existing mobile Home baseline or
+- [x] The screenshot review includes an existing mobile Home baseline or
       equivalent regression evidence.
 
 ## Follow-Up Stories

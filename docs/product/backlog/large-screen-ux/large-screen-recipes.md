@@ -2,13 +2,14 @@
 id: large-screen-recipes
 title: Large-screen Recipes card grid
 epic: large-screen-ux
-status: planned
+status: done
 priority: P3
 created: 2026-07-06
-updated: 2026-07-15
+updated: 2026-07-17
 issues:
   - https://github.com/joe-bor/FamilyHub/issues/290
-prs: []
+prs:
+  - https://github.com/joe-bor/FamilyHub/pull/291
 plan: ../../../superpowers/plans/2026-07-15-large-screen-recipes.md
 spec: ../../../superpowers/specs/2026-07-06-large-screen-recipes-design.md
 ---
@@ -39,9 +40,16 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Acceptance Criteria
 
-- [ ] 2-4 column grid at 1024px / 1280px / 1440px+ inside the container.
-- [ ] No card fills the viewport; images render at the capped aspect ratio.
-- [ ] Search and favorites filtering work unchanged; mobile unchanged.
-- [ ] At `lg+`, title, search, filters, and Add recipe fit in one toolbar row
+- [x] 2-4 column grid at 1024px / 1280px / 1440px+ inside the container.
+- [x] No card fills the viewport; images render at the capped aspect ratio.
+- [x] Search and favorites filtering work unchanged; mobile unchanged.
+- [x] At `lg+`, title, search, filters, and Add recipe fit in one toolbar row
       with 44px interactive targets.
-- [ ] Screenshot review per spec matrix, iterated before done.
+- [x] Screenshot review per spec matrix, iterated before done.
+
+Delivered on [FE PR #291](https://github.com/joe-bor/FamilyHub/pull/291)
+(merged 2026-07-16), closing
+[FE issue #290](https://github.com/joe-bor/FamilyHub/issues/290). The PR's
+real-backend Playwright suite verified the 1024px / 1280px / 1440px grid and
+toolbar geometry, centered states, preserved detail width, filtering, and the
+375px mobile regression baseline.

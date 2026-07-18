@@ -38,7 +38,7 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Acceptance Criteria
 
-- [ ] Widened board with Today visually primary at 1024px and 1440px.
-- [ ] Checkoff targets at least 44px on large screens.
-- [ ] All existing chore flows behave unchanged; mobile unchanged.
-- [ ] Screenshot review per spec matrix, iterated before done.
+- [x] Widened board with Today visually primary at 1024px and 1440px.
+- [x] Checkoff targets at least 44px on large screens.
+- [x] All existing chore flows behave unchanged; mobile unchanged.
+- [x] Screenshot review per spec matrix, iterated before done.

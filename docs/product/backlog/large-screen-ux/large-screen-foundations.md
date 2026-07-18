@@ -39,11 +39,11 @@ Design: [Large-screen foundations](../../../superpowers/specs/2026-07-06-large-s
 
 ## Acceptance Criteria
 
-- [ ] No fake weather chip in the module shell.
-- [ ] App header is a single compact row (~64px or less) on large screens.
-- [ ] One toolbar row per module on `lg+`.
-- [ ] Calendar chrome above the time grid totals ~160px or less at 1440x900.
-- [ ] Mobile shell unchanged; all touch targets remain at least 44px.
+- [x] No fake weather chip in the module shell.
+- [x] App header is a single compact row (~64px or less) on large screens.
+- [x] One toolbar row per module on `lg+`.
+- [x] Calendar chrome above the time grid totals ~160px or less at 1440x900.
+- [x] Mobile shell unchanged; all touch targets remain at least 44px.
 
 ## Follow-Up Stories
 

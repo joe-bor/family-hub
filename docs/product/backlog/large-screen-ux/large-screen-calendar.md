@@ -42,11 +42,11 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Acceptance Criteria
 
-- [ ] Week at 1440x900: 12+ visible hour rows, one-line day headers, single
+- [x] Week at 1440x900: 12+ visible hour rows, one-line day headers, single
       toolbar row.
-- [ ] Day on `lg+`: correct events per member lane; within-lane overlaps
+- [x] Day on `lg+`: correct events per member lane; within-lane overlaps
       stack correctly; all-day band aligned to lanes.
-- [ ] Mini-month rail auto-show/hide mechanics and persisted toggle work as
+- [x] Mini-month rail auto-show/hide mechanics and persisted toggle work as
       specified; tapping a day navigates Day view.
-- [ ] Mobile Calendar unchanged.
-- [ ] Screenshot review per spec matrix, iterated before done.
+- [x] Mobile Calendar unchanged.
+- [x] Screenshot review per spec matrix, iterated before done.

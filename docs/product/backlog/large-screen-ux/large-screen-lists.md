@@ -38,9 +38,9 @@ Depends on: [Large-screen foundations](large-screen-foundations.md).
 
 ## Acceptance Criteria
 
-- [ ] Rail + detail render simultaneously at 1024px+; selecting a list swaps
+- [x] Rail + detail render simultaneously at 1024px+; selecting a list swaps
       only the right pane.
-- [ ] Auto-select and create/delete fallbacks behave as specified.
-- [ ] Existing item flows work unchanged inside the pane.
-- [ ] Below 1024px and on mobile, drill-in flow unchanged.
-- [ ] Screenshot review per spec matrix, iterated before done.
+- [x] Auto-select and create/delete fallbacks behave as specified.
+- [x] Existing item flows work unchanged inside the pane.
+- [x] Below 1024px and on mobile, drill-in flow unchanged.
+- [x] Screenshot review per spec matrix, iterated before done.
