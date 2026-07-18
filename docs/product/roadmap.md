@@ -53,6 +53,11 @@ Released as FE `0.3.23` and deployed to production on 2026-07-17. All seven
 planned surfaces are complete, through FE PR #291, with no open large-screen
 implementation Issues remaining.
 
+A follow-up story has since been shaped for the two Calendar views this epic
+deliberately left at chrome-only: see [Large-screen Calendar Month and
+Schedule](backlog/large-screen-ux/large-screen-calendar-month-schedule.md)
+under Planned epics. It does not reopen this epic.
+
 Delivered implementation:
 - [Large-screen shell foundations](backlog/large-screen-ux/large-screen-foundations.md) — slim header (drop fake weather), one merged toolbar row, chrome budget; FE PR #282 merged 2026-07-06. [spec](../superpowers/specs/2026-07-06-large-screen-foundations-design.md) · [plan](../superpowers/plans/2026-07-06-large-screen-foundations.md)
 - [Large-screen Home hub](backlog/large-screen-ux/large-screen-home.md) — ambient A1 now-first Home (hero + Chores/Meals/Lists state strip + Today rail), cross-module routing intents, 10-min idle return; FE PR #284 merged 2026-07-07 (closes #278). [spec](../superpowers/specs/2026-07-05-large-screen-home-design.md) · [plan](../superpowers/plans/2026-07-05-large-screen-home.md)
@@ -89,6 +94,16 @@ Recommended order:
 5. `Photos` — deferred; no longer the next product slice
 
 ## Planned epics
+
+### Large-screen / tablet UX follow-on
+
+- [Large-screen Calendar Month and Schedule](backlog/large-screen-ux/large-screen-calendar-month-schedule.md) —
+  Month fills the viewport with density derived from measured row height, an
+  interactive `+N more` overflow popover, and multi-day runs welded by corner
+  geometry; Schedule moves to a date gutter with full-width rows and explicit
+  gap rows, resolving the foundations §3.3 narrow-centred-column violation it
+  still carries. Shaped 2026-07-18; no Issue opened yet.
+  [spec](../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md)
 
 ### Module foundations follow-on
 
