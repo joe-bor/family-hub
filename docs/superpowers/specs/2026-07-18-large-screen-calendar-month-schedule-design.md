@@ -115,12 +115,15 @@ Every change in this spec, **including the Month query-range change in Section
 4.6**, is gated at 1024px. Nothing below that boundary changes in rendering or
 in the data it is given.
 
-Month and Schedule ship as two separate atomic commits on one branch, Month
-first. Because `ScheduleCalendar` is shared with mobile, every Schedule change
-is gated on `useIsLargeScreen()` (`LARGE_SCREEN_BREAKPOINT = 1024`), and the
-Schedule commit is not complete until mobile rendering has been proven
-unchanged by screenshot hash comparison against `origin/main`, the method used
-for the shipped Calendar work in FE PR #285.
+Month and Schedule ship as two separate phases on one branch, Month first, each
+ending at its own screenshot gate. Commits within a phase are frequent; the
+phase boundary, not the commit count, is what provides the risk isolation.
+
+Because `ScheduleCalendar` is shared with mobile, every Schedule change is
+gated on `useIsLargeScreen()` (`LARGE_SCREEN_BREAKPOINT = 1024`), and the
+Schedule phase is not complete until mobile rendering has been proven unchanged
+by screenshot hash comparison against `origin/main`, the method used for the
+shipped Calendar work in FE PR #285.
 
 ## 4. Month View
 
@@ -129,8 +132,8 @@ for the shipped Calendar work in FE PR #285.
 At `lg+` the grid fills the height available to it instead of sizing to
 content.
 
-- Row height = (container height - weekday header) / week count, where week
-  count is **4, 5 or 6**. Four occurs for a non-leap February beginning on a
+- Row height = (weeks-container height - inter-row gaps) / week count, where
+  week count is **4, 5 or 6**. Four occurs for a non-leap February beginning on a
   Sunday: `buildMonthMatrix` pads only to a multiple of seven, so 28 days from
   a Sunday produce exactly four rows. February 2026 is such a month, and is the
   only one between 2024 and 2030 — which makes it exactly the case that ships
@@ -138,10 +141,18 @@ content.
   in the capacity unit tests.
 - A floor of `MONTH_MIN_ROW_HEIGHT = 96px` applies. If the computed height is
   below the floor, the floor wins and the grid scrolls.
-- Container height is observed with a `ResizeObserver` on the grid wrapper. The
-  observed height feeds the capacity calculation in Section 4.2. The observer
-  must write row height to state only when the value changes, so that
-  observation cannot re-trigger itself.
+- Height is observed with a `ResizeObserver` on the **weeks container**, not on
+  the grid wrapper. The weekday header is a sibling of the weeks container and
+  is not laid out by the row-height calculation, so observing an element that
+  includes it would overflow the grid by the header's height and leave a
+  permanent scrollbar.
+- The observed element unmounts while the loading skeleton is shown, so the
+  observer must be attached via a **callback ref**. An effect keyed on the week
+  count alone would never re-run when the container remounts, pinning row
+  height at the floor for the life of the view — and no unit test can catch it,
+  because `ResizeObserver` is a no-op mock in this repo.
+- The observer must write row height to state only when the value changes, so
+  that observation cannot re-trigger itself.
 
 ### 4.2 Cell slot capacity
 
@@ -442,11 +453,16 @@ gutter beside the event rows.
 `colorMap[member.color].light` into `cn()`. Both are `bg-*` utilities
 (`bg-[#b95443]` and `bg-[#fbe9e6]`), so `twMerge` treats them as conflicting
 and keeps only the last. The `border-l-4` therefore renders in the default
-border colour for every member. The fix is to pass a `border-*` colour rather
-than a second `bg-*`; it is a one-line change on a surface this story is
-already rebuilding, and leaving it would mean shipping a redesign that still
-silently drops a member channel. Adding the member's name is what makes member
-identity robust; fixing the border is what makes the colour channel real again.
+border colour for every member. The fix is to set the border colour from the
+member's `hex` via an inline style, which `twMerge` cannot collapse.
+
+**The fix applies to the `lg+` branch only.** Applying it to the shared compact
+path would make a member-coloured border appear on mobile where a grey one
+ships today — a visible mobile change, which this story's contract forbids, and
+one that would also destroy the byte-identical parity check that guards the
+rest of the Schedule work. The compact path keeps the bug; see Section 11.
+Adding the member's name is what makes member identity robust at `lg+`; fixing
+the border is what makes the colour channel real alongside it.
 - Rows keep a minimum height of 56px, above the 44px floor.
 
 ### 5.2 Gaps and empty days
@@ -679,9 +695,9 @@ Schedule:
       sticky within its own day group.
 - [ ] Event rows display the member's name as visible text in addition to
       colour and avatar.
-- [ ] The coloured left border renders in the member's colour, verified by
-      asserting the resolved class list contains a member `border-*` colour and
-      no conflicting second `bg-*`.
+- [ ] At `lg+` the coloured left border renders in the member's colour,
+      verified by asserting the resolved `borderLeftColor` equals that member's
+      `colorMap` hex. Below 1024px the border is unchanged, bug included.
 - [ ] A run of event-free days renders as one gap row naming the range, with
       `Nothing scheduled`; it is not focusable.
 - [ ] A window with no events renders the whole-view empty state, not a gap row.
@@ -758,9 +774,15 @@ Shared:
   measured row height, a future change to app header or toolbar height silently
   shifts how many events a cell shows. This is the intended behaviour, but it
   means the screenshot gate is the only thing pinning the concrete counts.
+- **Schedule's coloured left border stays broken below 1024px.** The `twMerge`
+  collapse described in Section 5.1 is fixed only in the `lg+` branch, because
+  fixing it on the shared compact path would be a visible mobile change. Mobile
+  and tablet keep a default-coloured border. The fix is a small follow-up whose
+  review should be about that visual delta specifically.
 
 ## 12. Delivery Notes
 
-Two atomic commits on one branch, Month first, each with its own screenshot
-review before it is considered done. The Schedule commit must include the
+Two phases on one branch, Month first, each with its own screenshot review
+before it is considered done. Schedule work does not begin until the Month gate
+passes. The Schedule commit must include the
 mobile parity evidence described in Section 3 before it is called complete.
