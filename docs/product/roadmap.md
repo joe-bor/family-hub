@@ -102,8 +102,9 @@ Recommended order:
   interactive `+N more` overflow popover, and multi-day runs welded by corner
   geometry; Schedule moves to a date gutter with full-width rows and explicit
   gap rows, resolving the foundations §3.3 narrow-centred-column violation it
-  still carries. Shaped 2026-07-18; no Issue opened yet.
-  [spec](../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md)
+  still carries. Shaped 2026-07-18; FE #293 open, not started.
+  [spec](../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md) ·
+  [plan](../superpowers/plans/2026-07-18-large-screen-calendar-month-schedule.md)
 
 ### Module foundations follow-on
 

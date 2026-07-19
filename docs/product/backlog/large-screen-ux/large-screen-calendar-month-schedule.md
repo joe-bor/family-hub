@@ -6,7 +6,8 @@ status: planned
 priority: P2
 created: 2026-07-18
 updated: 2026-07-18
-issues: []
+issues:
+  - https://github.com/joe-bor/FamilyHub/issues/293
 prs: []
 spec: ../../../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md
 ---
