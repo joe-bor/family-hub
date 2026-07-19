@@ -175,6 +175,8 @@ function setMobile(isMobile: boolean) {
 }
 ```
 
+This shim is temporary. Task 15 wraps all seven tests in a `describe("compact")` block with its own `beforeEach(() => setViewportWidth(390))`, at which point the only remaining caller is the FAB-clearance test's `setMobile(true)`. Inline that call and delete the shim then — `noUnusedLocals` does not cover test files, so nothing will flag it for you.
+
 - [ ] **Step 3: Verify existing tests still pass**
 
 ```bash
@@ -228,6 +230,8 @@ import { buildMonthMatrix, selectMonthDayDots } from "../utils/month-matrix";
 ```
 
 - [ ] **Step 4: Move the tests**
+
+Also delete whatever the move orphans in `day-rail.test.ts` — the `member()` and `ev()` builders and the `CalendarEvent` / `FamilyMember` type imports become unused once the two cases leave. Biome reports `noUnusedVariables` as a warning here and `biome check` still exits 0, so lint will not catch it.
 
 Move the two cases at `src/components/calendar/utils/day-rail.test.ts:44` (`"builds a 6x7 (or 5x7) month matrix covering the current month"`) and `:55` (the `selectMonthDayDots` case) into a new `src/components/calendar/utils/month-matrix.test.ts`, importing from `./month-matrix`. Leave the `railThresholdPx` cases in `day-rail.test.ts`.
 
@@ -2145,7 +2149,7 @@ In `monthly-calendar.tsx`, render in this priority order inside `MonthlyCalendar
 
 1. `isError` → `<CalendarErrorState message={errorMessage} onRetry={onRetry} />`
 2. `isLoading` → the skeleton below
-3. `!isLoading && events.length === 0 && !navigator.onLine` → `<CalendarOfflineState message="This month isn't cached yet." />` — the cold-cache case created by the breakpoint-gated query key (spec Section 6)
+3. `!isLoading && events.length === 0 && !isOnline` → `<CalendarOfflineState message="This month isn't cached yet." />` — the cold-cache case created by the breakpoint-gated query key (spec Section 6). Take `isOnline` from the existing `useOnlineStatus()` hook (`src/hooks/use-online-status.ts`); it is reactive, whereas a direct `navigator.onLine` read would not re-render when connectivity returns
 4. otherwise the grid
 
 ```tsx
@@ -2647,7 +2651,7 @@ className={cn(
 ```tsx
 <section
   key={formatLocalDate(row.date)}
-  aria-label={`${relativeLabel(row.date)}, ${format(row.date, "EEEE MMMM d")}, ${row.events.length} events`}
+  aria-label={`${relativeLabel(row.date)}, ${format(row.date, "EEEE MMMM d")}, ${row.events.length} ${row.events.length === 1 ? "event" : "events"}`}
   className="grid gap-4 border-t border-border py-3"
   style={{ gridTemplateColumns: `${SCHEDULE_GUTTER_WIDTH}px 1fr` }}
 >
