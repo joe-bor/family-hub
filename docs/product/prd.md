@@ -1,8 +1,8 @@
 # Product Requirements Document (PRD)
 ## Family Hub — Family Touchscreen Calendar
 
-**Document Version:** 2.1
-**Last Updated:** 2026-05-01
+**Document Version:** 2.3
+**Last Updated:** 2026-07-20
 **Project Owner:** Joe
 **Document Status:** Living document — see `docs/product/roadmap.md` for current phase.
 
@@ -208,7 +208,7 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 
 **Calendar Viewing**
 - As a **parent**, I want to see the current week's schedule at a glance, so I can plan my day efficiently
-- As a **parent**, I want to toggle between day/week/month views, so I can see different time horizons
+- As a **parent**, I want to toggle between Day, Week, Month, and Schedule views, so I can use different time horizons and scanning patterns
 - As a **parent**, I want to filter events by family member, so I can focus on specific schedules
 - As a **child**, I want to see my own color-coded events, so I know what I'm doing today
 
@@ -283,7 +283,7 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 ### In Scope (MVP - Phase 1)
 
 **Core Calendar Functionality:**
-✅ Week/Month/Day view switching  
+✅ Day/Week/Month/Schedule view switching<br>
 ✅ Google Calendar integration (read-only sync shipped; write-back is a future epic)  
 ✅ Add/Edit/Delete events from touchscreen  
 ✅ Color-coded events per family member  
@@ -333,7 +333,8 @@ A custom-built, family-friendly touchscreen calendar application designed to rep
 ❌ **Task Categories** - Future enhancement  
 ❌ **Location/Map Integration** - Future enhancement  
 ❌ **Voice Control** - Future enhancement  
-❌ **Offline Mode** - Requires active internet connection  
+❌ **Offline writes/outbox/background sync** - Cached read-only viewing is
+shipped; creating or changing data still requires an active connection<br>
 ❌ **WebSocket real-time sync** — polling via TanStack Query is sufficient  
 ❌ **Two-way Google Calendar sync** — Phase 1 is read-only; write-back is a future epic  
 
@@ -371,11 +372,13 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 
 #### Feature 7.1.1: Multi-View Calendar Display
 **Priority:** P0 (Must Have)  
-**User Story:** As a parent, I want to switch between day/week/month views so I can see different time horizons
+**User Story:** As a parent, I want to switch between Day, Week, Month, and
+Schedule views so I can use the time horizon and reading pattern that fits the
+moment
 
 **Requirements:**
 - Display current date prominently at top of interface
-- Week View (Default):
+- Week View (desktop/touchscreen first-use default):
   - Show 7 days (Sunday-Saturday; Sunday week start confirmed 2026-06-12, see backlog story `mobile-ux/sidebar-settings-story.md`)
   - Time slots from 6am-10pm in 1-hour increments
   - Events displayed as blocks within time slots
@@ -383,14 +386,21 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 - Month View:
   - Calendar grid showing full month
   - Events displayed as colored dots or small badges per day
-  - Tap day to see day detail view
+  - Tap an empty day to open Day view; tap a populated day to open a complete
+    day summary, with direct event-detail actions and an explicit Day-view
+    action. Dense Month badges are visual summaries rather than small controls.
 - Day View:
   - Single day schedule (6am-10pm)
   - Larger event blocks with more detail visible
   - Easier for child to understand
+- Schedule View:
+  - Chronological event list grouped by date, optimized for scanning what is
+    coming next without reading a time grid
+  - First-time mobile default; after a user selects another view, the
+    last-used view persists on that device
 
 **Acceptance Criteria:**
-- [ ] View toggle buttons clearly visible (Week/Month/Day)
+- [ ] View toggle buttons clearly visible (Day/Week/Month/Schedule)
 - [ ] Current view highlighted/active state shown
 - [ ] View switches render in <500ms
 - [ ] Current day highlighted in all views
@@ -432,7 +442,7 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 - [ ] Calendar updates in real-time as filters toggle
 - [ ] Filter state saved in localStorage (persists on reload)
 - [ ] Visual feedback shows which filters are active
-- [ ] Works in all calendar views (day/week/month)
+- [ ] Works in all calendar views (Day/Week/Month/Schedule)
 
 ---
 
@@ -520,7 +530,9 @@ Roadmap and backlog determine delivery order. This section only settles the prod
 **Requirements:**
 
 **Trigger:**
-- Tap existing event block → Opens event detail view
+- Tap an interactive event block or list row → Opens event detail view. Dense
+  Month-grid badges are presentational; their full-day summary contains the
+  interactive event rows.
 - "Edit" button in detail view → Opens edit modal
 
 **Edit Modal:**
@@ -790,11 +802,12 @@ Roadmap and backlog determine delivery order. This section only settles the prod
   - Full week view with time grid
   - Side-by-side calendar + supporting module context when relevant
   - Large touch targets optimized for touchscreen
-- **Medium (Tablet):** 768px - 1023px
+- **Medium (Tablet):** 769px - 1023px
   - Adjusted layout, still shows full week
   - Stacked calendar + supporting module context (tabs or scroll)
-- **Small (Mobile):** 320px - 767px
-  - Default to day view (week view too cramped)
+- **Small (Mobile):** 320px - 768px
+  - First-time Calendar use smart-defaults to Schedule (Week is too cramped);
+    after the user chooses a view, that last-used view persists per device
   - Bottom navigation for primary module switching (`Home`, `Calendar`, `Lists`, `Chores`, `Meals`, `Photos`)
   - Optimized for thumb-friendly tapping
 
@@ -1151,10 +1164,10 @@ POST   /api/settings/google-calendar  - Configure Google Calendar integration
    - Top Bar:
      - App title/logo (left)
      - Current date/time (center)
-     - View switcher: Day | Week | Month (right)
+     - View switcher: Day | Week | Month | Schedule (right)
      - Filter button (profile toggle)
    - Main Area:
-     - Calendar grid (day/week/month based on selection)
+     - Calendar grid or chronological Schedule list based on selection
      - Events rendered as colored blocks
    - Bottom Bar (mobile shell):
      - Home icon
@@ -1604,6 +1617,7 @@ Current epics (see roadmap for details):
 | 2.0     | 2026-04-23 | Joe    | Realigned with shipped reality; moved phase plan to roadmap.md; added JWT/recurring/multi-day as shipped; deferred Tasks and WebSocket. |
 | 2.1     | 2026-05-01 | Joe    | Aligned PRD vocabulary with shell (`Chores` vs `Lists`), corrected Google Calendar read-only wording, and recorded module-language decisions. |
 | 2.2     | 2026-05-21 | Joe    | Updated Chores from one-off due-date tasks to shipped recurring day / week / month routines. |
+| 2.3     | 2026-07-20 | Codex review | Reconciled Calendar Month interaction, Schedule view/default, the 768/769 breakpoint, and shipped cached read-only offline behavior with the running product. |
 
 ---
 

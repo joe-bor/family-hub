@@ -5,11 +5,12 @@ epic: large-screen-ux
 status: planned
 priority: P2
 created: 2026-07-18
-updated: 2026-07-18
+updated: 2026-07-20
 issues:
   - https://github.com/joe-bor/FamilyHub/issues/293
 prs: []
 spec: ../../../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md
+plan: ../../../superpowers/plans/2026-07-18-large-screen-calendar-month-schedule.md
 ---
 
 ## Context
@@ -29,15 +30,18 @@ events per cell and leaves the rest of the viewport empty. Schedule renders
 margin — a live violation of the shipped foundations spec Section 3.3.
 
 Design: [Large-screen Calendar Month and Schedule](../../../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md).
+Plan: [Large-screen Calendar Month and Schedule implementation](../../../superpowers/plans/2026-07-18-large-screen-calendar-month-schedule.md).
 Builds on: [Large-screen foundations](large-screen-foundations.md) and
 [Large-screen Calendar](large-screen-calendar.md), both shipped.
 
 ## Scope
 
-- Month at `lg+`: grid fills available height; events-per-cell derived from
-  measured row height; interactive `+N more` opening a per-day overflow
-  popover; multi-day runs welded by corner geometry with the title on every
-  day; keyboard grid navigation; weekend, today and selected-day emphasis.
+- Month at `lg+`: grid fills available height; visual slot capacity derived from
+  measured row height; the full day cell opens a per-day event popover while
+  28px chips and `+N more` remain dense visual summaries; multi-day runs welded
+  by corner geometry with a one-line 14px title summary and visible member name
+  on every day; keyboard grid navigation; weekend, today and selected-day
+  emphasis.
 - Month data at `lg+` only: widen the query range to the grid range so
   adjacent-month cells can show events. Gated at 1024px because the range is
   computed module-wide and `MobileMonthlyView` also renders adjacent-month
@@ -45,7 +49,7 @@ Builds on: [Large-screen foundations](large-screen-foundations.md) and
 - Schedule at `lg+`: date gutter plus full-width event rows carrying the
   member's name; event-free stretches rendered as explicit gap rows;
   de-emphasised past day groups.
-- Both views: loading skeletons, empty and error states.
+- Both views at `lg+`: loading skeletons, empty and error states.
 - Shared: `buildMonthMatrix()` reused rather than duplicated.
 - Two defects on surfaces being rebuilt anyway are fixed as part of the work:
   Schedule's coloured left border, which `twMerge` currently collapses away, and
@@ -62,6 +66,8 @@ Builds on: [Large-screen foundations](large-screen-foundations.md) and
   quick-add.
 - Calendar gestures; event create/detail/edit/recurrence dialogs.
 - Generalising the Day view mini-month rail to Month or Schedule.
+- App-wide dark-theme tokens, provider wiring and theme switching. The shipped
+  app exposes only the light theme; this story verifies contrast there.
 - Backend changes.
 
 ## Dependencies
@@ -69,7 +75,7 @@ Builds on: [Large-screen foundations](large-screen-foundations.md) and
 - [Large-screen foundations](large-screen-foundations.md) — shipped, FE PR #282.
 - [Large-screen Calendar](large-screen-calendar.md) — shipped, FE PR #285.
 - No backend dependency. The Month range change reuses the existing
-  `GET /calendar-events` contract with different date parameters.
+  `GET /calendar/events` contract with different date parameters.
 
 ## Delivery Risk
 
@@ -87,23 +93,49 @@ so Month carries materially less risk and ships first.
 - [ ] Month at 1440x900 fills the available height with no dead space below the
       final week row; at 1024x768 a six-week month does the same, respecting
       the minimum row-height floor.
-- [ ] Events per cell is derived from measured row height, not hardcoded, and a
-      taller row yields strictly more events. Absolute counts are confirmed at
-      the screenshot gate rather than fixed here.
-- [ ] `+N more` is a button opening a popover listing all that day's events;
-      selecting one opens the existing event detail modal.
+- [ ] Visual slot capacity is derived from measured row height, not hardcoded.
+      Capacity never decreases as row height grows, and the measured 1440x900
+      five-week row yields greater capacity than the 1024x768 six-week row.
+      Absolute counts are confirmed at the screenshot gate rather than fixed
+      here.
+- [ ] Activating a day with events opens a popover listing all that day's
+      events; `+N more` accurately reports hidden events, and selecting an
+      event in the popover opens the existing event detail modal.
 - [ ] Multi-day runs render with rounded outer corners only at true start and
-      end, square inner corners throughout, and the full title on every day,
-      including across a week boundary.
+      end, square inner corners throughout, and the complete title string in a
+      one-line 14px summary on every day, including across a week boundary.
+      The summary may ellipsize visually; the full title remains available in
+      the day popover.
 - [ ] At `lg+`, adjacent-month cells display events when events exist on those
       dates; below 1024px the query range and those cells are unchanged.
 - [ ] Month grid is one tab stop with arrow-key day navigation and the
       accessible names specified in the spec.
-- [ ] Schedule at 1440x900 spans the available width with no centred narrow
-      column; the date gutter carries label, date and event count; rows carry
-      the member's name.
+- [ ] Schedule at 1440x900, 1920x1080 and 2560x1440 spans the available width
+      with no centred narrow column; the date gutter carries label, date and
+      event count; rows carry the member's name and constrain long text inside
+      the row rather than capping the whole Schedule surface. Event titles are
+      20px and secondary metadata is at least 14px.
 - [ ] Event-free stretches render as one explicit gap row.
+- [ ] Schedule's whole-view empty state tells apart a family with no members,
+      filters hiding all events in the rendered window, and a genuinely empty
+      14-day window. A defensive no-selection branch is present, while the
+      shipped cross-view filter reset remains a documented follow-up. The
+      zero-member branch is component-tested: the authenticated app correctly
+      routes a real zero-member family to onboarding before Calendar mounts,
+      so an app-level Calendar screenshot would be artificial.
 - [ ] Mobile Schedule rendering is byte-identical to `origin/main`.
+- [ ] Schedule still renders offsets 0 through 13 and Previous/Next still move
+      exactly 7 days, preserving the existing 50% overlap.
+- [ ] Month and large-screen Schedule render loading skeletons and recoverable
+      error states; Month waits for persisted-query restoration before deciding
+      that an offline range is uncached, and a cached empty response still
+      renders the normal grid.
+- [ ] Escape restores the originating Month cell, outside pointer dismissal
+      keeps the newly clicked target, and closing Event Detail restores the
+      event's originating cell. New motion respects reduced-motion preference.
+- [ ] Text meets WCAG AA in the currently supported light theme, including
+      missing-member, adjacent-month, and de-emphasised Schedule past-day event
+      content; colour is never the only visible identity channel.
 - [ ] Mobile Calendar, the 769-1023px range, and Week and Day views are all
       unchanged.
 - [ ] Screenshot review per the spec matrix, iterated before done.
@@ -115,14 +147,19 @@ silently changed: Schedule's 14-day window with a 7-day paging step (a 50% page
 overlap) and its constant `"Upcoming"` toolbar label, which is shared with the
 mobile toolbar.
 
-Two constraints worth carrying into the implementation Issue, both surfaced by
-spec review:
+Three constraints worth carrying into the implementation Issue, all confirmed
+by the end-to-end contract review:
 
-- **The 44px rule is narrowed for in-grid Month chips**, to a 28px floor. At
-  44px the derived slot capacity would be 2 at 1440x900 and 1 at 1024x768,
-  fewer events than ship today. 28px matches the shipped Week view's
-  `min-h-[28px]` event buttons and the foundations spec, which scopes the 44px
-  rule to chrome. All chrome, controls and Schedule rows stay at 44px.
+- **The 44px product rule remains intact.** In-grid Month chips and `+N more`
+  are 28px visual summaries, not separate interactive controls. The day
+  gridcell is the single large target and opens the full-day popover; popover
+  actions and Schedule rows remain at least 44px, and adjacent day cells keep
+  the PRD's 8px minimum spacing. This preserves useful Month density without
+  weakening the PRD's touch-first contract for the four-year-old persona.
+- **The Schedule surface has no fixed outer width cap.** The product targets a
+  dedicated 20-inch-or-larger display and the PRD requires scaling through
+  2560px. Long text is constrained inside event rows, so readability does not
+  recreate the centred dead margins that motivated this story.
 - **The repo's Vitest setup cannot exercise the lg+ measured-height path.**
   `src/test/setup.ts` mocks `ResizeObserver` as a no-op and `matchMedia` as
   `matches: false` for every query, and jsdom has no layout engine. Capacity

@@ -1,12 +1,93 @@
 # Large-Screen Calendar: Month and Schedule - Design Spec
 
 **Date:** 2026-07-18
-**Status:** Draft for review
+**Status:** Reviewed; implementation-ready
 **Story:** `docs/product/backlog/large-screen-ux/large-screen-calendar-month-schedule.md`
+**Plan:** [Implementation plan](../plans/2026-07-18-large-screen-calendar-month-schedule.md)
 **Builds on:** `2026-07-06-large-screen-foundations-design.md` (shipped),
 `2026-07-06-large-screen-calendar-design.md` (shipped)
 **Scope:** Month and Schedule calendar views at 1024px and above. Mobile
 Calendar and the 769-1023px range are unchanged.
+
+### Review amendments (2026-07-20)
+
+The story, spec, plan, frontend `origin/main`, and Issue #293 were reviewed as
+one execution chain. Thirteen material corrections were made before implementation:
+
+1. The measured weeks wrapper is a valid `role="rowgroup"`, not an unroled
+   child forbidden by the earlier acceptance wording. WAI-ARIA permits rows to
+   be owned through a rowgroup, which preserves both valid grid semantics and
+   the required observation boundary.
+2. Month's 28px chips and overflow label are visual summaries, while the whole
+   day gridcell is the single 44px-or-larger control. This preserves density
+   without relaxing the PRD's touch-target requirement for the child persona.
+3. The chip weld uses the rendered border, padding and column gap as one
+   geometry model and cells do not clip the chip layer. The former plan's 4px
+   bleed inside `overflow-hidden` cells could not physically bridge a 4px gap.
+4. Schedule remains full width through the product's 2560px target. Readable
+   line length is enforced inside event rows rather than with a 1400px outer
+   cap, which would leave about 1048px of unused width on the target display.
+5. Adjacent-month emphasis applies to the cell chrome and date label, never by
+   lowering opacity on the whole cell. The widened query now puts real event
+   text in those cells, so blanket opacity would undermine the same WCAG AA
+   contrast requirement the design promises everywhere else.
+6. PRD Section 7.1.1 now records the large-screen Month interaction explicitly:
+   an empty day opens Day view, while a populated day opens the complete day
+   summary and then offers event-detail and Day-view actions. This is the
+   product consequence of keeping the full day cell as the one large target;
+   the older unconditional “tap day” sentence could not coexist with that
+   reviewed accessibility model.
+7. Both Month row and column gaps are 8px, matching the PRD's minimum spacing
+   between adjacent targets. With 1px borders and 4px horizontal padding, the
+   corresponding per-side weld bleed is therefore 9px, not 7px.
+8. Dense Month titles are 14px, repeat on every run segment, and may truncate
+   to one line; the popover exposes the complete title. Schedule event titles
+   are 20px. This turns “full title on every day” into a testable content rule
+   without contradicting fixed 28px slots or the PRD typography scale.
+9. WCAG AA acceptance is scoped to the app's currently supported light theme.
+   Frontend `origin/main` defines only `:root` colour tokens and never mounts
+   its exported theme provider; implementing and validating a dark theme would
+   be a separate cross-app feature, not Month/Schedule polish. Missing-member,
+   adjacent-month and past-day contrast remain explicit gates in the supported
+   theme, and dark-theme support is recorded as a prerequisite follow-up.
+10. Zero-member and zero-selection Schedule branches remain defensive
+    component states with direct component-test evidence, not fabricated
+    app-level screenshots. The released API rejects registration without a
+    member, and the authenticated shell routes a family with no remaining
+    members to onboarding before Calendar mounts. The reachable visual matrix
+    instead includes a missing-member Month response fixture to exercise the
+    required fallback tokens while a valid family member keeps Calendar
+    mounted.
+11. PRD breakpoint ranges now classify 768px as mobile and start tablet at
+    769px. The shipped `useIsMobile()` contract is `innerWidth <= 768` and this
+    story explicitly preserves that boundary; the earlier PRD classified 768px
+    as tablet, contradicting both the running product and its screenshot gate.
+12. The PRD's canonical Calendar view model and mobile default now match the
+    shipped product: Day, Week, Month, and Schedule are all first-class views;
+    first-time mobile users see Schedule, then their chosen view persists per
+    device. The old Day/Week/Month-only lists and “default to Day” text
+    contradicted the shipped type, switcher, store/module behavior, and existing
+    mobile-settings product decision. This matters here because shared
+    `ScheduleCalendar` regressions affect the first Calendar view a first-time
+    mobile user encounters.
+13. PRD scope now distinguishes shipped cached read-only offline viewing from
+    the offline writes/outbox/background-sync capability that remains out of
+    scope. The former “Offline Mode requires active internet” line contradicted
+    the shipped IndexedDB query persistence recorded elsewhere in the same PRD
+    and roadmap, and obscured why Month restoration is an acceptance gate.
+
+Proof: [WAI-ARIA grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/),
+[WCAG 2.2 target-size guidance](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum),
+[frontend light-only tokens at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/index.css),
+[frontend zero-member onboarding guard at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/App.tsx),
+[frontend 768px mobile boundary at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/hooks/use-is-mobile.ts),
+[frontend mobile Schedule smart default at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/components/calendar/calendar-module.tsx),
+[frontend four-view switcher at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/components/calendar/components/calendar-view-switcher.tsx),
+[frontend Calendar view type at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/lib/types/calendar.ts),
+[frontend persisted read-cache contract at the audited baseline](https://github.com/joe-bor/FamilyHub/blob/f9dc7e8070457f965b823baee4e3746486afa438/src/lib/offline/dehydrate.ts),
+[released API registration constraint](https://github.com/joe-bor/family-hub-api/blob/v1.9.0/src/main/java/com/familyhub/demo/dto/RegisterRequest.java),
+PRD Sections 1, 7.1.1, 7.5.1, 9.1, 9.4, 9.5 and 11.2, and the shipped
+foundations spec Section 3.3.
 
 ## 1. Context
 
@@ -55,7 +136,8 @@ renders at or below 768px.
 `ScheduleCalendar` is rendered from three call sites in `calendar-module.tsx`:
 the mobile switch (`case "schedule"` and its `default`) and the desktop switch.
 One component serves both. It is also the mobile smart default for first-time
-users, making it the highest-traffic mobile surface in the app.
+users, making compact-rendering preservation a release-critical risk even
+though no traffic ranking is asserted without telemetry.
 
 - `mx-auto max-w-3xl` centres a 768px column, leaving roughly 600px of dead
   margin at 1440. This is a live violation of foundations spec Section 3.3,
@@ -153,6 +235,11 @@ content.
   because `ResizeObserver` is a no-op mock in this repo.
 - The observer must write row height to state only when the value changes, so
   that observation cannot re-trigger itself.
+- Semantically, that measured weeks container is `role="rowgroup"`. The grid
+  therefore owns the weekday `row` and the observed `rowgroup`; the rowgroup
+  owns the week `row` elements. This is the WAI-ARIA-supported structure that
+  keeps the measurement boundary without inserting an unroled child in the
+  grid.
 
 ### 4.2 Cell slot capacity
 
@@ -161,7 +248,11 @@ slot that holds no event. Slot capacity is derived from measured row height,
 never hardcoded.
 
 ```
-usableHeight = rowHeight - MONTH_NUMERAL_BLOCK - MONTH_CELL_PADDING_Y
+usableHeight = rowHeight
+             - MONTH_CELL_BORDER_Y
+             - MONTH_CELL_PADDING_Y
+             - MONTH_NUMERAL_BLOCK
+             - MONTH_HEADER_SLOT_GAP
 slotCapacity = floor((usableHeight + MONTH_CHIP_GAP)
                      / (MONTH_CHIP_HEIGHT + MONTH_CHIP_GAP))
 ```
@@ -171,11 +262,20 @@ Starting constants, tunable during the screenshot gate in the same way
 
 | Constant | Value | Note |
 | --- | --- | --- |
-| `MONTH_NUMERAL_BLOCK` | 20px | |
-| `MONTH_CELL_PADDING_Y` | 10px | |
-| `MONTH_CHIP_HEIGHT` | 28px | Floor, see Section 7 |
+| `MONTH_CELL_BORDER_Y` | 2px | Two 1px borders |
+| `MONTH_CELL_PADDING_Y` | 8px | Two 4px paddings; rendered from this constant |
+| `MONTH_NUMERAL_BLOCK` | 20px | Fixed-height header row; rendered from this constant |
+| `MONTH_HEADER_SLOT_GAP` | 2px | Between header and first slot |
+| `MONTH_CHIP_HEIGHT` | 28px | Visual slot height; not a touch target, see Section 7 |
 | `MONTH_CHIP_GAP` | 2px | |
 | `MONTH_MIN_ROW_HEIGHT` | 96px | |
+| `MONTH_ROW_GAP` | 8px | PRD minimum between vertically adjacent targets |
+| `MONTH_COLUMN_GAP` | 8px | PRD minimum between horizontally adjacent targets |
+
+These are one geometry model, not accounting-only knobs. The cell's border,
+padding, fixed numeral row and header-to-slot gap must render from these values.
+Changing a capacity constant without changing the corresponding CSS would
+overstate what fits and is forbidden.
 
 **Required slots for a cell.** Let `k` be as defined in Section 4.3 rule 4
 (the highest index in the week row's multi-day list covering this day), or
@@ -191,14 +291,20 @@ requiredSlots = (k + 1) + singleDayCount
 
 - If `requiredSlots <= slotCapacity`, render every slot.
 - Otherwise render the first `slotCapacity - 1` slots and put a `+N more`
-  button in the last slot, where **`N` is the number of events not rendered** —
-  counted over events only, so reserved blank slots never inflate it. `N` is
-  therefore computed from what was actually rendered, not by subtracting from
-  `eventCount`.
+  visual summary in the last slot, where **`N` is the number of events not
+  rendered** — counted over events only, so reserved blank slots never inflate
+  it. `N` is therefore computed from what was actually rendered, not by
+  subtracting from `eventCount`. The summary is not a second control; activating
+  the day cell opens the full list.
 
 The `MONTH_MIN_ROW_HEIGHT` floor guarantees `slotCapacity >= 2` at every
-viewport where this composition is active, so `slotCapacity - 1` is always at
-least 1 and the "no chips, only an overflow row" case cannot occur.
+viewport where this composition is active. It does **not** guarantee a visible
+event chip: if the only covering run occupies a reserved lane at or beyond the
+visible prefix, the prefix can contain a blank plus `+N more`. That rare case is
+an accepted consequence of exact within-row lane alignment. It is covered by a
+counterexample unit test, the day cell still announces its event count, and the
+same 44px-or-larger cell opens the complete popover. The implementation must
+not claim that the first visible slot always contains an event.
 
 **Testability.** The formula lives in a pure exported helper,
 `monthSlotCapacity(rowHeight)`, alongside a pure `planCellSlots()` that takes
@@ -226,13 +332,13 @@ measured height of app header, toolbar and weekday header, so a small chrome
 change shifts them.
 
 Note honestly that the 1024x768 six-week case may land at or below today's
-hardcoded 3. That is an accepted trade for chips that meet the Section 7 floor,
-taller and more legible cells, and an overflow control that actually works
-where today's `+N more` is inert. If the screenshot gate judges it too tight,
-the levers in priority order are: reduce `MONTH_NUMERAL_BLOCK`, reduce
-`MONTH_CELL_PADDING_Y`, then raise `MONTH_MIN_ROW_HEIGHT` and accept scrolling
-for six-week months at that viewport. Reducing `MONTH_CHIP_HEIGHT` below the
-Section 7 floor is not a lever.
+hardcoded 3. That is an accepted trade for legible visual slots and a complete
+popover path where today's `+N more` is inert. If the screenshot gate judges it
+too tight, the levers in priority order are: reduce the **rendered** numeral
+block, reduce the **rendered** padding, then raise `MONTH_MIN_ROW_HEIGHT` and
+accept scrolling for six-week months at that viewport. Reducing
+`MONTH_CHIP_HEIGHT` below the Section 7 floor or changing accounting without
+matching DOM geometry is not a lever.
 
 ### 4.3 Multi-day continuation
 
@@ -241,14 +347,24 @@ visually and every chip carries the full title.
 
 - The chip's outer corner is rounded only at the run's true start and true end.
   All inner corners are square.
-- Chips bleed into the cell padding and grid gap with negative horizontal
-  margins so that adjacent chips physically touch. Without the bleed the weld
-  shows seams at every cell boundary.
+- Chips bleed across the cell border, horizontal padding and half the column
+  gap so adjacent segments physically touch. With 1px borders, 4px horizontal
+  padding and an 8px column gap, the per-side bleed is
+  `1 + 4 + (8 / 2) = 9px`. The chip width expands by the sum of its active
+  left/right bleeds; a negative margin alone does not enlarge the border box.
+- Day cells keep their chip layer `overflow: visible`; the outer grid clips
+  horizontal overflow. Sunday suppresses outward left bleed and Saturday
+  suppresses outward right bleed, so a run that crosses a week boundary ends
+  square at the row edge without causing page overflow. Browser geometry must
+  assert that adjacent chip rectangles touch and that the page has no
+  horizontal scrollbar.
 - A week boundary needs no special case **for corner geometry**: the last cell
   of a row keeps a square right edge because the run continues, and the first
   cell of the next row keeps a square left edge. It is not free for *vertical*
   alignment — see the limitation below.
-- The title prints on every day of the run. There is no arrow glyph, no
+- The full title string renders on every day of the run in a one-line 14px
+  visual summary and may ellipsize when the cell is narrow. The complete title
+  is always available in the full-day popover. There is no arrow glyph, no
   terminator glyph, and no opacity change; corner geometry is the only
   continuation signal. Opacity was rejected because dimming white-on-colour
   risks failing WCAG AA and would make opacity carry meaning.
@@ -292,17 +408,23 @@ Rule 4 keeps runs aligned in the common household cases (zero or one multi-day
 event, or several that do not interleave) without a general lane-packing model.
 See Section 11 for the accepted limitation.
 
-Accessible name for a chip that is not the run's first day includes the span,
-so that the audible rendering is not ambiguous: `"Spring break, all day, day 3
-of 5"`.
+The dense in-grid chip is visual and `aria-hidden`; it includes the member's
+visible first name before the event title so colour is secondary for sighted
+users. If stale data references a member no longer in the family, the same
+position reads `Unknown` and the popover action reads `Unknown member` rather
+than silently dropping the identity cue. The day cell announces the date and
+event count and references its visually-hidden member summary with
+`aria-describedby`; the popover is the
+screen-reader path to complete event and member names.
+Inside the popover, a multi-day event that is not on its first day includes the
+span in its accessible name: `"Spring break, all day, day 3 of 5"`.
 
 ### 4.4 Day cell interaction
 
 | Trigger | Result |
 | --- | --- |
-| Click cell background | Navigate to Day view for that date (`selectDateAndSwitchToDaily`, unchanged) |
-| Click an event chip | Open `EventDetailModal` for that event (unchanged) |
-| Click `+N more` | Open the day's overflow popover |
+| Click a day with events, including a chip or `+N more` | Open the day's overflow popover |
+| Click a day with no events | Navigate to Day view for that date |
 | `Enter` on a focused day with events | Open the day's overflow popover |
 | `Enter` on a focused day with no events | Navigate to Day view for that date |
 
@@ -312,22 +434,20 @@ The overflow popover:
   is a complete answer to "what is on this day."
 - Renders each event as a button opening the existing `EventDetailModal`.
 - Contains an "Open in Day view" action.
-- Closes on `Escape`, on outside click, and after any action, returning focus
-  to the day cell that opened it. Note that the popover has two triggers — the
-  `+N more` button for pointer users and the cell itself for keyboard users —
-  but one focus-return target. Radix `Popover` returns focus to its `Trigger`
-  by default, so if that primitive is used, `onCloseAutoFocus` must be
-  overridden to send focus to the day cell in both cases.
+- Closes on `Escape`, on outside click, and before either action runs. Escape
+  returns focus to the day cell. An outside pointer dismissal leaves focus on
+  the newly clicked target instead of pulling it back to the old cell. Event
+  selection suppresses popover focus restoration so the modal can take focus;
+  closing the modal returns focus to the originating day cell. "Open in Day
+  view" suppresses restoration because the Month grid unmounts. This
+  close-reason contract avoids fighting the user's pointer action or the
+  modal-dialog autofocus model.
 - Is transient. It is not the "permanent inline event-detail pane" excluded
   from the shipped epic, which describes a pane occupying width in every view.
 
-`+N more` becomes a `<button>` with an accessible name of the form
-`"Show all 6 events for March 8"`.
-
-Mouse-click on the cell background navigates to Day view while `Enter` opens
-the popover. This divergence is deliberate: it gives keyboard users a route to
-every event without putting several hundred chip elements into the tab order,
-and it is recorded here rather than left implicit.
+`+N more` is visible text inside the cell, not a nested control. The gridcell's
+activation is the one pointer and keyboard path, avoiding overlapping small hit
+targets while keeping the dense visual summary.
 
 ### 4.5 Keyboard and screen reader
 
@@ -336,40 +456,42 @@ and it is recorded here rather than left implicit.
 - `ArrowLeft` / `ArrowRight` move by one day, `ArrowUp` / `ArrowDown` by one
   week, `Home` / `End` to the first and last day of the focused week, and
   `PageUp` / `PageDown` to the previous and next month.
+- Initial roving selection is `currentDate`. Pointer activation makes that day
+  the roving selection. Toolbar Previous, Next, Today, or another external
+  `currentDate` update resets the roving selection to the new `currentDate`,
+  closes an open Month popover, and **does not move DOM focus away from the
+  toolbar or external control**. Only an in-grid keyboard traversal requests
+  focus after render.
 - Moving past a grid edge changes `currentDate` to the adjacent month and
   places focus on the day the movement landed on. Because that re-renders the
   grid and re-runs the query, the implementation must restore focus to the
   landed-on day after re-render, not reset it to the first cell.
 - The day cell is a focusable `<div role="gridcell">` carrying the roving
-  `tabindex`, inside `role="row"` within `role="grid"`. It is deliberately
-  **not** a `<button>`: event chips inside the cell are themselves buttons, and
-  a button may not contain a button. Keyboard activation is handled by an
-  `onKeyDown` handler on the cell. The grid carries an `aria-label` naming the
-  visible month.
-- Pointer activation of the cell background uses the existing pattern, where
-  chip clicks call `stopPropagation()` so they do not also trigger the cell.
+  `tabindex`, inside `role="row"` within a `role="rowgroup"` owned by
+  `role="grid"`. It is deliberately **not** a `<button>` so it can carry grid
+  semantics. Dense chips and `+N more` are presentational children, not nested
+  controls. Keyboard activation is handled by `onKeyDown`; pointer activation
+  is handled by the cell. The grid carries an `aria-label` naming the visible
+  month.
 - Day accessible name: `"March 8, 2026, 6 events"`, or
   `"March 8, 2026, no events"`. Today additionally carries
   `aria-current="date"`.
-- Event chips inside cells carry `tabindex="-1"` and are not individual tab
-  stops. They remain clickable for pointer users and are reachable for keyboard
-  users through the popover.
-- The `+N more` button **also carries `tabindex="-1"`**, for the same reason:
-  otherwise a month with six overflow days would add six tab stops and break
-  the single-tab-stop model. Keyboard users reach the popover with `Enter` on
-  the cell. Its focus ring still applies after pointer activation.
+- Event chips and `+N more` are `aria-hidden` visual content, never individual
+  tab stops or pointer targets. Keyboard and pointer users both activate the
+  day cell and then use the popover's 44px-or-larger event actions.
 - `Space` behaves identically to `Enter` on a focused day cell, and does not
   scroll the page.
 - The weekday header is part of the grid, not a sibling of it: it renders as a
-  `role="row"` whose seven children are `role="columnheader"`. A `role="grid"`
-  containing a non-row child is invalid ARIA. Today the header is a separate
-  `grid grid-cols-7` sibling of the day grid, so this is a structural change,
-  not just attributes.
+  `role="row"` whose seven children are `role="columnheader"`. Its semantic
+  sibling is the observed `role="rowgroup"`, whose children are the week rows.
+  The grid therefore owns only a row or rowgroup, with every gridcell owned by
+  a row. Today the header is a separate `grid grid-cols-7` sibling of the day
+  grid, so this is a structural change, not just attributes.
 - A day cell's `aria-label` is authoritative for the cell. Chips inside it are
   excluded from the cell's accessible-name computation so that a busy day is
-  not announced twice; the chips' own labels are used when a chip is focused
-  inside the popover.
-- Focus is visible on the focused day cell and on chips focused inside the
+  not announced twice; each interactive event row inside the popover has its
+  own complete accessible name.
+- Focus is visible on the focused day cell and on event/Day actions inside the
   popover.
 
 ### 4.6 Data range
@@ -390,9 +512,12 @@ which this story's contract forbids. Gating on `useIsLargeScreen()` ties the
 data range to exactly the breakpoint where the new composition activates, so
 composition and data change together and everything below 1024px is untouched.
 
-The consequence is that `dateRange` gains `isLargeScreen` as a dependency, so
-the query key differs across the 1024px boundary and crossing it triggers one
-refetch. Both ranges stay cached; this is accepted.
+The consequence is that `dateRange` gains `isLargeScreen` as a dependency.
+TanStack Query keys on the resulting `{startDate, endDate}` parameters, not on
+the breakpoint boolean itself. The key therefore differs only when the compact
+and expanded ranges differ; a grid-aligned month such as February 2026 reuses
+one key. A cached query may also satisfy the expanded range without a network
+request. Both behaviours are accepted and are tested explicitly.
 
 `startOfWeek` and `endOfWeek` use `weekStartsOn: 0`, matching the existing
 Week view and the Sunday week start confirmed in PRD Section 7.1.1.
@@ -407,16 +532,20 @@ Week view and the Sunday week start confirmed in PRD Section 7.1.1.
   being viewed" for this view. The selected day receives a ring visually
   distinct from today's, so that today and selected are separable both when
   they are different days and when they are the same day.
-- Days outside the visible month keep their reduced emphasis and are announced
-  as such in their accessible name: `"February 26, 2026, no events, outside
-  March"`.
+- Days outside the visible month keep reduced cell chrome and a muted date
+  label and are announced as such in their accessible name: `"February 26,
+  2026, no events, outside March"`. The cell itself never receives reduced
+  opacity: adjacent-month event chips, markers and member summaries stay at
+  full contrast now that Section 4.6 supplies real data for those dates.
 - The `"● "` string prefix is removed from all-day titles and replaced by a
-  rendered marker element with an accessible label, so the marker is not part
-  of the title text.
+  rendered visual marker. The dense marker is `aria-hidden`; the popover event
+  action includes "all day" in its accessible name.
 - Recurring events gain the `Repeat` glyph already used by `CalendarEventCard`
-  in Week and Day, with an accessible label.
-- Member identity in a cell is conveyed by chip colour plus the member's name
-  in the chip's accessible name, so colour is never the only channel.
+  in Week and Day. It is also `aria-hidden`; the popover event action includes
+  "repeats" in its accessible name.
+- Member identity in a cell is conveyed by chip colour plus the day-cell dot
+  summary, and the popover shows/names each member, so colour is never the only
+  channel.
 - The per-day member dots are retained — on an overflowing day they summarise
   every member with an event, which the visible chips alone cannot — but their
   `title`-only labelling is replaced. `title` is not a reliable accessible name
@@ -442,11 +571,15 @@ gutter beside the event rows.
 - The gutter is sticky within its own day group while that group is scrolling,
   replacing the current `sticky top-0` banner behaviour.
 - The `mx-auto max-w-3xl` cap is removed at `lg+`, resolving the foundations
-  Section 3.3 violation. A maximum content width of
-  `SCHEDULE_MAX_WIDTH = 1400px` prevents rows from becoming unreadably wide on
-  very large displays.
+  Section 3.3 violation. The day group and event-row surface stay full width
+  through the PRD's 2560px target; there is no fixed outer cap that recreates
+  centred dead margins. Event-row text uses a readable internal measure
+  (`max-width: 72ch`) while time/member affordances can use the remaining row
+  width.
 - Event rows keep their existing anatomy (colour left border, title, time,
   location, member avatar) and gain the member's **name** as visible text.
+  Large-screen event titles use the PRD's 20px Calendar-event size; secondary
+  time, location and member metadata uses at least 14px.
 
 **The coloured left border does not currently render, and this story fixes it.**
 `schedule-calendar.tsx` passes both `colorMap[member.color].bg` and
@@ -480,8 +613,30 @@ more event-free days inside the window renders as a single gap row:
   and a run at the end of the window both render as gap rows on the same terms
   as an interior run. There is no special leading or trailing case.
 
+Visible and accessible range labels must disambiguate boundaries: same-month
+ranges may use `Tue 10 – Thu 12`; cross-month ranges include both month names;
+cross-year ranges include both years. The accessible label always uses full
+weekday, month, day and year for both endpoints.
+
 When every day in the window is empty, the existing whole-view empty state is
 shown instead of a single 14-day gap row.
+
+Whole-view copy identifies why the visible result is empty:
+
+- no family members: `No family members yet` with an add-member prompt;
+- if a zero-selection state is delivered defensively:
+  `Select at least one profile to view events`, matching PRD Section 7.1.2,
+  with a choose-member prompt. The shipped filter pills immediately repair an
+  empty selection to “all,” so making zero selection persist is not claimed by
+  this story and remains the cross-view follow-up in Section 11;
+- events exist in the 14 rendered days but the active member/all-day filters
+  hide them all: `No events match your filters` with an adjust-filter prompt;
+- no events exist in the rendered window: `No upcoming events` with the honest
+  14-day-window description.
+
+The filter-induced case is based on events in the rendered window before
+filters are applied. It must not treat an event on the query's inclusive
+fifteenth boundary day as evidence for the 14-day rendered window.
 
 ### 5.3 Past days
 
@@ -537,8 +692,9 @@ explicit date context that the label does not carry.
   shared centred "Loading events..." text, and a per-view error state with a
   retry affordance. `renderCalendarView()`'s shared fallback continues to serve
   Week and Day unchanged.
-- Schedule's locally duplicated inline `Calendar` SVG is replaced with the
-  lucide `Calendar` import already used elsewhere in the module.
+- Schedule's compact inline `Calendar` SVG and empty-state markup remain
+  byte-identical. The new large branch uses the shared `CalendarEmptyState`;
+  replacing the compact SVG would invalidate the parity contract.
 - Schedule's empty-state copy is corrected to describe the window it actually
   renders.
 - Existing Schedule tests must be migrated, not merely kept passing.
@@ -549,40 +705,41 @@ explicit date context that the label does not carry.
   which sits exactly on the lg+ boundary. The plan must state which of those
   cases move into an lg+ describe block with `matchMedia` overridden and which
   stay asserting the unchanged mobile path.
-- Offline reads are unchanged for Schedule. For Month there is one new case:
-  because Section 4.6 puts `isLargeScreen` into the query key, Month has two
-  distinct persisted cache entries. A user whose IndexedDB cache was populated
-  below 1024px, or who crosses the boundary while offline, gets a cache miss
-  and an empty Month with no network to fill it. The view must render its
-  offline-empty state rather than an indefinite skeleton in that case, and the
-  case belongs in the offline screenshot matrix.
+- Offline reads are unchanged for Schedule. Month distinguishes a real cached
+  empty response from no query data **after persisted-query restoration has
+  completed**. `eventsResponse === undefined` while `useIsRestoring()` is true
+  is an indeterminate hydration state and shows the skeleton, never cold-cache
+  copy. Only restoration-complete plus absent query data is a cold cache.
+  `events.length === 0` is not a cache-presence test. April 2026 covers a
+  differing compact/expanded key, February 2026 covers key reuse, and a cached
+  empty response must render the normal empty grid rather than "isn't cached"
+  copy. An offline cold-start test must prove persisted data wins after
+  asynchronous restoration without flashing the uncached message.
 
 ## 7. Accessibility Summary
 
-- **Touch-target rule and its one exception.** All chrome and controls — the
-  toolbar, popover actions, Schedule event rows — stay at least 44px in their
-  smallest dimension. In-grid Month event chips are the documented exception,
-  with a floor of `MONTH_CHIP_HEIGHT = 28px`.
-
-  This is a deliberate narrowing of the 44px rule and is called out rather than
-  buried. It matches both precedent and arithmetic. Foundations spec Sections 5
-  and 6 already scope the rule to chrome ("All interactive **chrome** keeps
-  44px minimum touch targets"), and the shipped Week view renders event buttons
-  at `min-h-[28px]` with `MIN_EVENT_PX = 30`. Arithmetically, 44px chips would
-  yield a slot capacity of 2 at 1440x900 and 1 at 1024x768 — fewer events than
-  ship today, which would defeat the purpose of the story. A 28px chip matches
-  the shipped Week floor exactly, and every chip has a full-size alternative
-  path: the day cell itself and the overflow popover, both of which meet 44px.
-- Colour is never the only channel: member identity is carried in accessible
-  names and in visible member names on Schedule, member dots carry a
-  visually-hidden summary, all-day and recurring states have marker elements
-  with labels, and continuation is carried by geometry plus an explicit
-  day-of-span accessible name.
+- **Touch-target rule.** Every interactive element stays at least 44px in its
+  smallest dimension. Month's dense 28px chip and `+N more` slot are visual
+  summaries rather than controls; the 96px-or-taller day gridcell is the single
+  target and opens the full-day popover. Popover actions and Schedule event rows
+  are at least 44px, and adjacent day targets are separated by 8px in both
+  axes. This retains useful density without weakening the PRD's stricter
+  touch-first requirement. WCAG 2.5.8 would permit a 24px target or an
+  equivalent-control exception, but Family Hub deliberately keeps its stronger
+  product rule.
+- Colour is never the only channel: visible member names prefix Month chip
+  titles and appear on Schedule rows, the Month cell references its hidden
+  member summary with `aria-describedby`, and popover actions include complete
+  member names. All-day and recurring states are named by popover actions, and
+  continuation is carried by geometry plus an explicit day-of-span popover
+  name.
 - No information is conveyed by opacity alone.
-- Text contrast meets WCAG AA in both light and dark themes.
+- Text contrast meets WCAG AA in the currently supported light theme.
 - Reduced motion is respected for the popover transition.
-- Auto-focus never moves focus without a user action; the popover moves focus
-  only because the user opened it, and returns it on close.
+- Auto-focus never moves focus without a user action. Escape returns to the day
+  cell; an outside pointer dismissal leaves focus on the clicked target; event
+  selection transfers focus into the modal and returns to the originating cell
+  only when that modal closes.
 
 ## 8. Alternatives Considered
 
@@ -618,9 +775,11 @@ self-evident, narrow columns push rows back into a cramped layout that undoes
 the width gain, unbalanced weeks leave one column nearly empty, and it diverges
 furthest from the mobile rendering it shares a component with.
 
-**Schedule with a widened column cap - rejected.** Raising `max-w-3xl` alone is
-a one-line change, but a 1300px row carrying "Trash out - All day" is a worse
-outcome than the dead margin it replaces.
+**Schedule with a widened outer cap - rejected.** Raising `max-w-3xl` to 1400px
+would pass a 1440px screenshot while recreating more than 1000px of combined
+dead width at 2560px. The selected design keeps the row surface full width and
+constrains only its text measure, so the household board scales without turning
+a short title into an unreadably long line.
 
 ## 9. Acceptance Criteria
 
@@ -642,16 +801,22 @@ Month:
       including when Section 4.3 reserves blank slots — verified by a case with
       reserved blanks plus single-day events that would overflow under a
       naive `eventCount` comparison.
+- [ ] The reserved-lane counterexample `[blank, event, single-day]` at capacity
+      2 is tested and deliberately yields `[blank, +2 more]`; the full day
+      remains discoverable and operable through the gridcell and popover.
 - [ ] The `+N more` count equals the number of events not rendered, and is
       unaffected by reserved blank slots.
 - [ ] A four-row month (February 2026) renders correctly and its capacity is
       covered by unit test.
-- [ ] `+N more` opens a popover listing all of that day's events; selecting one
-      opens `EventDetailModal`; `Escape` closes it and returns focus to the day
-      cell.
+- [ ] Activating any day with events opens a popover listing all of that day's
+      events; selecting one closes the popover and opens `EventDetailModal`
+      without stealing focus back from the modal; closing the modal restores
+      the originating day cell. `Escape` from the popover returns to the cell;
+      outside pointer dismissal leaves focus on the clicked target.
 - [ ] A multi-day run renders with rounded outer corners only at its true start
-      and end, square inner corners throughout, and the full title on every
-      day.
+      and end, square inner corners throughout, and the complete title string
+      on every day in a one-line 14px summary that may ellipsize; the popover
+      exposes the untruncated title.
 - [ ] A multi-day run crossing a week boundary keeps a square right edge on the
       last cell of the row and a square left edge on the first cell of the next.
 - [ ] A multi-day run occupies the same slot index in every cell it touches
@@ -670,37 +835,52 @@ Month:
       specified in Section 4.5, and crossing a grid edge restores focus to the
       landed-on day after the month re-renders.
 - [ ] The weekday header renders as a `role="row"` of `role="columnheader"`
-      cells inside the same `role="grid"` as the day rows; the grid has no
-      non-row children.
-- [ ] `Enter` opens the popover on a day with events and navigates to Day view
-      on a day without.
+      cells inside the same `role="grid"` as the day rows; the grid owns only
+      rows or rowgroups, and the observed weeks rowgroup owns the day rows.
+- [ ] `Enter` and `Space` open the popover on a day with events and navigate to
+      Day view on a day without; `Space` does not scroll.
 - [ ] Day cells expose the accessible names specified in Section 4.5, and today
       carries `aria-current="date"`.
 - [ ] Weekend, today and selected-day treatments are visually distinguishable
       from one another and from the default cell.
-- [ ] All-day and recurring events carry marker elements with accessible
-      labels; no `"● "` prefix remains in any title string.
-- [ ] Per-day member dots expose a visually-hidden member summary; no member
-      information is conveyed by `title` alone.
+- [ ] All-day and recurring events carry visible markers with no `"● "` title
+      prefix; the popover action's accessible name carries "all day" and
+      "repeats" without duplicate marker announcements.
+- [ ] Multi-day chip rectangles physically meet across an inner cell boundary,
+      row-edge bleed is suppressed, and the page has no horizontal overflow.
+- [ ] Visible member names prefix Month chip titles; per-day member dots expose
+      a visually-hidden member summary referenced by the gridcell's
+      `aria-describedby`; no member information is conveyed by colour or
+      `title` alone.
+- [ ] Adjacent Month gridcells have at least 8px row and column gaps, while
+      continuation-chip weld geometry still touches across the horizontal gap.
 - [ ] Month at 769-1023px is visually and behaviourally unchanged.
 - [ ] Mobile Month (`MobileMonthlyView`) is visually and behaviourally
       unchanged.
 
 Schedule:
 
-- [ ] At 1440x900 Schedule content spans the available width up to
-      `SCHEDULE_MAX_WIDTH`, with no centred narrow column and no dead side
-      margins.
+- [ ] At 1440x900, 1920x1080 and 2560x1440 Schedule's day-group and event-row
+      surfaces span the available width with no centred narrow column or fixed
+      outer cap; event text keeps a readable internal measure.
 - [ ] The date gutter renders the relative label, date and event count, and is
       sticky within its own day group.
 - [ ] Event rows display the member's name as visible text in addition to
-      colour and avatar.
+      colour and avatar; event titles are 20px and secondary metadata is at
+      least 14px.
 - [ ] At `lg+` the coloured left border renders in the member's colour,
       verified by asserting the resolved `borderLeftColor` equals that member's
       `colorMap` hex. Below 1024px the border is unchanged, bug included.
 - [ ] A run of event-free days renders as one gap row naming the range, with
-      `Nothing scheduled`; it is not focusable.
+      `Nothing scheduled`; it is not focusable, and cross-month/year ranges are
+      unambiguous in visible and accessible labels.
 - [ ] A window with no events renders the whole-view empty state, not a gap row.
+- [ ] Whole-view Schedule empty copy distinguishes no family members, active
+      filters hiding all events in the rendered window, and a genuinely
+      event-free window; a defensive zero-selection branch is also present but
+      neither zero-member Calendar nor persistent zero selection is an
+      app-reachable in-scope path, so both defensive branches have component
+      evidence rather than fabricated browser screenshots.
 - [ ] Day groups before today are de-emphasised without reducing event text
       contrast.
 - [ ] The 14-day window and 7-day prev/next step behave exactly as before.
@@ -709,25 +889,37 @@ Schedule:
       only stabilises once font loading is matched between the two captures;
       budget for that rather than treating an early mismatch as a regression.
 - [ ] Schedule at 769-1023px is visually and behaviourally unchanged.
-- [ ] Filtering out every member renders an empty state whose copy describes a
-      filter-induced empty, not "events for the next 2 weeks will appear here".
+- [ ] When active member/all-day filters hide every event in the rendered
+      window, the empty-state copy describes a filter result, not "events for
+      the next 2 weeks will appear here".
 
 Shared:
 
 - [ ] Month and Schedule render skeletons while loading and a per-view error
       state with retry; Week and Day keep the existing shared fallback.
-- [ ] All chrome and controls are at least 44px; Month event chips are at least
-      `MONTH_CHIP_HEIGHT` (28px) and are the only documented exception.
-- [ ] Text contrast meets WCAG AA in light and dark themes, including the
-      zero-member fallback where chips render `bg-muted` with `text-white`.
+- [ ] Every interactive element is at least 44px. Month event chips and `+N`
+      summaries render at `MONTH_CHIP_HEIGHT` (28px) but are presentational;
+      the 96px-or-taller day gridcell is their single interactive target.
+- [ ] Text contrast meets WCAG AA in the currently supported light theme,
+      including the missing-member fallback where chips render
+      `bg-muted text-foreground`, never `bg-muted text-white`.
+- [ ] Adjacent-month cell chrome is reduced without applying opacity to event
+      content; event titles and markers in those cells retain full contrast.
+- [ ] Month offline state waits for persisted-query restoration, distinguishes
+      no query data from a successfully cached empty response, and covers both
+      differing-range April 2026 and range-reuse February 2026 without an
+      uncached-message flash during an offline cold start.
 - [ ] Week and Day views are visually and behaviourally unchanged, and the
       existing `day-rail.test.ts` cases still pass unmodified in substance after
       the `buildMonthMatrix` move.
 - [ ] Screenshot review at 375x812, **768 (mobile-boundary check)**, **769**,
-      1024x768, 1280x800 and 1440x900 covers loading, empty, error, offline
+      1024x768, 1280x800, 1440x900, 1920x1080 and 2560x1440 covers loading,
+      empty, error, offline
       (including the Month cold-cache case from Section 6), dense, recurring,
       multi-day, overflow, **four-row February 2026**, very long titles, and a
-      family with zero members. Issues found are iterated before done.
+      reachable missing-member fallback. Defensive zero-member/zero-selection
+      Schedule states are covered at component level. Issues found are iterated
+      before done.
 
 ## 10. Out of Scope
 
@@ -747,6 +939,27 @@ Shared:
 
 ## 11. Known Limitations and Follow-Ups
 
+- **Dark theme is not currently an app surface.** The audited frontend baseline
+  exports a `ThemeProvider` wrapper but never mounts it and defines no `.dark`
+  token block. This story verifies WCAG AA in the supported light theme rather
+  than pretending to test an unreachable theme. Add dark tokens, mount the
+  provider, and run app-wide contrast regression testing in a dedicated theme
+  story before extending this acceptance contract to dark mode.
+
+- **Persistent zero-selection filtering remains broken across views.** The PRD
+  permits clearing every profile and requires the empty selection to persist,
+  but shipped `FamilyFilterPills` immediately reselects all members whenever
+  the selection becomes empty. Fixing that initialization/state behavior would
+  change every Calendar view and every breakpoint, contradicting this story's
+  preservation boundary. The new Schedule branch handles zero selection
+  defensively, but a dedicated cross-view filter story must make the state
+  reachable and verify the canonical PRD message everywhere.
+- **A reserved-lane overflow cell can show no event chip.** Exact within-row
+  alignment can place the day's only covering run beyond the visible prefix.
+  In that case the cell deliberately shows reserved space plus `+N more`; its
+  accessible event count and full-day popover remain complete. Maximising a
+  visible chip would require moving the run out of its lane and breaking the
+  weld, or adopting the spanning-bar lane packer rejected in Section 8.
 - **Multi-day runs can step a slot at a week boundary.** Because the ordered
   list `R` is computed per week row, a run can hold a different slot index in
   the next row when another run present in the first row does not extend into

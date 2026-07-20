@@ -1,6 +1,7 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-17 (Large-screen / tablet UX shipped in FE `0.3.23` and deployed to production)
+Last updated: 2026-07-20 (Large-screen / tablet UX shipped in FE `0.3.23`;
+the Month/Schedule follow-on execution chain was reviewed for FE #293)
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -99,10 +100,11 @@ Recommended order:
 
 - [Large-screen Calendar Month and Schedule](backlog/large-screen-ux/large-screen-calendar-month-schedule.md) —
   Month fills the viewport with density derived from measured row height, an
-  interactive `+N more` overflow popover, and multi-day runs welded by corner
-  geometry; Schedule moves to a date gutter with full-width rows and explicit
-  gap rows, resolving the foundations §3.3 narrow-centred-column violation it
-  still carries. Shaped 2026-07-18; FE #293 open, not started.
+  all-events day popover opened through the full day-cell target, presentational
+  `+N more`, and multi-day runs welded by corner geometry; Schedule moves to a
+  date gutter with full-width rows and explicit gap rows, resolving the
+  foundations §3.3 narrow-centred-column violation it still carries. Shaped
+  2026-07-18; FE #293 open, not started.
   [spec](../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md) ·
   [plan](../superpowers/plans/2026-07-18-large-screen-calendar-month-schedule.md)
 
