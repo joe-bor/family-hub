@@ -2,7 +2,7 @@
 id: large-screen-calendar-month-schedule
 title: Large-screen Calendar Month and Schedule polish
 epic: large-screen-ux
-status: planned
+status: in-progress
 priority: P2
 created: 2026-07-18
 updated: 2026-07-21
@@ -73,21 +73,33 @@ Builds on: [Large-screen foundations](large-screen-foundations.md) and
   app exposes only the light theme; this story verifies contrast there.
 - Backend changes.
 
+## Execution state
+
+Started 2026-07-21. Session A (plan Tasks 0–4, the pure helpers) is committed on
+`feat/large-screen-month-schedule` at `5bcbdbb`, unpushed, with zero
+user-visible change by design. Sessions B–F remain. Per-session detail lives in
+the [session prompts](../../../superpowers/2026-07-21-large-screen-month-schedule-session-prompts.md);
+FE #293 is still open with no linked PR.
+
 ## Baseline drift
 
-Re-verified 2026-07-21: FE #293 is still open with no linked PR and no branch.
+The Issue contract pins frontend `origin/main` at `f9dc7e8`; the session-prompt
+doc pinned `e74c5c7`. Actual `origin/main` at branch time was **`cf9aac5`** —
+FE #292 (`ws` bump), #296 (event form time-label clipping), #298
+(`DialogContent` viewport bound), then `chore(main): release family-hub 0.3.24`,
+a release-please commit touching only the manifest, CHANGELOG, README badge and
+version.
 
-The Issue contract pins frontend `origin/main` at `f9dc7e8`. Three commits have
-landed since — FE #292 (`ws` bump), #296 (event form time-label clipping) and
-#298 (`DialogContent` viewport bound) — moving `origin/main` to `e74c5c7`.
-Refresh the pinned SHA in the Issue before starting, and branch from the fresh
-baseline rather than the stale commit.
+None of those pointers affects implementation: Task 0 branches from
+`origin/main` dynamically, the worktree exists, and no parallel work is running.
+The stale SHAs are being left in the Issue rather than churned. The one place
+the baseline matters is evidence — all twelve preservation pairs must be
+captured against `cf9aac5`.
 
-The twelve byte-identical preservation pairs are captured against whatever
-`origin/main` is at execution time. All three superseding commits touch dialog
-chrome or dependencies, not the Month, Schedule, Week or Day surfaces the pairs
-photograph, so the preservation gate is expected to hold unchanged — but
-re-capture the baselines from the fresh commit, do not reuse pre-drift images.
+All four superseding commits touch dialog chrome, dependencies or release
+metadata, not the Month, Schedule, Week or Day surfaces the pairs photograph, so
+the preservation gate is expected to hold unchanged — but re-capture the
+baselines from `cf9aac5`, do not reuse pre-drift images.
 
 Note that #296 and #298 land inside this story's declared Out of Scope
 ("event create/detail/edit/recurrence dialogs"). They neither satisfy nor

@@ -40,31 +40,74 @@ boundary and run Tasks 9–10 as their own session. Do not cut inside Task 8.
 - **Issue:** https://github.com/joe-bor/FamilyHub/issues/293
 - **Worktree:** `frontend/.worktrees/large-screen-month-schedule`
 - **Branch:** `feat/large-screen-month-schedule`
-- **Baseline:** frontend `origin/main` = `e74c5c737c77aa2285ac83e2c523093cea7a3216`
+- **Baseline:** frontend `origin/main` = `cf9aac505aac2587ab32bdf7bf5182252acd5462`
+  (branched at Session A, 2026-07-21)
 
-> **Plan header drift.** The plan's "Review baseline" block still names
-> `f9dc7e8070457f965b823baee4e3746486afa438`, verified 2026-07-20. Three commits
-> have landed since (#292, #296, #298). The Issue body was refreshed on
-> 2026-07-21; the plan header was intentionally left alone. Task 0 branches from
-> `origin/main` dynamically, so execution is unaffected — but capture every
-> preservation baseline from the fresh commit and never reuse a pre-drift image.
+> **Stale commit pointers — inert, do not chase.** Three documents name three
+> different baselines, and none of it affects implementation. The plan header
+> says `f9dc7e80` (verified 2026-07-20). The Issue body and the Session A prompt
+> say `e74c5c73`. The actual `origin/main` at branch time was `cf9aac50`
+> — `e74c5c73` plus `chore(main): release family-hub 0.3.24`, a release-please
+> commit touching only the manifest, CHANGELOG, README badge and version. No
+> Calendar or test source moved.
+>
+> Task 0 branches from `origin/main` dynamically, the worktree already exists,
+> and there is no parallel work on this story, so every session after A simply
+> continues the existing branch. The one place the SHA matters is evidence:
+> **Sessions D and F must capture all twelve preservation pairs against
+> `cf9aac50`**, and must never reuse a pre-drift image.
 
-### Before Session A
+### Before Session A — done, 2026-07-21
 
-Optional but recommended — the plan mandates one isolated worktree, and the FE
-checkout currently carries five stale ones from shipped stories plus an
-already-merged branch:
-
-```bash
-cd frontend
-git worktree list                     # expect 5 leftovers: chores, lists, recipes, meals, quick-capture
-git worktree remove .worktrees/<name> # for each shipped story
-git worktree prune
-```
+The five stale worktrees from shipped stories were removed and pruned before
+Session A ran; `frontend/.worktrees/large-screen-month-schedule` is now the only
+one. Nothing to repeat here.
 
 ---
 
-## Session A — Helpers (Tasks 0–4)
+## Session A — Helpers (Tasks 0–4) — SHIPPED 2026-07-21
+
+Branch `feat/large-screen-month-schedule`, five commits, gate green
+(`lint` 0, `build` 0, **169 files / 1645 tests**). Nothing pushed; review local.
+
+| Task | Commit | Result |
+| --- | --- | --- |
+| 0 | — | worktree on `cf9aac50`; baseline 165 files / 1610 tests |
+| 1 | `ff05cb0` | `setViewportWidth` / `resetViewportWidth` in `test-utils.tsx` |
+| 2 | `212e858` | `month-matrix.ts` + `selectMonthDayMembers`; `day-rail` trimmed (4 tests) |
+| 3 | `0e32b6e` | `month-capacity.ts` — `monthRowHeight`, `monthSlotCapacity` (9 tests) |
+| 4 | `0fd40bf` | `month-slots.ts` — `planCellSlots` and multi-day reservation (19 tests) |
+| — | `5bcbdbb` | review fix, see below (5 tests) |
+
+**One deliberate deviation from a plan snippet, accepted on review.** Task 1's
+`setViewportWidth` snippet returns `true` for *every non-width media query*:
+both `Number.parseInt` calls yield `NaN`, so `matchesMax && matchesMin`
+collapses to `true`. At any width `(prefers-reduced-motion: reduce)`,
+`(pointer: coarse)`, `(display-mode: standalone)` and
+`(prefers-color-scheme: dark)` all matched — the inverse of `setup.ts`'s
+default. Inert on `origin/main` (only the inline `setMobile` used it), but the
+plan calls `setViewportWidth` in Tasks 8, 10, 11, 14, 15 and 16, and contract
+item 14 requires new motion to respect reduced-motion — Session C would
+otherwise have silently tested the reduced-motion branch at every viewport.
+`5bcbdbb` adds a NaN guard plus `src/test/test-utils.test.ts` pinning it.
+
+**Deferred review findings, carried into Sessions B and C** — no correctness
+bugs were found in the helpers themselves (196,812 brute-forced `planCellSlots`
+cases, `buildMonthMatrix` verified for every month 1990–2100, old vs new
+`selectMonthDayDots` proven identical over 3,000 randomized inputs):
+
+- `planCellSlots` has unstated preconditions. It does **not** filter
+  `singleDayEvents` by `isEventOnDate`, does **not** dedupe them against
+  `rowMultiDay` (a caller passing "all of this day's events" renders every
+  multi-day run twice), and does **not** sort them — chronological order within
+  a cell is the caller's job. Task 7 owns this.
+- `MONTH_CHIP_HEIGHT`'s comment calls it "a visual floor, not a dial", but
+  `monthSlotCapacity` divides by it as the *exact* slot height. A wrapped
+  two-line chip would over-report capacity and overflow the cell. Task 5 must
+  clamp chips to exactly 28px.
+- Cosmetic only: `if (isStart && isEnd) return "solo"` in `multiDayEdge` is
+  unreachable given `isMultiDay`; `MONTH_CHIP_BLEED_X` (=9) is exported, unused
+  and unpinned until Task 8 consumes it.
 
 ```
 You are the frontend delivery agent for FamilyHub#293 in the joe-bor/FamilyHub
@@ -119,9 +162,16 @@ in progress. Read the Issue and its linked Spec and Plan before touching code.
 Resume the EXISTING worktree — do not create one and do not re-run Task 0:
 
   cd frontend/.worktrees/large-screen-month-schedule
-  git status --short          # must be clean
-  git log --oneline -1        # must be Task 4's commit
-  npm test -- --run           # must be green before you start
+  git status --short     # must be clean
+  git log --oneline -1   # must be 5bcbdbb, Session A's last commit
+  npm test -- --run      # must be green: 169 files / 1645 tests
+
+Session A shipped the pure helpers you are about to consume: month-capacity.ts
+(monthRowHeight, monthSlotCapacity, the geometry constants), month-slots.ts
+(isMultiDay, multiDayEdge, orderRowMultiDay, planCellSlots) and month-matrix.ts
+(buildMonthMatrix, selectMonthDayDots, selectMonthDayMembers). Read them before
+writing components — they are the contract, and they are already tested. Do not
+re-derive or duplicate their arithmetic.
 
 Use superpowers:subagent-driven-development and
 superpowers:test-driven-development. All three tasks are red-green-commit.
@@ -141,6 +191,21 @@ Carry these contract items into every component decision:
   - Weld geometry is exact: 28px slots, 9px continuation bleed per active side,
     rounded corners only at a run's true start and end.
   - Do not use opacity to carry meaning.
+
+Two findings from Session A's review land in this session:
+  - MONTH_CHIP_HEIGHT (28) is documented as "a visual floor, not a dial", but
+    monthSlotCapacity divides by it as the EXACT slot height. A chip that wraps
+    to two lines makes capacity over-report and the cell overflow — the precise
+    failure the helper exists to prevent. Task 5's chip must clamp to exactly
+    28px and truncate, never wrap.
+  - planCellSlots does NOT filter singleDayEvents by isEventOnDate, does NOT
+    dedupe them against rowMultiDay, and does NOT sort them. Task 7's day cell
+    owns all three: pass only that day's single-day events, already excluding
+    anything in rowMultiDay, in the order they should render.
+
+Also note setViewportWidth now correctly reports `false` for non-width queries
+(reduced-motion, pointer, display-mode, colour-scheme). If a component test
+needs one of those true, mock that hook directly — do not widen the helper.
 
 GATE — do not hand off until all of these hold:
   1. `npm run lint`, `npm test -- --run` and `npm run build` all exit 0.
