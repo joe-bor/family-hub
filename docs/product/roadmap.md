@@ -100,28 +100,36 @@ Latest release:
 - FE `0.3.24` is **cut but unreleased**: release-please PR #297 is open with the two dialog viewport fixes (#296, #298). Merging it publishes the release; production still runs `0.3.23`.
 - BE `v1.9.0` published 2026-07-05 remains the current released backend contract, with no unreleased commits on BE `main`.
 
-Next recommended product focus (**decision open as of 2026-07-21**):
+Next product focus — **decided 2026-07-21: finish large-screen (FE #293)**.
 
 The dogfood pass is underway and already paying out — FE #296 and #298 were
 both found by using the shipped surfaces rather than by planned work. Keep it
 running as background signal, not as a blocking phase.
 
-With the large-screen epic closed and no BE work in flight, exactly one shaped
-story is ready to execute (FE #293) and one BE Issue is open (#67, login
-throttle). The next slice is a genuine fork with no default:
+Chosen slice: execute [FE #293](https://github.com/joe-bor/FamilyHub/issues/293),
+the Month/Schedule follow-on. It is the only story already shaped to
+spec + plan + reviewed Issue contract, it closes the last two Calendar views
+still at chrome-only, and it clears the live foundations §3.3
+narrow-centred-column violation. Refresh the Issue's pinned baseline SHA first —
+see the story's Baseline drift note.
 
-1. **Finish large-screen** — execute FE #293. Closes the last two Calendar
-   views still at chrome-only and clears the live foundations §3.3 violation.
-2. **Return to mobile** — Notifications, or calendar gestures (drag-to-create /
-   pinch-to-zoom). All three are captured but none are shaped to spec/plan.
+Deliberately deferred by this decision, in no fixed order:
+
+1. **Mobile UX themes 2–5** — routing/deep links, Calendar prev/next arrows,
+   Meals opening at Sunday rather than today, microcopy and the onboarding Zod
+   leak, mobile touch targets, first-run dead end. Captured in the 2026-07-01
+   clunkiness review; none shaped to spec/plan. This is the queue that serves
+   the phones the family actually uses today, so it should be re-examined as
+   soon as #293 lands.
+2. **Notifications / calendar gestures** — captured as stories, unshaped.
 3. **Security hardening** — BE #67 login throttle, the only open P1 in either
-   repo. The accessibility pass surfaced in the July security review is still
-   unshaped and has no Issue.
-4. **Reduce carrying cost** — 12 open FE dependency PRs, several with major
-   version bumps (`vite` 7→8, `lucide-react` 0.x→1.x, `jsdom` 25→29).
+   repo, with spec and plan already written. The accessibility pass surfaced in
+   the July security review is still unshaped and has no Issue.
+4. **Carrying cost** — 12 open FE dependency PRs, several with major version
+   bumps (`vite` 7→8, `lucide-react` 0.x→1.x, `jsdom` 25→29).
 
-Nothing here blocks anything else, so sequence by what the household actually
-feels first.
+Independent of the above: release-please PR #297 should merge on its own
+schedule. Until it does, the #296/#298 dialog fixes are merged but not live.
 
 Exit criterion for this phase:
 - Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
