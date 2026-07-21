@@ -31,6 +31,9 @@ margin — a live violation of the shipped foundations spec Section 3.3.
 
 Design: [Large-screen Calendar Month and Schedule](../../../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md).
 Plan: [Large-screen Calendar Month and Schedule implementation](../../../superpowers/plans/2026-07-18-large-screen-calendar-month-schedule.md).
+Execution: [six session prompts](../../../superpowers/2026-07-21-large-screen-month-schedule-session-prompts.md)
+— the plan is 6,416 lines across 18 tasks, so it runs as six gated
+sessions rather than one. The plan itself is unrevised.
 Builds on: [Large-screen foundations](large-screen-foundations.md) and
 [Large-screen Calendar](large-screen-calendar.md), both shipped.
 
