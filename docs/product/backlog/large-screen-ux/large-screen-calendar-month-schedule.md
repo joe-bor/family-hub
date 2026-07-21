@@ -5,7 +5,7 @@ epic: large-screen-ux
 status: planned
 priority: P2
 created: 2026-07-18
-updated: 2026-07-20
+updated: 2026-07-21
 issues:
   - https://github.com/joe-bor/FamilyHub/issues/293
 prs: []
@@ -69,6 +69,26 @@ Builds on: [Large-screen foundations](large-screen-foundations.md) and
 - App-wide dark-theme tokens, provider wiring and theme switching. The shipped
   app exposes only the light theme; this story verifies contrast there.
 - Backend changes.
+
+## Baseline drift
+
+Re-verified 2026-07-21: FE #293 is still open with no linked PR and no branch.
+
+The Issue contract pins frontend `origin/main` at `f9dc7e8`. Three commits have
+landed since — FE #292 (`ws` bump), #296 (event form time-label clipping) and
+#298 (`DialogContent` viewport bound) — moving `origin/main` to `e74c5c7`.
+Refresh the pinned SHA in the Issue before starting, and branch from the fresh
+baseline rather than the stale commit.
+
+The twelve byte-identical preservation pairs are captured against whatever
+`origin/main` is at execution time. All three superseding commits touch dialog
+chrome or dependencies, not the Month, Schedule, Week or Day surfaces the pairs
+photograph, so the preservation gate is expected to hold unchanged — but
+re-capture the baselines from the fresh commit, do not reuse pre-drift images.
+
+Note that #296 and #298 land inside this story's declared Out of Scope
+("event create/detail/edit/recurrence dialogs"). They neither satisfy nor
+reduce any acceptance criterion here.
 
 ## Dependencies
 

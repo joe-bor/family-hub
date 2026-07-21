@@ -1,7 +1,8 @@
 # Family Hub — Roadmap
 
-Last updated: 2026-07-20 (Large-screen / tablet UX shipped in FE `0.3.23`;
-the Month/Schedule follow-on execution chain was reviewed for FE #293)
+Last updated: 2026-07-21 (Large-screen / tablet UX shipped in FE `0.3.23`;
+FE #293 Month/Schedule follow-on still open and not started; two dialog
+viewport fixes merged to FE `main` and awaiting release `0.3.24`)
 
 Use this document as a summary/index. Story status lives in `docs/product/backlog/<epic>/<story>.md`. GitHub Project **Family Hub** is the live task board for issue-level work.
 
@@ -68,6 +69,22 @@ Delivered implementation:
 - [Large-screen Chores](backlog/large-screen-ux/large-screen-chores.md) — full-width, full-height board: Today weighted as the primary column, This Week/This Month supporting, each column scrolling its own routines; ≥44px checkoff targets. Mobile/tablet unchanged. FE PR #289 merged 2026-07-15. [spec](../superpowers/specs/2026-07-06-large-screen-chores-design.md) · [plan](../superpowers/plans/2026-07-13-large-screen-chores.md)
 - [Large-screen Recipes](backlog/large-screen-ux/large-screen-recipes.md) — responsive 2/3/4-column index grid at 1024px / 1280px / 1440px, a single large-screen toolbar row, and preserved detail/mobile composition. FE issue #290 and PR #291 closed 2026-07-16. [spec](../superpowers/specs/2026-07-06-large-screen-recipes-design.md) · [plan](../superpowers/plans/2026-07-15-large-screen-recipes.md)
 
+### Cross-cutting UI reliability
+
+Unplanned defect work found by dogfooding the shipped large-screen surfaces.
+Merged to FE `main` after the `0.3.23` tag, so it is **not yet released or
+deployed** — it ships with release-please PR #297 (`0.3.24`).
+
+- Event form time labels no longer clip — the time row sizes its tracks from
+  available space (`auto-fit`/`minmax`) instead of the `sm:` viewport
+  breakpoint, which never matched the 768px sheet/dialog swap it was deciding
+  for. FE PR #296 merged 2026-07-20.
+- Every dialog is viewport-bounded by default — `max-h-[90dvh] overflow-y-auto`
+  moved from six per-call-site opt-ins onto `DialogContent` itself. Ten
+  previously unbounded dialogs were one long field away from an unreachable
+  submit button, because a `fixed` centred element does not extend the document
+  and so cannot be scrolled to. FE PR #298 merged 2026-07-21.
+
 ## Active epics
 
 ### Module foundations
@@ -79,10 +96,32 @@ Most recent shipped story:
 - [Meals recipe ingredients to grocery list](backlog/module-foundations/meals-recipe-ingredients-to-grocery-list.md) — reviewed recipe ingredient rows from the visible Meals week append to a chosen grocery list through the released generic bulk Lists endpoint
 
 Latest release:
-- FE release `family-hub-v0.3.22` published on 2026-07-06, including the Meals ingredients-to-grocery-list flow over the released BE `v1.9.0` bulk list-item append endpoint.
+- FE `family-hub-v0.3.23` published 2026-07-17 and deployed to production — the complete large-screen / tablet epic across all seven surfaces.
+- FE `0.3.24` is **cut but unreleased**: release-please PR #297 is open with the two dialog viewport fixes (#296, #298). Merging it publishes the release; production still runs `0.3.23`.
+- BE `v1.9.0` published 2026-07-05 remains the current released backend contract, with no unreleased commits on BE `main`.
 
-Next recommended product focus:
-- Run a phone-first production dogfood pass across the newly shipped Meals planning, ingredients-to-grocery-list flow, Lists multi-add, calendar time/location capture, and existing create/edit/complete flows. After that, pick the next Mobile UX story: Notifications for reminder value, or calendar gestures (drag-to-create / pinch-to-zoom).
+Next recommended product focus (**decision open as of 2026-07-21**):
+
+The dogfood pass is underway and already paying out — FE #296 and #298 were
+both found by using the shipped surfaces rather than by planned work. Keep it
+running as background signal, not as a blocking phase.
+
+With the large-screen epic closed and no BE work in flight, exactly one shaped
+story is ready to execute (FE #293) and one BE Issue is open (#67, login
+throttle). The next slice is a genuine fork with no default:
+
+1. **Finish large-screen** — execute FE #293. Closes the last two Calendar
+   views still at chrome-only and clears the live foundations §3.3 violation.
+2. **Return to mobile** — Notifications, or calendar gestures (drag-to-create /
+   pinch-to-zoom). All three are captured but none are shaped to spec/plan.
+3. **Security hardening** — BE #67 login throttle, the only open P1 in either
+   repo. The accessibility pass surfaced in the July security review is still
+   unshaped and has no Issue.
+4. **Reduce carrying cost** — 12 open FE dependency PRs, several with major
+   version bumps (`vite` 7→8, `lucide-react` 0.x→1.x, `jsdom` 25→29).
+
+Nothing here blocks anything else, so sequence by what the household actually
+feels first.
 
 Exit criterion for this phase:
 - Make the current organizer surfaces reliable and polished enough for daily phone use by Joe and Partner, while preserving the larger-screen/tablet product direction for later hardware.
@@ -104,7 +143,11 @@ Recommended order:
   `+N more`, and multi-day runs welded by corner geometry; Schedule moves to a
   date gutter with full-width rows and explicit gap rows, resolving the
   foundations §3.3 narrow-centred-column violation it still carries. Shaped
-  2026-07-18; FE #293 open, not started.
+  2026-07-18; FE #293 open with no linked PR and no branch — re-verified
+  2026-07-21, still not started.
+
+  The Issue contract's pinned frontend baseline has since drifted; see the
+  story's Baseline drift note before starting.
   [spec](../superpowers/specs/2026-07-18-large-screen-calendar-month-schedule-design.md) ·
   [plan](../superpowers/plans/2026-07-18-large-screen-calendar-month-schedule.md)
 
